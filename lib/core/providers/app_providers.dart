@@ -216,6 +216,9 @@ final realReminderSchedulerProvider = Provider<ReminderScheduler>((ref) {
   return ReminderScheduler(
     ref.watch(realDatabaseProvider),
     ref.watch(realNotificationServiceProvider),
+    onCheck: () async {
+      await ref.read(mockDatabaseProvider.notifier).runAutoInterestAccrual();
+    },
   );
 });
 

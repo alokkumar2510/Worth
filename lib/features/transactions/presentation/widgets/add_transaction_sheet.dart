@@ -5,8 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/custom_segmented_control.dart';
 import '../../../../core/providers/mock_database.dart';
-import '../../../../core/providers/dependency_provider.dart';
-import '../../../../database/database.dart';
 
 class AddTransactionSheet extends ConsumerStatefulWidget {
   final int? initialSegmentedIndex;
@@ -50,6 +48,12 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   final _unitsController = TextEditingController();
   final _priceController = TextEditingController();
   
+  // MTF Fields
+  bool _isMtf = false;
+  final _brokerController = TextEditingController();
+  final _ownCapitalController = TextEditingController();
+  final _interestRateController = TextEditingController();
+  
   String _category = 'General';
   bool _showNotes = false;
 
@@ -74,6 +78,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     _notesController.dispose();
     _unitsController.dispose();
     _priceController.dispose();
+    _brokerController.dispose();
+    _ownCapitalController.dispose();
+    _interestRateController.dispose();
     super.dispose();
   }
 
@@ -138,7 +145,27 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       final units = double.tryParse(_unitsController.text.trim()) ?? 0.0;
       final price = double.tryParse(_priceController.text.trim()) ?? 0.0;
       if (_selectedInvestmentId != null && units > 0 && price > 0) {
-        notifier.buyInvestment(_selectedInvestmentId!, _selectedFromAccountId ?? 'acc_primary_bank_uuid', units, price, notes, DateTime.now().toUtc());
+        if (_isMtf) {
+          final broker = _brokerController.text.trim();
+          final ownCap = double.tryParse(_ownCapitalController.text.trim()) ?? (units * price * 0.5);
+          final intRate = double.tryParse(_interestRateController.text.trim()) ?? 12.0;
+          final borrowed = (units * price) - ownCap;
+
+          final inv = ref.read(mockDatabaseProvider).investments.firstWhere((i) => i.id == _selectedInvestmentId);
+          notifier.addMtfPosition(
+            broker: broker.isNotEmpty ? broker : 'Broker',
+            instrument: inv.name,
+            units: units,
+            averagePrice: price,
+            ownCapital: ownCap,
+            borrowedCapital: borrowed,
+            interestRate: intRate,
+            openingDate: DateTime.now().toUtc(),
+            investmentId: _selectedInvestmentId,
+          );
+        } else {
+          notifier.buyInvestment(_selectedInvestmentId!, _selectedFromAccountId ?? 'acc_primary_bank_uuid', units, price, notes, DateTime.now().toUtc());
+        }
       }
     } else if (finalType == 'investment_sell') {
       final units = double.tryParse(_unitsController.text.trim()) ?? 0.0;
@@ -379,6 +406,83 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                   ),
                 ],
               ),
+              if (_selectedMoreType == 'investment_buy') ...[
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  title: const Text('MTF Position?', style: TextStyle(color: Colors.white, fontSize: 14)),
+                  subtitle: const Text('Margin Trading Facility', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
+                  value: _isMtf,
+                  activeThumbColor: AppColors.glow,
+                  contentPadding: EdgeInsets.zero,
+                  onChanged: (val) {
+                    setState(() {
+                      _isMtf = val;
+                      if (_isMtf) {
+                        final u = double.tryParse(_unitsController.text.trim()) ?? 0.0;
+                        final p = double.tryParse(_priceController.text.trim()) ?? 0.0;
+                        _ownCapitalController.text = (u * p * 0.5).toStringAsFixed(2);
+                      }
+                    });
+                  },
+                ),
+                if (_isMtf) ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _brokerController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(labelText: 'Broker', labelStyle: TextStyle(color: AppColors.grey500)),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _ownCapitalController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(labelText: 'Own Capital', labelStyle: TextStyle(color: AppColors.grey500)),
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: _interestRateController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(labelText: 'Interest Rate % p.a.', labelStyle: TextStyle(color: AppColors.grey500)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Builder(
+                    builder: (context) {
+                      final u = double.tryParse(_unitsController.text.trim()) ?? 0.0;
+                      final p = double.tryParse(_priceController.text.trim()) ?? 0.0;
+                      final own = double.tryParse(_ownCapitalController.text.trim()) ?? (u * p * 0.5);
+                      final borrowed = (u * p) - own;
+                      return Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.layer2,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Borrowed Capital:', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                            Text(
+                              '$currency${borrowed.toStringAsFixed(2)}',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                  ),
+                ],
+              ],
               const SizedBox(height: 16),
             ],
 
@@ -474,6 +578,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     final price = double.tryParse(_priceController.text.trim()) ?? 0.0;
     if (units > 0 && price > 0) {
       _amountController.text = (units * price).toStringAsFixed(2);
+      if (_isMtf) {
+        _ownCapitalController.text = (units * price * 0.5).toStringAsFixed(2);
+      }
     }
   }
 }

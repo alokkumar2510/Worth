@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
+import 'package:collection/collection.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/glass_card.dart';
@@ -233,91 +234,218 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     final symbolController = TextEditingController();
     final unitsController = TextEditingController();
     final priceController = TextEditingController();
+    
+    // MTF Fields
+    final brokerController = TextEditingController();
+    final ownCapitalController = TextEditingController();
+    final interestRateController = TextEditingController();
+    bool isMtf = false;
     String type = 'mutual_fund';
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        
-        title: const Text('Add Investment', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Investment Name', labelStyle: TextStyle(color: AppColors.grey500)),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: symbolController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Symbol / Ticker', labelStyle: TextStyle(color: AppColors.grey500)),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: type,
-                dropdownColor: AppColors.layer1,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Type', labelStyle: TextStyle(color: AppColors.grey500)),
-                items: const [
-                  DropdownMenuItem(value: 'mutual_fund', child: Text('Mutual Fund')),
-                  DropdownMenuItem(value: 'stock', child: Text('Direct Equity')),
-                  DropdownMenuItem(value: 'etf', child: Text('ETF')),
-                  DropdownMenuItem(value: 'crypto', child: Text('Crypto')),
-                  DropdownMenuItem(value: 'bond', child: Text('Bond / FD')),
-                ],
-                onChanged: (val) => type = val!,
-              ),
-              const SizedBox(height: 12),
-              Row(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final showMtfSwitch = type == 'stock' || type == 'etf';
+          final units = double.tryParse(unitsController.text) ?? 0.0;
+          final price = double.tryParse(priceController.text) ?? 0.0;
+          final totalCost = units * price;
+          final ownCapital = double.tryParse(ownCapitalController.text) ?? (isMtf ? totalCost * 0.5 : totalCost);
+          final borrowedCapital = totalCost - ownCapital;
+
+          return AlertDialog(
+            
+            title: const Text('Add Investment', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: unitsController,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(labelText: 'Units', labelStyle: TextStyle(color: AppColors.grey500)),
-                    ),
+                  TextField(
+                    controller: nameController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(labelText: 'Investment Name', labelStyle: TextStyle(color: AppColors.grey500)),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: priceController,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: const InputDecoration(labelText: 'Price / Unit', labelStyle: TextStyle(color: AppColors.grey500)),
-                    ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: symbolController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(labelText: 'Symbol / Ticker', labelStyle: TextStyle(color: AppColors.grey500)),
                   ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: type,
+                    dropdownColor: AppColors.layer1,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(labelText: 'Type', labelStyle: TextStyle(color: AppColors.grey500)),
+                    items: const [
+                      DropdownMenuItem(value: 'mutual_fund', child: Text('Mutual Fund')),
+                      DropdownMenuItem(value: 'stock', child: Text('Direct Equity')),
+                      DropdownMenuItem(value: 'etf', child: Text('ETF')),
+                      DropdownMenuItem(value: 'crypto', child: Text('Crypto')),
+                      DropdownMenuItem(value: 'bond', child: Text('Bond / FD')),
+                    ],
+                    onChanged: (val) {
+                      setDialogState(() {
+                        type = val!;
+                        if (type != 'stock' && type != 'etf') {
+                          isMtf = false;
+                        }
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: unitsController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(labelText: 'Units', labelStyle: TextStyle(color: AppColors.grey500)),
+                          onChanged: (_) {
+                            if (isMtf) {
+                              final u = double.tryParse(unitsController.text) ?? 0.0;
+                              final p = double.tryParse(priceController.text) ?? 0.0;
+                              ownCapitalController.text = (u * p * 0.5).toStringAsFixed(2);
+                            }
+                            setDialogState(() {});
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: priceController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          style: const TextStyle(color: Colors.white),
+                          decoration: const InputDecoration(labelText: 'Price / Unit', labelStyle: TextStyle(color: AppColors.grey500)),
+                          onChanged: (_) {
+                            if (isMtf) {
+                              final u = double.tryParse(unitsController.text) ?? 0.0;
+                              final p = double.tryParse(priceController.text) ?? 0.0;
+                              ownCapitalController.text = (u * p * 0.5).toStringAsFixed(2);
+                            }
+                            setDialogState(() {});
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (showMtfSwitch) ...[
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      title: const Text('MTF Position?', style: TextStyle(color: Colors.white, fontSize: 14)),
+                      subtitle: const Text('Margin Trading Facility', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
+                      value: isMtf,
+                      activeColor: AppColors.glow,
+                      contentPadding: EdgeInsets.zero,
+                      onChanged: (val) {
+                        setDialogState(() {
+                          isMtf = val;
+                          if (isMtf) {
+                            final u = double.tryParse(unitsController.text) ?? 0.0;
+                            final p = double.tryParse(priceController.text) ?? 0.0;
+                            ownCapitalController.text = (u * p * 0.5).toStringAsFixed(2);
+                          }
+                        });
+                      },
+                    ),
+                  ],
+                  if (isMtf) ...[
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: brokerController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(labelText: 'Broker', labelStyle: TextStyle(color: AppColors.grey500)),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: ownCapitalController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            style: const TextStyle(color: Colors.white),
+                            decoration: const InputDecoration(labelText: 'Own Capital', labelStyle: TextStyle(color: AppColors.grey500)),
+                            onChanged: (_) => setDialogState(() {}),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: interestRateController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            style: const TextStyle(color: Colors.white),
+                            decoration: const InputDecoration(labelText: 'Interest Rate % p.a.', labelStyle: TextStyle(color: AppColors.grey500)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.layer2,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Borrowed Capital:', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                          Text(
+                            '${ref.read(mockDatabaseProvider).currency}${borrowedCapital.toStringAsFixed(2)}',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final name = nameController.text.trim();
+                  final symbol = symbolController.text.trim();
+                  final unitsVal = double.tryParse(unitsController.text.trim()) ?? 0.0;
+                  final priceVal = double.tryParse(priceController.text.trim()) ?? 0.0;
+
+                  if (name.isNotEmpty && unitsVal > 0 && priceVal > 0) {
+                    final notifier = ref.read(mockDatabaseProvider.notifier);
+                    if (isMtf) {
+                      final broker = brokerController.text.trim();
+                      final ownCap = double.tryParse(ownCapitalController.text.trim()) ?? (unitsVal * priceVal * 0.5);
+                      final intRate = double.tryParse(interestRateController.text.trim()) ?? 12.0;
+                      final borrowed = (unitsVal * priceVal) - ownCap;
+
+                      notifier.addMtfPosition(
+                        broker: broker.isNotEmpty ? broker : 'Broker',
+                        instrument: name,
+                        units: unitsVal,
+                        averagePrice: priceVal,
+                        ownCapital: ownCap,
+                        borrowedCapital: borrowed,
+                        interestRate: intRate,
+                        openingDate: DateTime.now().toUtc(),
+                      );
+                    } else {
+                      final inv = notifier.addInvestment(name, type, symbol.isNotEmpty ? symbol : null, 'Manual creation', priceVal);
+                      notifier.buyInvestment(inv.id, 'acc_primary_bank_uuid', unitsVal, priceVal, 'Opening Buy', DateTime.now().toUtc());
+                    }
+                    Navigator.pop(context);
+                  }
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
+                child: const Text('Save', style: TextStyle(color: Colors.white)),
               ),
             ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final name = nameController.text.trim();
-              final symbol = symbolController.text.trim();
-              final units = double.tryParse(unitsController.text.trim()) ?? 0.0;
-              final price = double.tryParse(priceController.text.trim()) ?? 0.0;
-
-              if (name.isNotEmpty && units > 0 && price > 0) {
-                final notifier = ref.read(mockDatabaseProvider.notifier);
-                final inv = notifier.addInvestment(name, type, symbol.isNotEmpty ? symbol : null, 'Manual creation', price);
-                notifier.buyInvestment(inv.id, 'acc_primary_bank_uuid', units, price, 'Opening Buy', DateTime.now().toUtc());
-                Navigator.pop(context);
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
-            child: const Text('Save', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -910,7 +1038,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     final currency = dbState.currency;
 
     return DefaultTabController(
-      length: 6,
+      length: 7,
       child: Scaffold(
         appBar: AppBar(
           title: Text(
@@ -934,6 +1062,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
               Tab(text: 'Assets'),
               Tab(text: 'Liabilities'),
               Tab(text: 'Investments'),
+              Tab(text: 'MTF Tracker'),
               Tab(text: 'Receivables'),
               Tab(text: 'Expected Income'),
               Tab(text: 'Goals'),
@@ -967,6 +1096,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                 _buildAssetsTab(dbState, currency),
                 _buildLiabilitiesTab(dbState, currency),
                 _buildInvestmentsTab(dbState, currency),
+                _buildMtfTab(dbState, currency),
                 _buildReceivablesTab(dbState, currency),
                 _buildExpectedIncomeTab(dbState, currency),
                 _buildGoalsTab(dbState, currency),
@@ -1594,6 +1724,533 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     );
   }
 
+  Widget _buildMtfTab(MockDatabaseState state, String currency) {
+    final activePositions = state.mtfPositions.where((p) => p.isClosed == 0).toList();
+    final closedPositions = state.mtfPositions.where((p) => p.isClosed == 1).toList();
+    final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
+    final formatDec = NumberFormat.currency(symbol: currency, decimalDigits: 2);
+
+    if (activePositions.isEmpty && closedPositions.isEmpty) {
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: EmptyStateWidget(
+          icon: Icons.trending_up_outlined,
+          title: 'No MTF Positions Yet',
+          description: 'Leverage your capital with Margin Trading Facility to track margin-funded ETF and stock positions.',
+          action: _buildAddButton('Add MTF Position', _showAddInvestmentDialog),
+        ),
+      );
+    }
+
+    // Calculations for dashboard
+    double totalBorrowed = 0.0;
+    double totalOwn = 0.0;
+    double totalValue = 0.0;
+    double totalInterestAccrued = 0.0;
+
+    for (final pos in activePositions) {
+      final inv = state.investments.firstWhereOrNull((i) => i.id == pos.investmentId);
+      final currentPrice = inv?.marketValue ?? pos.averagePrice;
+      totalBorrowed += pos.borrowedCapital;
+      totalOwn += pos.ownCapital;
+      totalValue += pos.units * currentPrice;
+      totalInterestAccrued += state.transactions
+          .where((t) => t.investmentId == pos.investmentId && t.category == 'MTF Interest')
+          .fold(0.0, (sum, t) => sum + t.amount);
+    }
+
+    final avgLtv = totalValue > 0 ? (totalBorrowed / totalValue * 100) : 0.0;
+    final ownRatio = (totalOwn + totalBorrowed) > 0 ? totalOwn / (totalOwn + totalBorrowed) : 0.5;
+
+    // Risk Indicator level
+    String riskLevel = 'LOW';
+    Color riskColor = AppColors.darkSuccess;
+    if (avgLtv >= 75) {
+      riskLevel = 'HIGH';
+      riskColor = AppColors.darkDanger;
+    } else if (avgLtv >= 60) {
+      riskLevel = 'MEDIUM';
+      riskColor = AppColors.darkWarning;
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          // Dashboard Card
+          if (activePositions.isNotEmpty) ...[
+            GlassCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('MTF EXPOSURE DASHBOARD', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.grey500)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: riskColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: riskColor.withValues(alpha: 0.3), width: 1),
+                        ),
+                        child: Text(
+                          '$riskLevel RISK',
+                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: riskColor),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(format.format(totalBorrowed), style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                            const SizedBox(height: 4),
+                            const Text('Total Borrowed', style: TextStyle(color: AppColors.grey500, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(format.format(totalInterestAccrued), style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                            const SizedBox(height: 4),
+                            const Text('Total Interest', style: TextStyle(color: AppColors.grey500, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text('${avgLtv.toStringAsFixed(1)}%', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                            const SizedBox(height: 4),
+                            const Text('Avg LTV Ratio', style: TextStyle(color: AppColors.grey500, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: SizedBox(
+                      height: 12,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: (ownRatio * 100).toInt(),
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [AppColors.darkPrimary, AppColors.glow],
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: ((1 - ownRatio) * 100).toInt(),
+                            child: Container(
+                              color: AppColors.grey700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Own: ${format.format(totalOwn)} (${(ownRatio * 100).toStringAsFixed(0)}%)', style: const TextStyle(color: AppColors.glow, fontSize: 11, fontWeight: FontWeight.bold)),
+                      Text('Borrowed: ${format.format(totalBorrowed)} (${((1 - ownRatio) * 100).toStringAsFixed(0)}%)', style: const TextStyle(color: AppColors.grey400, fontSize: 11, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+
+          // Active Positions Title
+          if (activePositions.isNotEmpty) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('ACTIVE POSITION TRACKING', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.grey500)),
+                Text('${activePositions.length} Open', style: GoogleFonts.inter(fontSize: 12, color: AppColors.grey500)),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Active Positions Cards
+          ...activePositions.map((pos) {
+            final inv = state.investments.firstWhereOrNull((i) => i.id == pos.investmentId);
+            final currentPrice = inv?.marketValue ?? pos.averagePrice;
+            final currentMarketValue = pos.units * currentPrice;
+            final totalCost = pos.units * pos.averagePrice;
+            final totalInterestPaid = state.transactions
+                .where((t) => t.investmentId == pos.investmentId && t.category == 'MTF Interest')
+                .fold(0.0, (sum, t) => sum + t.amount);
+            final netProfit = currentMarketValue - totalCost - totalInterestPaid;
+            final netRoi = pos.ownCapital > 0 ? (netProfit / pos.ownCapital * 100) : 0.0;
+            final dailyInterest = pos.borrowedCapital * (pos.interestRate / 100) / 365;
+            final ltv = currentMarketValue > 0 ? (pos.borrowedCapital / currentMarketValue * 100) : 0.0;
+
+            Color posRiskColor = AppColors.darkSuccess;
+            if (ltv >= 75) {
+              posRiskColor = AppColors.darkDanger;
+            } else if (ltv >= 60) {
+              posRiskColor = AppColors.darkWarning;
+            }
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: GlassCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Top header row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(pos.instrument, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                              const SizedBox(height: 2),
+                              Text('${pos.broker} • ${DateFormat('yyyy-MM-dd').format(pos.openingDate)}', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
+                            ],
+                          ),
+                        ),
+                        PopupMenuButton<String>(
+                          icon: const Icon(Icons.more_vert, color: Colors.white),
+                          color: AppColors.layer1,
+                          onSelected: (val) {
+                            if (val == 'edit') {
+                              _showEditMtfDialog(pos);
+                            } else if (val == 'close') {
+                              _showCloseMtfDialog(pos);
+                            } else if (val == 'delete') {
+                              _showDeleteMtfConfirmDialog(pos);
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(value: 'edit', child: Text('Edit Interest/Broker', style: TextStyle(color: Colors.white))),
+                            const PopupMenuItem(value: 'close', child: Text('Close (Sell Position)', style: TextStyle(color: AppColors.glow))),
+                            const PopupMenuItem(value: 'delete', child: Text('Delete / Force Close', style: TextStyle(color: AppColors.darkDanger))),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const Divider(color: AppColors.grey700, height: 20),
+                    
+                    // Stats grid
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildMtfStat('Units Held', pos.units.toStringAsFixed(2)),
+                        _buildMtfStat('Avg Price', formatDec.format(pos.averagePrice)),
+                        _buildMtfStat('Current Price', formatDec.format(currentPrice)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildMtfStat('Own Capital', format.format(pos.ownCapital)),
+                        _buildMtfStat('Borrowed', format.format(pos.borrowedCapital)),
+                        _buildMtfStat('LTV Ratio', '${ltv.toStringAsFixed(1)}%', valueColor: posRiskColor),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildMtfStat('Daily Int.', '${formatDec.format(dailyInterest)} (${pos.interestRate.toStringAsFixed(1)}%)'),
+                        _buildMtfStat('Total Int. Paid', formatDec.format(totalInterestPaid)),
+                        _buildMtfStat(
+                          'Net Profit', 
+                          '${netProfit >= 0 ? '+' : ''}${format.format(netProfit)}', 
+                          valueColor: netProfit >= 0 ? AppColors.darkSuccess : AppColors.darkDanger
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Return on Own Capital (ROI):', style: TextStyle(color: AppColors.grey500, fontSize: 12)),
+                        Text(
+                          '${netRoi >= 0 ? '+' : ''}${netRoi.toStringAsFixed(2)}%',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: netRoi >= 0 ? AppColors.darkSuccess : AppColors.darkDanger,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+
+          // Add buttons and spacer
+          _buildAddButton('Add MTF Position', _showAddInvestmentDialog),
+
+          // Closed Positions History Section
+          if (closedPositions.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text('CLOSED HISTORY', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.grey500)),
+            const SizedBox(height: 12),
+            ...closedPositions.map((pos) {
+              final totalInterestPaid = state.transactions
+                  .where((t) => t.investmentId == pos.investmentId && t.category == 'MTF Interest')
+                  .fold(0.0, (sum, t) => sum + t.amount);
+              
+              double salePrice = pos.averagePrice; // fallback
+              if (state.transactions.any((t) => t.investmentId == pos.investmentId && t.type == 'investment_sell')) {
+                final sellTx = state.transactions.firstWhere((t) => t.investmentId == pos.investmentId && t.type == 'investment_sell');
+                salePrice = pos.units > 0 ? sellTx.amount / pos.units : sellTx.amount;
+              }
+              final totalProceeds = pos.units * salePrice;
+              final totalCost = pos.units * pos.averagePrice;
+              final realizedNetProfit = totalProceeds - totalCost - totalInterestPaid;
+              final realizedRoi = pos.ownCapital > 0 ? (realizedNetProfit / pos.ownCapital * 100) : 0.0;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: GlassCard(
+                  child: Theme(
+                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      tilePadding: EdgeInsets.zero,
+                      childrenPadding: EdgeInsets.zero,
+                      collapsedIconColor: Colors.white,
+                      iconColor: Colors.white,
+                      title: Text(pos.instrument, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white70)),
+                      subtitle: Text(
+                        'Closed ${pos.closedDate != null ? DateFormat('yyyy-MM-dd').format(pos.closedDate!) : 'n/a'} • Net: ${realizedNetProfit >= 0 ? '+' : ''}${format.format(realizedNetProfit)} (${realizedRoi.toStringAsFixed(1)}% ROI)',
+                        style: TextStyle(fontSize: 11, color: realizedNetProfit >= 0 ? AppColors.darkSuccess.withValues(alpha: 0.8) : AppColors.darkDanger.withValues(alpha: 0.8)),
+                      ),
+                      children: [
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildMtfStat('Broker', pos.broker),
+                            _buildMtfStat('Buy Price', formatDec.format(pos.averagePrice)),
+                            _buildMtfStat('Sell Price', formatDec.format(salePrice)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildMtfStat('Own Capital', format.format(pos.ownCapital)),
+                            _buildMtfStat('Borrowed', format.format(pos.borrowedCapital)),
+                            _buildMtfStat('Interest Paid', formatDec.format(totalInterestPaid)),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Realized Return (ROI):', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
+                            Text(
+                              '${realizedNetProfit >= 0 ? '+' : ''}${realizedNetProfit.toStringAsFixed(2)} (${realizedRoi.toStringAsFixed(2)}% ROI)',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: realizedNetProfit >= 0 ? AppColors.darkSuccess : AppColors.darkDanger,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton.icon(
+                          onPressed: () => _showDeleteMtfConfirmDialog(pos),
+                          icon: const Icon(Icons.delete, color: AppColors.darkDanger, size: 14),
+                          label: const Text('Delete from History', style: TextStyle(color: AppColors.darkDanger, fontSize: 12)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMtfStat(String label, String value, {Color? valueColor}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: AppColors.grey500, fontSize: 11)),
+        const SizedBox(height: 4),
+        Text(value, style: TextStyle(color: valueColor ?? Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+      ],
+    );
+  }
+
+  void _showEditMtfDialog(MtfPosition pos) {
+    final brokerController = TextEditingController(text: pos.broker);
+    final interestRateController = TextEditingController(text: pos.interestRate.toString());
+
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit MTF Position', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: brokerController,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(labelText: 'Broker', labelStyle: TextStyle(color: AppColors.grey500)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: interestRateController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(labelText: 'Interest Rate % p.a.', labelStyle: TextStyle(color: AppColors.grey500)),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final broker = brokerController.text.trim();
+              final rate = double.tryParse(interestRateController.text.trim()) ?? pos.interestRate;
+              if (broker.isNotEmpty) {
+                final updated = pos.copyWith(
+                  broker: broker,
+                  interestRate: rate,
+                  updatedAt: DateTime.now().toUtc(),
+                );
+                ref.read(mockDatabaseProvider.notifier).editMtfPosition(updated);
+                Navigator.pop(context);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
+            child: const Text('Save', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCloseMtfDialog(MtfPosition pos) {
+    final salePriceController = TextEditingController();
+    DateTime selectedDate = DateTime.now();
+
+    showDialog<void>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Close MTF Position', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('You are closing ${pos.units.toStringAsFixed(2)} units of ${pos.instrument}.', style: const TextStyle(color: AppColors.grey400, fontSize: 13)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: salePriceController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(labelText: 'Sale Price / Unit', labelStyle: TextStyle(color: AppColors.grey500)),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                title: Text(
+                  'Sale Date: ${DateFormat('yyyy-MM-dd').format(selectedDate)}',
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                ),
+                trailing: const Icon(Icons.calendar_today, color: AppColors.darkPrimary),
+                contentPadding: EdgeInsets.zero,
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: selectedDate,
+                    firstDate: pos.openingDate,
+                    lastDate: DateTime.now().add(const Duration(days: 1)),
+                  );
+                  if (picked != null) {
+                    setState(() {
+                      selectedDate = picked;
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final salePrice = double.tryParse(salePriceController.text.trim()) ?? 0.0;
+                if (salePrice > 0) {
+                  ref.read(mockDatabaseProvider.notifier).closeMtfPosition(pos.id, salePrice, selectedDate.toUtc());
+                  Navigator.pop(context);
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.glow),
+              child: const Text('Close & Repay', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteMtfConfirmDialog(MtfPosition pos) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Position?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: const Text(
+          'This will permanently delete this MTF position record and its associated investment. All historical interest accrual records will remain in your transaction log, but the tracker will be cleared. This action cannot be undone.',
+          style: TextStyle(color: AppColors.grey400, fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              ref.read(mockDatabaseProvider.notifier).deleteMtfPosition(pos.id);
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkDanger),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAddButton(String label, VoidCallback onTap) {
     return Container(
       margin: const EdgeInsets.only(top: 8, bottom: 24),
@@ -1611,7 +2268,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
           ),
         ),
         style: OutlinedButton.styleFrom(
-          backgroundColor: AppColors.layer1.withOpacity(0.5),
+          backgroundColor: AppColors.layer1.withValues(alpha: 0.5),
           side: const BorderSide(color: AppColors.glassBorder, width: 1.0),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         ),

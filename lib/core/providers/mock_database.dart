@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart';
+import 'package:intl/intl.dart';
 import '../../database/database.dart';
 import '../../database/seeder.dart';
 export '../../database/database.dart' hide Transaction, Snapshot, Account, Investment, Goal, ExpectedIncome, Milestone, Achievement, AchievementProgress;
@@ -31,6 +32,7 @@ class MockDatabaseState {
   final List<Snapshot> snapshots;
   final List<Adjustment> adjustments;
   final List<IpoPool> ipoPools;
+  final List<MtfPosition> mtfPositions;
   
   // Settings & Auth State
   final String currency;
@@ -55,6 +57,7 @@ class MockDatabaseState {
     required this.snapshots,
     required this.adjustments,
     required this.ipoPools,
+    required this.mtfPositions,
     required this.currency,
     required this.themeMode,
     required this.appLockEnabled,
@@ -78,6 +81,7 @@ class MockDatabaseState {
     List<Snapshot>? snapshots,
     List<Adjustment>? adjustments,
     List<IpoPool>? ipoPools,
+    List<MtfPosition>? mtfPositions,
     String? currency,
     String? themeMode,
     bool? appLockEnabled,
@@ -100,6 +104,7 @@ class MockDatabaseState {
       snapshots: snapshots ?? this.snapshots,
       adjustments: adjustments ?? this.adjustments,
       ipoPools: ipoPools ?? this.ipoPools,
+      mtfPositions: mtfPositions ?? this.mtfPositions,
       currency: currency ?? this.currency,
       themeMode: themeMode ?? this.themeMode,
       appLockEnabled: appLockEnabled ?? this.appLockEnabled,
@@ -304,7 +309,15 @@ class MockDatabaseState {
       }
     }
 
-    return borrowed + credit;
+    // 3. MTF Borrowed Capital
+    double mtfTotal = 0.0;
+    for (final mtf in mtfPositions) {
+      if (mtf.isClosed == 0) {
+        mtfTotal += mtf.borrowedCapital;
+      }
+    }
+
+    return borrowed + credit + mtfTotal;
   }
 
   double get netWorth {
@@ -371,6 +384,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final consumptions = await db.select(db.investmentLotConsumptions).get();
       final adjustments = await db.select(db.adjustments).get();
       final settingsList = await db.select(db.settings).get();
+      final mtfPositions = await db.select(db.mtfPositions).get();
 
       final settingsMap = {for (var s in settingsList) s.key: s.value};
 
@@ -407,6 +421,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         snapshots: snapshots,
         adjustments: adjustments,
         ipoPools: ipoPools,
+        mtfPositions: mtfPositions,
         currency: currency,
         themeMode: themeMode,
         appLockEnabled: appLockEnabled,
@@ -421,6 +436,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       // Trigger gamification engine evaluation
       Future.microtask(() async {
         try {
+          await runAutoInterestAccrual();
           await _ref.read(gamificationEngineProvider).evaluateAll();
         } catch (e) {
           // ignore
@@ -1913,6 +1929,202 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     }
   }
 
+  // --- MTF Position Mutations ---
+
+  Future<void> addMtfPosition({
+    required String broker,
+    required String instrument,
+    required double units,
+    required double averagePrice,
+    required double ownCapital,
+    required double borrowedCapital,
+    required double interestRate,
+    required DateTime openingDate,
+    String? investmentId,
+  }) async {
+    final id = _uuid.v4();
+    final now = DateTime.now().toUtc();
+
+    // 1. Get or Add Investment
+    final String actualInvestmentId;
+    if (investmentId != null) {
+      actualInvestmentId = investmentId;
+    } else {
+      final inv = addInvestment(instrument, 'stock', null, 'MTF Position: $broker', averagePrice);
+      actualInvestmentId = inv.id;
+    }
+
+    // 2. Add MtfPosition
+    final newPos = MtfPosition(
+      id: id,
+      investmentId: actualInvestmentId,
+      broker: broker,
+      instrument: instrument,
+      units: units,
+      averagePrice: averagePrice,
+      ownCapital: ownCapital,
+      borrowedCapital: borrowedCapital,
+      interestRate: interestRate,
+      openingDate: openingDate,
+      isClosed: 0,
+      createdAt: now,
+      updatedAt: now,
+      lastAccrualDate: openingDate,
+    );
+
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await db.into(db.mtfPositions).insert(MtfPosition(
+        id: id,
+        investmentId: actualInvestmentId,
+        broker: broker,
+        instrument: instrument,
+        units: units,
+        averagePrice: averagePrice,
+        ownCapital: ownCapital,
+        borrowedCapital: borrowedCapital,
+        interestRate: interestRate,
+        openingDate: openingDate,
+        isClosed: 0,
+        createdAt: now,
+        updatedAt: now,
+        lastAccrualDate: openingDate,
+      ));
+    }
+
+    state = state.copyWith(mtfPositions: [...state.mtfPositions, newPos]);
+
+    // 3. Add Buy Transaction (decreases cash by units * averagePrice)
+    buyInvestment(actualInvestmentId, 'acc_primary_bank_uuid', units, averagePrice, 'MTF Buy: $instrument', openingDate);
+
+    // 4. Add Borrow Transaction (deposits borrowedCapital back to offset cash)
+    await addBorrowTransaction('person_broker_uuid_placeholder', 'acc_primary_bank_uuid', borrowedCapital, 'MTF Borrowed Funding for $instrument', openingDate);
+
+    // Run auto accrual for any days since opening date
+    await runAutoInterestAccrual();
+  }
+
+  Future<void> editMtfPosition(MtfPosition pos) async {
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.mtfPositions)..where((tbl) => tbl.id.equals(pos.id))).write(
+        MtfPositionsCompanion(
+          broker: Value(pos.broker),
+          interestRate: Value(pos.interestRate),
+          updatedAt: Value(DateTime.now().toUtc()),
+        ),
+      );
+    }
+    state = state.copyWith(
+      mtfPositions: state.mtfPositions.map((p) => p.id == pos.id ? pos : p).toList(),
+    );
+  }
+
+  Future<void> closeMtfPosition(String id, double salePrice, DateTime date) async {
+    final now = DateTime.now().toUtc();
+    final pos = state.mtfPositions.firstWhere((p) => p.id == id);
+    
+    // 1. Accrue final interest before closing
+    await runAutoInterestAccrual();
+
+    final closedPos = pos.copyWith(
+      isClosed: 1,
+      closedDate: date,
+      updatedAt: now,
+    );
+
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.mtfPositions)..where((tbl) => tbl.id.equals(id))).write(
+        MtfPositionsCompanion(
+          isClosed: const Value(1),
+          closedDate: Value(date),
+          updatedAt: Value(now),
+        ),
+      );
+    }
+
+    state = state.copyWith(
+      mtfPositions: state.mtfPositions.map((p) => p.id == id ? closedPos : p).toList(),
+    );
+
+    // 2. Sell Investment (increases cash by units * salePrice)
+    sellInvestment(pos.investmentId, 'acc_primary_bank_uuid', pos.units, salePrice, 'MTF Position Closed: ${pos.instrument}', date);
+
+    // 3. Repay Borrowed Capital (decreases cash by borrowedCapital)
+    await addRepayTransaction('person_broker_uuid_placeholder', 'acc_primary_bank_uuid', pos.borrowedCapital, 'MTF Loan Repayment for ${pos.instrument}', date);
+  }
+
+  Future<void> deleteMtfPosition(String id) async {
+    final pos = state.mtfPositions.firstWhere((p) => p.id == id);
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.delete(db.mtfPositions)..where((tbl) => tbl.id.equals(id))).go();
+    }
+    state = state.copyWith(
+      mtfPositions: state.mtfPositions.where((p) => p.id != id).toList(),
+    );
+
+    // Also delete/archive associated investment and transactions
+    await deleteInvestment(pos.investmentId);
+  }
+
+  Future<void> updateMtfPositionAccrual(String id, DateTime date) async {
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.mtfPositions)..where((tbl) => tbl.id.equals(id))).write(
+        MtfPositionsCompanion(
+          lastAccrualDate: Value(date),
+        ),
+      );
+    }
+    state = state.copyWith(
+      mtfPositions: state.mtfPositions.map((p) => p.id == id ? p.copyWith(lastAccrualDate: date) : p).toList(),
+    );
+  }
+
+  Future<void> runAutoInterestAccrual() async {
+    final now = DateTime.now().toUtc();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    final activePositions = state.mtfPositions.where((pos) => pos.isClosed == 0).toList();
+
+    for (final pos in activePositions) {
+      final lastAccrual = pos.lastAccrualDate ?? pos.openingDate;
+      final lastAccrualDay = DateTime(lastAccrual.year, lastAccrual.month, lastAccrual.day);
+      final days = today.difference(lastAccrualDay).inDays;
+
+      if (days > 0) {
+        final dailyInterest = pos.borrowedCapital * (pos.interestRate / 100) / 365;
+        if (dailyInterest <= 0) continue;
+
+        for (int i = 1; i <= days; i++) {
+          final accrualDate = lastAccrualDay.add(Duration(days: i));
+          final txId = _uuid.v4();
+          final txNotes = 'MTF Interest Accrued for ${DateFormat("yyyy-MM-dd").format(accrualDate)}';
+          
+          await addTransaction(
+            type: 'expense',
+            amount: dailyInterest,
+            category: 'MTF Interest',
+            fromAccountId: 'acc_primary_bank_uuid',
+            investmentId: pos.investmentId,
+            notes: txNotes,
+            date: accrualDate,
+            id: txId,
+          );
+        }
+
+        await updateMtfPositionAccrual(pos.id, today);
+      }
+    }
+  }
+
   // --- Initial seed data ---
 
   static MockDatabaseState initialState() {
@@ -1928,6 +2140,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       snapshots: getMockSnapshots(DateTime.now()),
       adjustments: const [],
       ipoPools: const [],
+      mtfPositions: const [],
       currency: mockCurrency,
       themeMode: 'dark', // Premium Dark Theme by default
       appLockEnabled: false,

@@ -259,6 +259,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       isPrimary: true,
       borderColor: AppColors.darkPrimary.withOpacity(0.35),
       child: Stack(
+        clipBehavior: Clip.none,
         children: [
           // Background soft orb glow inside card
           Positioned(
@@ -347,7 +348,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     onPressed: () => context.push('/monthly_snapshot'),
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      backgroundColor: AppColors.layer2,
+                      backgroundColor: Colors.white.withOpacity(0.06),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(18),
                         side: const BorderSide(color: AppColors.glassBorder, width: 1.0),
@@ -719,7 +720,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       margin: const EdgeInsets.only(left: 6),
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: isSelected ? AppColors.darkPrimary : AppColors.layer2,
+                        color: isSelected ? AppColors.darkPrimary : Colors.white.withOpacity(0.06),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: isSelected ? AppColors.darkPrimary : AppColors.glassBorder,

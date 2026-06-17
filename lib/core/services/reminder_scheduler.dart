@@ -6,9 +6,10 @@ import 'notification_service.dart';
 class ReminderScheduler {
   final db.AppDatabase _db;
   final NotificationService _notificationService;
+  final Future<void> Function()? onCheck;
   Timer? _timer;
 
-  ReminderScheduler(this._db, this._notificationService);
+  ReminderScheduler(this._db, this._notificationService, {this.onCheck});
 
   // Starts the scheduler to run checks immediately and then periodically (e.g., every 12 hours)
   void start() {
@@ -31,6 +32,9 @@ class ReminderScheduler {
   // Scan database and trigger notifications
   Future<void> checkAndTriggerReminders() async {
     try {
+      if (onCheck != null) {
+        await onCheck!();
+      }
       await _checkGoals();
       await _checkLiabilities();
       await _checkReceivables();

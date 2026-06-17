@@ -9002,6 +9002,791 @@ class AchievementProgressCompanion
   }
 }
 
+class $MtfPositionsTable extends MtfPositions
+    with TableInfo<$MtfPositionsTable, MtfPosition> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $MtfPositionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _investmentIdMeta =
+      const VerificationMeta('investmentId');
+  @override
+  late final GeneratedColumn<String> investmentId = GeneratedColumn<String>(
+      'investment_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      $customConstraints: 'NOT NULL REFERENCES investments(id)');
+  static const VerificationMeta _brokerMeta = const VerificationMeta('broker');
+  @override
+  late final GeneratedColumn<String> broker = GeneratedColumn<String>(
+      'broker', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _instrumentMeta =
+      const VerificationMeta('instrument');
+  @override
+  late final GeneratedColumn<String> instrument = GeneratedColumn<String>(
+      'instrument', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _unitsMeta = const VerificationMeta('units');
+  @override
+  late final GeneratedColumn<double> units = GeneratedColumn<double>(
+      'units', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _averagePriceMeta =
+      const VerificationMeta('averagePrice');
+  @override
+  late final GeneratedColumn<double> averagePrice = GeneratedColumn<double>(
+      'average_price', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _ownCapitalMeta =
+      const VerificationMeta('ownCapital');
+  @override
+  late final GeneratedColumn<double> ownCapital = GeneratedColumn<double>(
+      'own_capital', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _borrowedCapitalMeta =
+      const VerificationMeta('borrowedCapital');
+  @override
+  late final GeneratedColumn<double> borrowedCapital = GeneratedColumn<double>(
+      'borrowed_capital', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _interestRateMeta =
+      const VerificationMeta('interestRate');
+  @override
+  late final GeneratedColumn<double> interestRate = GeneratedColumn<double>(
+      'interest_rate', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _openingDateMeta =
+      const VerificationMeta('openingDate');
+  @override
+  late final GeneratedColumn<DateTime> openingDate = GeneratedColumn<DateTime>(
+      'opening_date', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _closedDateMeta =
+      const VerificationMeta('closedDate');
+  @override
+  late final GeneratedColumn<DateTime> closedDate = GeneratedColumn<DateTime>(
+      'closed_date', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _isClosedMeta =
+      const VerificationMeta('isClosed');
+  @override
+  late final GeneratedColumn<int> isClosed = GeneratedColumn<int>(
+      'is_closed', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _syncStatusMeta =
+      const VerificationMeta('syncStatus');
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+      'sync_status', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('pending'));
+  static const VerificationMeta _lastAccrualDateMeta =
+      const VerificationMeta('lastAccrualDate');
+  @override
+  late final GeneratedColumn<DateTime> lastAccrualDate =
+      GeneratedColumn<DateTime>('last_accrual_date', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        investmentId,
+        broker,
+        instrument,
+        units,
+        averagePrice,
+        ownCapital,
+        borrowedCapital,
+        interestRate,
+        openingDate,
+        closedDate,
+        isClosed,
+        createdAt,
+        updatedAt,
+        syncStatus,
+        lastAccrualDate
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'mtf_positions';
+  @override
+  VerificationContext validateIntegrity(Insertable<MtfPosition> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('investment_id')) {
+      context.handle(
+          _investmentIdMeta,
+          investmentId.isAcceptableOrUnknown(
+              data['investment_id']!, _investmentIdMeta));
+    } else if (isInserting) {
+      context.missing(_investmentIdMeta);
+    }
+    if (data.containsKey('broker')) {
+      context.handle(_brokerMeta,
+          broker.isAcceptableOrUnknown(data['broker']!, _brokerMeta));
+    } else if (isInserting) {
+      context.missing(_brokerMeta);
+    }
+    if (data.containsKey('instrument')) {
+      context.handle(
+          _instrumentMeta,
+          instrument.isAcceptableOrUnknown(
+              data['instrument']!, _instrumentMeta));
+    } else if (isInserting) {
+      context.missing(_instrumentMeta);
+    }
+    if (data.containsKey('units')) {
+      context.handle(
+          _unitsMeta, units.isAcceptableOrUnknown(data['units']!, _unitsMeta));
+    } else if (isInserting) {
+      context.missing(_unitsMeta);
+    }
+    if (data.containsKey('average_price')) {
+      context.handle(
+          _averagePriceMeta,
+          averagePrice.isAcceptableOrUnknown(
+              data['average_price']!, _averagePriceMeta));
+    } else if (isInserting) {
+      context.missing(_averagePriceMeta);
+    }
+    if (data.containsKey('own_capital')) {
+      context.handle(
+          _ownCapitalMeta,
+          ownCapital.isAcceptableOrUnknown(
+              data['own_capital']!, _ownCapitalMeta));
+    } else if (isInserting) {
+      context.missing(_ownCapitalMeta);
+    }
+    if (data.containsKey('borrowed_capital')) {
+      context.handle(
+          _borrowedCapitalMeta,
+          borrowedCapital.isAcceptableOrUnknown(
+              data['borrowed_capital']!, _borrowedCapitalMeta));
+    } else if (isInserting) {
+      context.missing(_borrowedCapitalMeta);
+    }
+    if (data.containsKey('interest_rate')) {
+      context.handle(
+          _interestRateMeta,
+          interestRate.isAcceptableOrUnknown(
+              data['interest_rate']!, _interestRateMeta));
+    } else if (isInserting) {
+      context.missing(_interestRateMeta);
+    }
+    if (data.containsKey('opening_date')) {
+      context.handle(
+          _openingDateMeta,
+          openingDate.isAcceptableOrUnknown(
+              data['opening_date']!, _openingDateMeta));
+    } else if (isInserting) {
+      context.missing(_openingDateMeta);
+    }
+    if (data.containsKey('closed_date')) {
+      context.handle(
+          _closedDateMeta,
+          closedDate.isAcceptableOrUnknown(
+              data['closed_date']!, _closedDateMeta));
+    }
+    if (data.containsKey('is_closed')) {
+      context.handle(_isClosedMeta,
+          isClosed.isAcceptableOrUnknown(data['is_closed']!, _isClosedMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+          _syncStatusMeta,
+          syncStatus.isAcceptableOrUnknown(
+              data['sync_status']!, _syncStatusMeta));
+    }
+    if (data.containsKey('last_accrual_date')) {
+      context.handle(
+          _lastAccrualDateMeta,
+          lastAccrualDate.isAcceptableOrUnknown(
+              data['last_accrual_date']!, _lastAccrualDateMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  MtfPosition map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return MtfPosition(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      investmentId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}investment_id'])!,
+      broker: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}broker'])!,
+      instrument: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}instrument'])!,
+      units: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}units'])!,
+      averagePrice: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}average_price'])!,
+      ownCapital: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}own_capital'])!,
+      borrowedCapital: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}borrowed_capital'])!,
+      interestRate: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}interest_rate'])!,
+      openingDate: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}opening_date'])!,
+      closedDate: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}closed_date']),
+      isClosed: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}is_closed'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      syncStatus: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}sync_status'])!,
+      lastAccrualDate: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}last_accrual_date']),
+    );
+  }
+
+  @override
+  $MtfPositionsTable createAlias(String alias) {
+    return $MtfPositionsTable(attachedDatabase, alias);
+  }
+}
+
+class MtfPosition extends DataClass implements Insertable<MtfPosition> {
+  final String id;
+  final String investmentId;
+  final String broker;
+  final String instrument;
+  final double units;
+  final double averagePrice;
+  final double ownCapital;
+  final double borrowedCapital;
+  final double interestRate;
+  final DateTime openingDate;
+  final DateTime? closedDate;
+  final int isClosed;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final String syncStatus;
+  final DateTime? lastAccrualDate;
+  const MtfPosition(
+      {required this.id,
+      required this.investmentId,
+      required this.broker,
+      required this.instrument,
+      required this.units,
+      required this.averagePrice,
+      required this.ownCapital,
+      required this.borrowedCapital,
+      required this.interestRate,
+      required this.openingDate,
+      this.closedDate,
+      required this.isClosed,
+      required this.createdAt,
+      required this.updatedAt,
+      required this.syncStatus,
+      this.lastAccrualDate});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['investment_id'] = Variable<String>(investmentId);
+    map['broker'] = Variable<String>(broker);
+    map['instrument'] = Variable<String>(instrument);
+    map['units'] = Variable<double>(units);
+    map['average_price'] = Variable<double>(averagePrice);
+    map['own_capital'] = Variable<double>(ownCapital);
+    map['borrowed_capital'] = Variable<double>(borrowedCapital);
+    map['interest_rate'] = Variable<double>(interestRate);
+    map['opening_date'] = Variable<DateTime>(openingDate);
+    if (!nullToAbsent || closedDate != null) {
+      map['closed_date'] = Variable<DateTime>(closedDate);
+    }
+    map['is_closed'] = Variable<int>(isClosed);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['sync_status'] = Variable<String>(syncStatus);
+    if (!nullToAbsent || lastAccrualDate != null) {
+      map['last_accrual_date'] = Variable<DateTime>(lastAccrualDate);
+    }
+    return map;
+  }
+
+  MtfPositionsCompanion toCompanion(bool nullToAbsent) {
+    return MtfPositionsCompanion(
+      id: Value(id),
+      investmentId: Value(investmentId),
+      broker: Value(broker),
+      instrument: Value(instrument),
+      units: Value(units),
+      averagePrice: Value(averagePrice),
+      ownCapital: Value(ownCapital),
+      borrowedCapital: Value(borrowedCapital),
+      interestRate: Value(interestRate),
+      openingDate: Value(openingDate),
+      closedDate: closedDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closedDate),
+      isClosed: Value(isClosed),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      syncStatus: Value(syncStatus),
+      lastAccrualDate: lastAccrualDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastAccrualDate),
+    );
+  }
+
+  factory MtfPosition.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return MtfPosition(
+      id: serializer.fromJson<String>(json['id']),
+      investmentId: serializer.fromJson<String>(json['investmentId']),
+      broker: serializer.fromJson<String>(json['broker']),
+      instrument: serializer.fromJson<String>(json['instrument']),
+      units: serializer.fromJson<double>(json['units']),
+      averagePrice: serializer.fromJson<double>(json['averagePrice']),
+      ownCapital: serializer.fromJson<double>(json['ownCapital']),
+      borrowedCapital: serializer.fromJson<double>(json['borrowedCapital']),
+      interestRate: serializer.fromJson<double>(json['interestRate']),
+      openingDate: serializer.fromJson<DateTime>(json['openingDate']),
+      closedDate: serializer.fromJson<DateTime?>(json['closedDate']),
+      isClosed: serializer.fromJson<int>(json['isClosed']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      syncStatus: serializer.fromJson<String>(json['syncStatus']),
+      lastAccrualDate: serializer.fromJson<DateTime?>(json['lastAccrualDate']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'investmentId': serializer.toJson<String>(investmentId),
+      'broker': serializer.toJson<String>(broker),
+      'instrument': serializer.toJson<String>(instrument),
+      'units': serializer.toJson<double>(units),
+      'averagePrice': serializer.toJson<double>(averagePrice),
+      'ownCapital': serializer.toJson<double>(ownCapital),
+      'borrowedCapital': serializer.toJson<double>(borrowedCapital),
+      'interestRate': serializer.toJson<double>(interestRate),
+      'openingDate': serializer.toJson<DateTime>(openingDate),
+      'closedDate': serializer.toJson<DateTime?>(closedDate),
+      'isClosed': serializer.toJson<int>(isClosed),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'syncStatus': serializer.toJson<String>(syncStatus),
+      'lastAccrualDate': serializer.toJson<DateTime?>(lastAccrualDate),
+    };
+  }
+
+  MtfPosition copyWith(
+          {String? id,
+          String? investmentId,
+          String? broker,
+          String? instrument,
+          double? units,
+          double? averagePrice,
+          double? ownCapital,
+          double? borrowedCapital,
+          double? interestRate,
+          DateTime? openingDate,
+          Value<DateTime?> closedDate = const Value.absent(),
+          int? isClosed,
+          DateTime? createdAt,
+          DateTime? updatedAt,
+          String? syncStatus,
+          Value<DateTime?> lastAccrualDate = const Value.absent()}) =>
+      MtfPosition(
+        id: id ?? this.id,
+        investmentId: investmentId ?? this.investmentId,
+        broker: broker ?? this.broker,
+        instrument: instrument ?? this.instrument,
+        units: units ?? this.units,
+        averagePrice: averagePrice ?? this.averagePrice,
+        ownCapital: ownCapital ?? this.ownCapital,
+        borrowedCapital: borrowedCapital ?? this.borrowedCapital,
+        interestRate: interestRate ?? this.interestRate,
+        openingDate: openingDate ?? this.openingDate,
+        closedDate: closedDate.present ? closedDate.value : this.closedDate,
+        isClosed: isClosed ?? this.isClosed,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        syncStatus: syncStatus ?? this.syncStatus,
+        lastAccrualDate: lastAccrualDate.present
+            ? lastAccrualDate.value
+            : this.lastAccrualDate,
+      );
+  MtfPosition copyWithCompanion(MtfPositionsCompanion data) {
+    return MtfPosition(
+      id: data.id.present ? data.id.value : this.id,
+      investmentId: data.investmentId.present
+          ? data.investmentId.value
+          : this.investmentId,
+      broker: data.broker.present ? data.broker.value : this.broker,
+      instrument:
+          data.instrument.present ? data.instrument.value : this.instrument,
+      units: data.units.present ? data.units.value : this.units,
+      averagePrice: data.averagePrice.present
+          ? data.averagePrice.value
+          : this.averagePrice,
+      ownCapital:
+          data.ownCapital.present ? data.ownCapital.value : this.ownCapital,
+      borrowedCapital: data.borrowedCapital.present
+          ? data.borrowedCapital.value
+          : this.borrowedCapital,
+      interestRate: data.interestRate.present
+          ? data.interestRate.value
+          : this.interestRate,
+      openingDate:
+          data.openingDate.present ? data.openingDate.value : this.openingDate,
+      closedDate:
+          data.closedDate.present ? data.closedDate.value : this.closedDate,
+      isClosed: data.isClosed.present ? data.isClosed.value : this.isClosed,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      syncStatus:
+          data.syncStatus.present ? data.syncStatus.value : this.syncStatus,
+      lastAccrualDate: data.lastAccrualDate.present
+          ? data.lastAccrualDate.value
+          : this.lastAccrualDate,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MtfPosition(')
+          ..write('id: $id, ')
+          ..write('investmentId: $investmentId, ')
+          ..write('broker: $broker, ')
+          ..write('instrument: $instrument, ')
+          ..write('units: $units, ')
+          ..write('averagePrice: $averagePrice, ')
+          ..write('ownCapital: $ownCapital, ')
+          ..write('borrowedCapital: $borrowedCapital, ')
+          ..write('interestRate: $interestRate, ')
+          ..write('openingDate: $openingDate, ')
+          ..write('closedDate: $closedDate, ')
+          ..write('isClosed: $isClosed, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('lastAccrualDate: $lastAccrualDate')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      investmentId,
+      broker,
+      instrument,
+      units,
+      averagePrice,
+      ownCapital,
+      borrowedCapital,
+      interestRate,
+      openingDate,
+      closedDate,
+      isClosed,
+      createdAt,
+      updatedAt,
+      syncStatus,
+      lastAccrualDate);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MtfPosition &&
+          other.id == this.id &&
+          other.investmentId == this.investmentId &&
+          other.broker == this.broker &&
+          other.instrument == this.instrument &&
+          other.units == this.units &&
+          other.averagePrice == this.averagePrice &&
+          other.ownCapital == this.ownCapital &&
+          other.borrowedCapital == this.borrowedCapital &&
+          other.interestRate == this.interestRate &&
+          other.openingDate == this.openingDate &&
+          other.closedDate == this.closedDate &&
+          other.isClosed == this.isClosed &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.syncStatus == this.syncStatus &&
+          other.lastAccrualDate == this.lastAccrualDate);
+}
+
+class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
+  final Value<String> id;
+  final Value<String> investmentId;
+  final Value<String> broker;
+  final Value<String> instrument;
+  final Value<double> units;
+  final Value<double> averagePrice;
+  final Value<double> ownCapital;
+  final Value<double> borrowedCapital;
+  final Value<double> interestRate;
+  final Value<DateTime> openingDate;
+  final Value<DateTime?> closedDate;
+  final Value<int> isClosed;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<String> syncStatus;
+  final Value<DateTime?> lastAccrualDate;
+  final Value<int> rowid;
+  const MtfPositionsCompanion({
+    this.id = const Value.absent(),
+    this.investmentId = const Value.absent(),
+    this.broker = const Value.absent(),
+    this.instrument = const Value.absent(),
+    this.units = const Value.absent(),
+    this.averagePrice = const Value.absent(),
+    this.ownCapital = const Value.absent(),
+    this.borrowedCapital = const Value.absent(),
+    this.interestRate = const Value.absent(),
+    this.openingDate = const Value.absent(),
+    this.closedDate = const Value.absent(),
+    this.isClosed = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    this.lastAccrualDate = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  MtfPositionsCompanion.insert({
+    required String id,
+    required String investmentId,
+    required String broker,
+    required String instrument,
+    required double units,
+    required double averagePrice,
+    required double ownCapital,
+    required double borrowedCapital,
+    required double interestRate,
+    required DateTime openingDate,
+    this.closedDate = const Value.absent(),
+    this.isClosed = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.syncStatus = const Value.absent(),
+    this.lastAccrualDate = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        investmentId = Value(investmentId),
+        broker = Value(broker),
+        instrument = Value(instrument),
+        units = Value(units),
+        averagePrice = Value(averagePrice),
+        ownCapital = Value(ownCapital),
+        borrowedCapital = Value(borrowedCapital),
+        interestRate = Value(interestRate),
+        openingDate = Value(openingDate),
+        createdAt = Value(createdAt),
+        updatedAt = Value(updatedAt);
+  static Insertable<MtfPosition> custom({
+    Expression<String>? id,
+    Expression<String>? investmentId,
+    Expression<String>? broker,
+    Expression<String>? instrument,
+    Expression<double>? units,
+    Expression<double>? averagePrice,
+    Expression<double>? ownCapital,
+    Expression<double>? borrowedCapital,
+    Expression<double>? interestRate,
+    Expression<DateTime>? openingDate,
+    Expression<DateTime>? closedDate,
+    Expression<int>? isClosed,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<String>? syncStatus,
+    Expression<DateTime>? lastAccrualDate,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (investmentId != null) 'investment_id': investmentId,
+      if (broker != null) 'broker': broker,
+      if (instrument != null) 'instrument': instrument,
+      if (units != null) 'units': units,
+      if (averagePrice != null) 'average_price': averagePrice,
+      if (ownCapital != null) 'own_capital': ownCapital,
+      if (borrowedCapital != null) 'borrowed_capital': borrowedCapital,
+      if (interestRate != null) 'interest_rate': interestRate,
+      if (openingDate != null) 'opening_date': openingDate,
+      if (closedDate != null) 'closed_date': closedDate,
+      if (isClosed != null) 'is_closed': isClosed,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
+      if (lastAccrualDate != null) 'last_accrual_date': lastAccrualDate,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  MtfPositionsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? investmentId,
+      Value<String>? broker,
+      Value<String>? instrument,
+      Value<double>? units,
+      Value<double>? averagePrice,
+      Value<double>? ownCapital,
+      Value<double>? borrowedCapital,
+      Value<double>? interestRate,
+      Value<DateTime>? openingDate,
+      Value<DateTime?>? closedDate,
+      Value<int>? isClosed,
+      Value<DateTime>? createdAt,
+      Value<DateTime>? updatedAt,
+      Value<String>? syncStatus,
+      Value<DateTime?>? lastAccrualDate,
+      Value<int>? rowid}) {
+    return MtfPositionsCompanion(
+      id: id ?? this.id,
+      investmentId: investmentId ?? this.investmentId,
+      broker: broker ?? this.broker,
+      instrument: instrument ?? this.instrument,
+      units: units ?? this.units,
+      averagePrice: averagePrice ?? this.averagePrice,
+      ownCapital: ownCapital ?? this.ownCapital,
+      borrowedCapital: borrowedCapital ?? this.borrowedCapital,
+      interestRate: interestRate ?? this.interestRate,
+      openingDate: openingDate ?? this.openingDate,
+      closedDate: closedDate ?? this.closedDate,
+      isClosed: isClosed ?? this.isClosed,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+      lastAccrualDate: lastAccrualDate ?? this.lastAccrualDate,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (investmentId.present) {
+      map['investment_id'] = Variable<String>(investmentId.value);
+    }
+    if (broker.present) {
+      map['broker'] = Variable<String>(broker.value);
+    }
+    if (instrument.present) {
+      map['instrument'] = Variable<String>(instrument.value);
+    }
+    if (units.present) {
+      map['units'] = Variable<double>(units.value);
+    }
+    if (averagePrice.present) {
+      map['average_price'] = Variable<double>(averagePrice.value);
+    }
+    if (ownCapital.present) {
+      map['own_capital'] = Variable<double>(ownCapital.value);
+    }
+    if (borrowedCapital.present) {
+      map['borrowed_capital'] = Variable<double>(borrowedCapital.value);
+    }
+    if (interestRate.present) {
+      map['interest_rate'] = Variable<double>(interestRate.value);
+    }
+    if (openingDate.present) {
+      map['opening_date'] = Variable<DateTime>(openingDate.value);
+    }
+    if (closedDate.present) {
+      map['closed_date'] = Variable<DateTime>(closedDate.value);
+    }
+    if (isClosed.present) {
+      map['is_closed'] = Variable<int>(isClosed.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    if (lastAccrualDate.present) {
+      map['last_accrual_date'] = Variable<DateTime>(lastAccrualDate.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('MtfPositionsCompanion(')
+          ..write('id: $id, ')
+          ..write('investmentId: $investmentId, ')
+          ..write('broker: $broker, ')
+          ..write('instrument: $instrument, ')
+          ..write('units: $units, ')
+          ..write('averagePrice: $averagePrice, ')
+          ..write('ownCapital: $ownCapital, ')
+          ..write('borrowedCapital: $borrowedCapital, ')
+          ..write('interestRate: $interestRate, ')
+          ..write('openingDate: $openingDate, ')
+          ..write('closedDate: $closedDate, ')
+          ..write('isClosed: $isClosed, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('lastAccrualDate: $lastAccrualDate, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -9031,6 +9816,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $AchievementsTable achievements = $AchievementsTable(this);
   late final $AchievementProgressTable achievementProgress =
       $AchievementProgressTable(this);
+  late final $MtfPositionsTable mtfPositions = $MtfPositionsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -9055,7 +9841,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         adjustments,
         milestones,
         achievements,
-        achievementProgress
+        achievementProgress,
+        mtfPositions
       ];
 }
 
@@ -9721,6 +10508,22 @@ final class $$InvestmentsTableReferences
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
+
+  static MultiTypedResultKey<$MtfPositionsTable, List<MtfPosition>>
+      _mtfPositionsRefsTable(_$AppDatabase db) =>
+          MultiTypedResultKey.fromTable(db.mtfPositions,
+              aliasName: $_aliasNameGenerator(
+                  db.investments.id, db.mtfPositions.investmentId));
+
+  $$MtfPositionsTableProcessedTableManager get mtfPositionsRefs {
+    final manager = $$MtfPositionsTableTableManager($_db, $_db.mtfPositions)
+        .filter(
+            (f) => f.investmentId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_mtfPositionsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
 }
 
 class $$InvestmentsTableFilterComposer
@@ -9786,6 +10589,27 @@ class $$InvestmentsTableFilterComposer
                   $removeJoinBuilderFromRootComposer:
                       $removeJoinBuilderFromRootComposer,
                 ));
+    return f(composer);
+  }
+
+  Expression<bool> mtfPositionsRefs(
+      Expression<bool> Function($$MtfPositionsTableFilterComposer f) f) {
+    final $$MtfPositionsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.mtfPositions,
+        getReferencedColumn: (t) => t.investmentId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$MtfPositionsTableFilterComposer(
+              $db: $db,
+              $table: $db.mtfPositions,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
     return f(composer);
   }
 }
@@ -9898,6 +10722,27 @@ class $$InvestmentsTableAnnotationComposer
                 ));
     return f(composer);
   }
+
+  Expression<T> mtfPositionsRefs<T extends Object>(
+      Expression<T> Function($$MtfPositionsTableAnnotationComposer a) f) {
+    final $$MtfPositionsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.mtfPositions,
+        getReferencedColumn: (t) => t.investmentId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$MtfPositionsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.mtfPositions,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$InvestmentsTableTableManager extends RootTableManager<
@@ -9911,7 +10756,8 @@ class $$InvestmentsTableTableManager extends RootTableManager<
     $$InvestmentsTableUpdateCompanionBuilder,
     (Investment, $$InvestmentsTableReferences),
     Investment,
-    PrefetchHooks Function({bool investmentBalanceCachesRefs})> {
+    PrefetchHooks Function(
+        {bool investmentBalanceCachesRefs, bool mtfPositionsRefs})> {
   $$InvestmentsTableTableManager(_$AppDatabase db, $InvestmentsTable table)
       : super(TableManagerState(
           db: db,
@@ -9984,11 +10830,13 @@ class $$InvestmentsTableTableManager extends RootTableManager<
                     $$InvestmentsTableReferences(db, table, e)
                   ))
               .toList(),
-          prefetchHooksCallback: ({investmentBalanceCachesRefs = false}) {
+          prefetchHooksCallback: (
+              {investmentBalanceCachesRefs = false, mtfPositionsRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
-                if (investmentBalanceCachesRefs) db.investmentBalanceCaches
+                if (investmentBalanceCachesRefs) db.investmentBalanceCaches,
+                if (mtfPositionsRefs) db.mtfPositions
               ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
@@ -10002,6 +10850,19 @@ class $$InvestmentsTableTableManager extends RootTableManager<
                         managerFromTypedResult: (p0) =>
                             $$InvestmentsTableReferences(db, table, p0)
                                 .investmentBalanceCachesRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.investmentId == item.id),
+                        typedResults: items),
+                  if (mtfPositionsRefs)
+                    await $_getPrefetchedData<Investment, $InvestmentsTable,
+                            MtfPosition>(
+                        currentTable: table,
+                        referencedTable: $$InvestmentsTableReferences
+                            ._mtfPositionsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$InvestmentsTableReferences(db, table, p0)
+                                .mtfPositionsRefs,
                         referencedItemsForCurrentItem:
                             (item, referencedItems) => referencedItems
                                 .where((e) => e.investmentId == item.id),
@@ -10024,7 +10885,8 @@ typedef $$InvestmentsTableProcessedTableManager = ProcessedTableManager<
     $$InvestmentsTableUpdateCompanionBuilder,
     (Investment, $$InvestmentsTableReferences),
     Investment,
-    PrefetchHooks Function({bool investmentBalanceCachesRefs})>;
+    PrefetchHooks Function(
+        {bool investmentBalanceCachesRefs, bool mtfPositionsRefs})>;
 typedef $$InvestmentLotsTableCreateCompanionBuilder = InvestmentLotsCompanion
     Function({
   required String id,
@@ -14563,6 +15425,452 @@ typedef $$AchievementProgressTableProcessedTableManager = ProcessedTableManager<
     ),
     AchievementProgressData,
     PrefetchHooks Function()>;
+typedef $$MtfPositionsTableCreateCompanionBuilder = MtfPositionsCompanion
+    Function({
+  required String id,
+  required String investmentId,
+  required String broker,
+  required String instrument,
+  required double units,
+  required double averagePrice,
+  required double ownCapital,
+  required double borrowedCapital,
+  required double interestRate,
+  required DateTime openingDate,
+  Value<DateTime?> closedDate,
+  Value<int> isClosed,
+  required DateTime createdAt,
+  required DateTime updatedAt,
+  Value<String> syncStatus,
+  Value<DateTime?> lastAccrualDate,
+  Value<int> rowid,
+});
+typedef $$MtfPositionsTableUpdateCompanionBuilder = MtfPositionsCompanion
+    Function({
+  Value<String> id,
+  Value<String> investmentId,
+  Value<String> broker,
+  Value<String> instrument,
+  Value<double> units,
+  Value<double> averagePrice,
+  Value<double> ownCapital,
+  Value<double> borrowedCapital,
+  Value<double> interestRate,
+  Value<DateTime> openingDate,
+  Value<DateTime?> closedDate,
+  Value<int> isClosed,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+  Value<String> syncStatus,
+  Value<DateTime?> lastAccrualDate,
+  Value<int> rowid,
+});
+
+final class $$MtfPositionsTableReferences
+    extends BaseReferences<_$AppDatabase, $MtfPositionsTable, MtfPosition> {
+  $$MtfPositionsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $InvestmentsTable _investmentIdTable(_$AppDatabase db) =>
+      db.investments.createAlias($_aliasNameGenerator(
+          db.mtfPositions.investmentId, db.investments.id));
+
+  $$InvestmentsTableProcessedTableManager get investmentId {
+    final $_column = $_itemColumn<String>('investment_id')!;
+
+    final manager = $$InvestmentsTableTableManager($_db, $_db.investments)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_investmentIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$MtfPositionsTableFilterComposer
+    extends Composer<_$AppDatabase, $MtfPositionsTable> {
+  $$MtfPositionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get broker => $composableBuilder(
+      column: $table.broker, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get instrument => $composableBuilder(
+      column: $table.instrument, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get units => $composableBuilder(
+      column: $table.units, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get averagePrice => $composableBuilder(
+      column: $table.averagePrice, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get ownCapital => $composableBuilder(
+      column: $table.ownCapital, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get borrowedCapital => $composableBuilder(
+      column: $table.borrowedCapital,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get interestRate => $composableBuilder(
+      column: $table.interestRate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get openingDate => $composableBuilder(
+      column: $table.openingDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get closedDate => $composableBuilder(
+      column: $table.closedDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get isClosed => $composableBuilder(
+      column: $table.isClosed, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lastAccrualDate => $composableBuilder(
+      column: $table.lastAccrualDate,
+      builder: (column) => ColumnFilters(column));
+
+  $$InvestmentsTableFilterComposer get investmentId {
+    final $$InvestmentsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.investmentId,
+        referencedTable: $db.investments,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$InvestmentsTableFilterComposer(
+              $db: $db,
+              $table: $db.investments,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$MtfPositionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $MtfPositionsTable> {
+  $$MtfPositionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get broker => $composableBuilder(
+      column: $table.broker, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get instrument => $composableBuilder(
+      column: $table.instrument, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get units => $composableBuilder(
+      column: $table.units, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get averagePrice => $composableBuilder(
+      column: $table.averagePrice,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get ownCapital => $composableBuilder(
+      column: $table.ownCapital, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get borrowedCapital => $composableBuilder(
+      column: $table.borrowedCapital,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get interestRate => $composableBuilder(
+      column: $table.interestRate,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get openingDate => $composableBuilder(
+      column: $table.openingDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get closedDate => $composableBuilder(
+      column: $table.closedDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get isClosed => $composableBuilder(
+      column: $table.isClosed, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lastAccrualDate => $composableBuilder(
+      column: $table.lastAccrualDate,
+      builder: (column) => ColumnOrderings(column));
+
+  $$InvestmentsTableOrderingComposer get investmentId {
+    final $$InvestmentsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.investmentId,
+        referencedTable: $db.investments,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$InvestmentsTableOrderingComposer(
+              $db: $db,
+              $table: $db.investments,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$MtfPositionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $MtfPositionsTable> {
+  $$MtfPositionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get broker =>
+      $composableBuilder(column: $table.broker, builder: (column) => column);
+
+  GeneratedColumn<String> get instrument => $composableBuilder(
+      column: $table.instrument, builder: (column) => column);
+
+  GeneratedColumn<double> get units =>
+      $composableBuilder(column: $table.units, builder: (column) => column);
+
+  GeneratedColumn<double> get averagePrice => $composableBuilder(
+      column: $table.averagePrice, builder: (column) => column);
+
+  GeneratedColumn<double> get ownCapital => $composableBuilder(
+      column: $table.ownCapital, builder: (column) => column);
+
+  GeneratedColumn<double> get borrowedCapital => $composableBuilder(
+      column: $table.borrowedCapital, builder: (column) => column);
+
+  GeneratedColumn<double> get interestRate => $composableBuilder(
+      column: $table.interestRate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get openingDate => $composableBuilder(
+      column: $table.openingDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get closedDate => $composableBuilder(
+      column: $table.closedDate, builder: (column) => column);
+
+  GeneratedColumn<int> get isClosed =>
+      $composableBuilder(column: $table.isClosed, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastAccrualDate => $composableBuilder(
+      column: $table.lastAccrualDate, builder: (column) => column);
+
+  $$InvestmentsTableAnnotationComposer get investmentId {
+    final $$InvestmentsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.investmentId,
+        referencedTable: $db.investments,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$InvestmentsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.investments,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$MtfPositionsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $MtfPositionsTable,
+    MtfPosition,
+    $$MtfPositionsTableFilterComposer,
+    $$MtfPositionsTableOrderingComposer,
+    $$MtfPositionsTableAnnotationComposer,
+    $$MtfPositionsTableCreateCompanionBuilder,
+    $$MtfPositionsTableUpdateCompanionBuilder,
+    (MtfPosition, $$MtfPositionsTableReferences),
+    MtfPosition,
+    PrefetchHooks Function({bool investmentId})> {
+  $$MtfPositionsTableTableManager(_$AppDatabase db, $MtfPositionsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$MtfPositionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$MtfPositionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$MtfPositionsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> investmentId = const Value.absent(),
+            Value<String> broker = const Value.absent(),
+            Value<String> instrument = const Value.absent(),
+            Value<double> units = const Value.absent(),
+            Value<double> averagePrice = const Value.absent(),
+            Value<double> ownCapital = const Value.absent(),
+            Value<double> borrowedCapital = const Value.absent(),
+            Value<double> interestRate = const Value.absent(),
+            Value<DateTime> openingDate = const Value.absent(),
+            Value<DateTime?> closedDate = const Value.absent(),
+            Value<int> isClosed = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+            Value<String> syncStatus = const Value.absent(),
+            Value<DateTime?> lastAccrualDate = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              MtfPositionsCompanion(
+            id: id,
+            investmentId: investmentId,
+            broker: broker,
+            instrument: instrument,
+            units: units,
+            averagePrice: averagePrice,
+            ownCapital: ownCapital,
+            borrowedCapital: borrowedCapital,
+            interestRate: interestRate,
+            openingDate: openingDate,
+            closedDate: closedDate,
+            isClosed: isClosed,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            syncStatus: syncStatus,
+            lastAccrualDate: lastAccrualDate,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String investmentId,
+            required String broker,
+            required String instrument,
+            required double units,
+            required double averagePrice,
+            required double ownCapital,
+            required double borrowedCapital,
+            required double interestRate,
+            required DateTime openingDate,
+            Value<DateTime?> closedDate = const Value.absent(),
+            Value<int> isClosed = const Value.absent(),
+            required DateTime createdAt,
+            required DateTime updatedAt,
+            Value<String> syncStatus = const Value.absent(),
+            Value<DateTime?> lastAccrualDate = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              MtfPositionsCompanion.insert(
+            id: id,
+            investmentId: investmentId,
+            broker: broker,
+            instrument: instrument,
+            units: units,
+            averagePrice: averagePrice,
+            ownCapital: ownCapital,
+            borrowedCapital: borrowedCapital,
+            interestRate: interestRate,
+            openingDate: openingDate,
+            closedDate: closedDate,
+            isClosed: isClosed,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            syncStatus: syncStatus,
+            lastAccrualDate: lastAccrualDate,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$MtfPositionsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({investmentId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (investmentId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.investmentId,
+                    referencedTable:
+                        $$MtfPositionsTableReferences._investmentIdTable(db),
+                    referencedColumn:
+                        $$MtfPositionsTableReferences._investmentIdTable(db).id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$MtfPositionsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $MtfPositionsTable,
+    MtfPosition,
+    $$MtfPositionsTableFilterComposer,
+    $$MtfPositionsTableOrderingComposer,
+    $$MtfPositionsTableAnnotationComposer,
+    $$MtfPositionsTableCreateCompanionBuilder,
+    $$MtfPositionsTableUpdateCompanionBuilder,
+    (MtfPosition, $$MtfPositionsTableReferences),
+    MtfPosition,
+    PrefetchHooks Function({bool investmentId})>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -14609,4 +15917,6 @@ class $AppDatabaseManager {
       $$AchievementsTableTableManager(_db, _db.achievements);
   $$AchievementProgressTableTableManager get achievementProgress =>
       $$AchievementProgressTableTableManager(_db, _db.achievementProgress);
+  $$MtfPositionsTableTableManager get mtfPositions =>
+      $$MtfPositionsTableTableManager(_db, _db.mtfPositions);
 }

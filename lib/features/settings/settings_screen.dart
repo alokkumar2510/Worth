@@ -432,14 +432,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required String value,
     required VoidCallback onTap,
   }) {
+    final bool isLongValue = value.length > 15;
     return ListTile(
       leading: Icon(icon, color: AppColors.darkPrimary),
       title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 14)),
+      subtitle: isLongValue
+          ? Text(value, style: const TextStyle(color: AppColors.grey500, fontSize: 12))
+          : null,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(value, style: const TextStyle(color: AppColors.grey500, fontSize: 13)),
-          const SizedBox(width: 8),
+          if (!isLongValue) ...[
+            Text(value, style: const TextStyle(color: AppColors.grey500, fontSize: 13)),
+            const SizedBox(width: 8),
+          ],
           const Icon(Icons.arrow_forward_ios, size: 12, color: AppColors.grey500),
         ],
       ),

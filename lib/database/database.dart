@@ -22,6 +22,7 @@ import 'tables/adjustments.dart';
 import 'tables/milestones.dart';
 import 'tables/achievements.dart';
 import 'tables/achievement_progress.dart';
+import 'tables/mtf_positions.dart';
 
 part 'database.g.dart';
 
@@ -46,13 +47,14 @@ part 'database.g.dart';
   Milestones,
   Achievements,
   AchievementProgress,
+  MtfPositions,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 5; // Bumping version for Gamification tables
-
+  int get schemaVersion => 6; // Bumping version for MTF Position Tracker
+ 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
@@ -89,6 +91,9 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(milestones);
             await m.createTable(achievements);
             await m.createTable(achievementProgress);
+          }
+          if (from < 6) {
+            await m.createTable(mtfPositions);
           }
         },
       );

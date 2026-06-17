@@ -33,7 +33,7 @@ class FinancialCalculatorService {
     return total;
   }
 
-  // Sum of all outstanding credit card balances and debt owed to other people
+  // Sum of all outstanding credit card balances, debt owed to other people, and MTF borrowed capital
   Future<double> calculateLiabilities() async {
     // 1. Credit Card Accounts
     final ccQuery = _db.select(_db.accounts).join([
@@ -65,7 +65,15 @@ class FinancialCalculatorService {
       debtTotal += cache.liabilityBalance;
     }
 
-    return ccTotal + debtTotal;
+    // 3. MTF Borrowed Capital
+    final mtfQuery = _db.select(_db.mtfPositions)..where((tbl) => tbl.isClosed.equals(0));
+    final mtfRows = await mtfQuery.get();
+    double mtfTotal = 0.0;
+    for (final row in mtfRows) {
+      mtfTotal += row.borrowedCapital;
+    }
+
+    return ccTotal + debtTotal + mtfTotal;
   }
 
   // Sum of all outstanding loans/receivables owed to us by other people
