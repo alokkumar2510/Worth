@@ -1970,6 +1970,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       createdAt: now,
       updatedAt: now,
       lastAccrualDate: openingDate,
+      syncStatus: 'pending',
     );
 
     final isMock = _ref.read(mockModeProvider);
@@ -1990,6 +1991,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         createdAt: now,
         updatedAt: now,
         lastAccrualDate: openingDate,
+        syncStatus: 'pending',
       ));
     }
 
@@ -2031,7 +2033,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
 
     final closedPos = pos.copyWith(
       isClosed: 1,
-      closedDate: date,
+      closedDate: Value(date),
       updatedAt: now,
     );
 
@@ -2084,7 +2086,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       );
     }
     state = state.copyWith(
-      mtfPositions: state.mtfPositions.map((p) => p.id == id ? p.copyWith(lastAccrualDate: date) : p).toList(),
+      mtfPositions: state.mtfPositions.map((p) => p.id == id ? p.copyWith(lastAccrualDate: Value(date)) : p).toList(),
     );
   }
 
@@ -2105,7 +2107,6 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
 
         for (int i = 1; i <= days; i++) {
           final accrualDate = lastAccrualDay.add(Duration(days: i));
-          final txId = _uuid.v4();
           final txNotes = 'MTF Interest Accrued for ${DateFormat("yyyy-MM-dd").format(accrualDate)}';
           
           await addTransaction(
@@ -2116,7 +2117,6 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
             investmentId: pos.investmentId,
             notes: txNotes,
             date: accrualDate,
-            id: txId,
           );
         }
 

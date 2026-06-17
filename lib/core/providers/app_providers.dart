@@ -22,6 +22,7 @@ import '../../features/transactions/domain/entities/transaction.dart';
 import '../../features/goals/domain/entities/goal.dart';
 import '../../features/reports/domain/entities/snapshot.dart';
 import '../../features/achievements/domain/services/gamification_engine.dart';
+import 'mock_database.dart';
 
 // Import repositories
 import '../../features/accounts/domain/repositories/account_repository.dart';
