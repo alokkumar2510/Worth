@@ -1,10 +1,10 @@
 # 💎 Worth — Premium Wealth Intelligence Center & Personal Wealth OS
 
-[![Flutter](https://img.shields.io/badge/Flutter-3.44.2-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
-[![Dart](https://img.shields.io/badge/Dart-3.12.2-0175C2?logo=dart&logoColor=white)](https://dart.dev)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![Flutter](https://img.shields.io/badge/Flutter-3.44.2-02569B)](https://flutter.dev)
+[![Dart](https://img.shields.io/badge/Dart-3.12.2-0175C2)](https://dart.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green)](https://opensource.org/licenses/MIT)
 [![SEO Friendly](https://img.shields.io/badge/SEO-Optimized-violet)](https://github.com/alokkumar2510/Worth)
-[![Aesthetics](https://img.shields.io/badge/Design-Premium%20Dark%20Theme-black)](https://github.com/alokkumar2510/Worth)
+[![Aesthetics](https://img.shields.io/badge/Design-Premium_Dark_Theme-black)](https://github.com/alokkumar2510/Worth)
 
 **Worth** is a privacy-first, premium personal wealth operating system and dashboard. Inspired by the designs of *Wealthfront*, *Copilot Money*, *Arc Browser*, and *Linear*, it completely moves away from generic finance templates and offers a state-of-the-art **Wealth Intelligence Center**. Track your net worth, manage assets, liabilities, receivables, investments, and expected income, and unlock beautifully animated custom-painted milestones.
 
