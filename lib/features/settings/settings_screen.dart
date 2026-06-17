@@ -332,6 +332,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             const SizedBox(height: 24),
 
+            // Specialized Tools
+            _buildSectionHeader('SPECIALIZED TOOLS'),
+            const SizedBox(height: 8),
+            GlassCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  _buildSettingsTile(
+                    icon: Icons.dashboard_customize_outlined,
+                    title: 'IPO Pool Dashboard',
+                    value: 'Active pools & pool creation',
+                    onTap: () => context.push('/settings/ipo_pool'),
+                  ),
+                  const Divider(color: AppColors.glassBorder, height: 1),
+                  _buildSettingsTile(
+                    icon: Icons.contact_mail_outlined,
+                    title: 'Contributor Ledger',
+                    value: 'Profiles, ROIs, and settlement history',
+                    onTap: () => context.push('/settings/ipo_pool/contributors'),
+                  ),
+                  const Divider(color: AppColors.glassBorder, height: 1),
+                  _buildSettingsTile(
+                    icon: Icons.history_edu_outlined,
+                    title: 'IPO History Archive',
+                    value: 'Timeline & statistics of listed pools',
+                    onTap: () => context.push('/settings/ipo_pool/archive'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
             // System Title
             _buildSectionHeader('SYSTEM ACTIONS'),
             const SizedBox(height: 8),

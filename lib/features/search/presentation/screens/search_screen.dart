@@ -9,6 +9,7 @@ import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/providers/mock_database.dart';
 import '../../../../core/constants/asset_paths.dart';
 import '../../../../core/constants/asset_constants.dart';
+import '../../../../core/widgets/empty_state_widget.dart';
 
 class SearchItem {
   final String id;
@@ -195,19 +196,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         ),
                       )
                     : filtered.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Image.asset(
-                                  AssetPaths.noSearchResults,
-                                  height: AssetConstants.emptyStateImageHeight,
-                                  semanticLabel: AssetConstants.noSearchResultsLabel,
-                                ),
-                                const SizedBox(height: 16),
-                                const Text('No results match your search.', style: TextStyle(color: AppColors.grey500)),
-                              ],
-                            ),
+                        ? const EmptyStateWidget(
+                            icon: Icons.search_off_outlined,
+                            title: 'No Results',
+                            description: 'Your search did not return any matches.',
                           )
                         : ListView.builder(
                             itemCount: filtered.length,

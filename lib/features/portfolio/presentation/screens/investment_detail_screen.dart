@@ -85,6 +85,7 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
     final nameController = TextEditingController(text: inv.name);
     final symbolController = TextEditingController(text: inv.symbol ?? '');
     final notesController = TextEditingController(text: inv.notes ?? '');
+    final priceController = TextEditingController(text: inv.marketValue?.toString() ?? '0');
     String type = inv.type;
 
     showDialog(
@@ -94,42 +95,51 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
           
           
           title: const Text('Edit Investment', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Investment Name', labelStyle: TextStyle(color: AppColors.grey500)),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: symbolController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Symbol / Ticker', labelStyle: TextStyle(color: AppColors.grey500)),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: type,
-                dropdownColor: AppColors.layer1,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Type', labelStyle: TextStyle(color: AppColors.grey500)),
-                items: const [
-                  DropdownMenuItem(value: 'mutual_fund', child: Text('Mutual Fund')),
-                  DropdownMenuItem(value: 'stock', child: Text('Direct Equity')),
-                  DropdownMenuItem(value: 'etf', child: Text('ETF')),
-                  DropdownMenuItem(value: 'crypto', child: Text('Crypto')),
-                  DropdownMenuItem(value: 'bond', child: Text('Bond / FD')),
-                ],
-                onChanged: (val) => setState(() => type = val!),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: notesController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Notes', labelStyle: TextStyle(color: AppColors.grey500)),
-              ),
-            ],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Investment Name', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: symbolController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Symbol / Ticker', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: type,
+                  dropdownColor: AppColors.layer1,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Type', labelStyle: TextStyle(color: AppColors.grey500)),
+                  items: const [
+                    DropdownMenuItem(value: 'mutual_fund', child: Text('Mutual Fund')),
+                    DropdownMenuItem(value: 'stock', child: Text('Direct Equity')),
+                    DropdownMenuItem(value: 'etf', child: Text('ETF')),
+                    DropdownMenuItem(value: 'crypto', child: Text('Crypto')),
+                    DropdownMenuItem(value: 'bond', child: Text('Bond / FD')),
+                  ],
+                  onChanged: (val) => setState(() => type = val!),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: priceController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Live Price / Unit', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Notes', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -141,6 +151,7 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                 final name = nameController.text.trim();
                 final symbol = symbolController.text.trim();
                 final notes = notesController.text.trim();
+                final price = double.tryParse(priceController.text.trim()) ?? 0.0;
                 if (name.isNotEmpty) {
                   ref.read(mockDatabaseProvider.notifier).updateInvestment(
                         inv.id,
@@ -149,6 +160,9 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                         symbol.isNotEmpty ? symbol : null,
                         notes.isNotEmpty ? notes : null,
                       );
+                  if (price > 0) {
+                    ref.read(mockDatabaseProvider.notifier).updateInvestmentMarketValue(inv.id, price);
+                  }
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Investment details updated.')),
@@ -437,6 +451,8 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
             onSelected: (menuVal) {
               if (menuVal == 'edit') {
                 _showEditInvestmentDialog(inv);
+              } else if (menuVal == 'update_price') {
+                _showUpdateMarketValueDialog(inv, currency);
               } else if (menuVal == 'adjust_amount') {
                 _showChooseAdjustmentTypeDialog(context, ref, inv, cap, value);
               } else if (menuVal == 'view_history') {
@@ -455,6 +471,10 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
               const PopupMenuItem(
                 value: 'edit',
                 child: Text('Edit Details', style: TextStyle(color: Colors.white)),
+              ),
+              const PopupMenuItem(
+                value: 'update_price',
+                child: Text('Update Live Price', style: TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
                 value: 'adjust_amount',
@@ -485,7 +505,11 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
               Row(
                 children: [
                   Expanded(
-                    child: _buildMetricCard('MARKET VALUE', format.format(value), Colors.white),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(24),
+                      onTap: () => _showUpdateMarketValueDialog(inv, currency),
+                      child: _buildMetricCard('MARKET VALUE', format.format(value), Colors.white, isEditable: true),
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -661,17 +685,26 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
     );
   }
 
-  Widget _buildMetricCard(String title, String value, Color valueColor) {
+  Widget _buildMetricCard(String title, String value, Color valueColor, {bool isEditable = false}) {
     return GlassCard(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.8),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.8),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (isEditable)
+                const Icon(Icons.edit, size: 10, color: AppColors.grey500),
+            ],
           ),
           const SizedBox(height: 8),
           Text(

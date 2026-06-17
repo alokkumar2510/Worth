@@ -5,6 +5,7 @@ import '../../database/database.dart';
 import '../../database/seeder.dart';
 export '../../database/database.dart' hide Transaction, Snapshot, Account, Investment, Goal, ExpectedIncome, Milestone, Achievement, AchievementProgress;
 import 'package:collection/collection.dart';
+import 'dart:convert';
 import 'app_providers.dart';
 import 'dependency_provider.dart';
 import '../mock_data/mock_constants.dart';
@@ -16,6 +17,7 @@ import '../mock_data/mock_goals.dart';
 import '../mock_data/mock_expected_incomes.dart';
 import '../mock_data/mock_snapshots.dart';
 import '../mock_data/mock_transactions.dart';
+import '../../features/ipo_pool/domain/entities/ipo_pool_models.dart';
 
 class MockDatabaseState {
   final List<Account> accounts;
@@ -28,6 +30,7 @@ class MockDatabaseState {
   final List<Goal> goals;
   final List<Snapshot> snapshots;
   final List<Adjustment> adjustments;
+  final List<IpoPool> ipoPools;
   
   // Settings & Auth State
   final String currency;
@@ -51,6 +54,7 @@ class MockDatabaseState {
     required this.goals,
     required this.snapshots,
     required this.adjustments,
+    required this.ipoPools,
     required this.currency,
     required this.themeMode,
     required this.appLockEnabled,
@@ -73,6 +77,7 @@ class MockDatabaseState {
     List<Goal>? goals,
     List<Snapshot>? snapshots,
     List<Adjustment>? adjustments,
+    List<IpoPool>? ipoPools,
     String? currency,
     String? themeMode,
     bool? appLockEnabled,
@@ -94,6 +99,7 @@ class MockDatabaseState {
       goals: goals ?? this.goals,
       snapshots: snapshots ?? this.snapshots,
       adjustments: adjustments ?? this.adjustments,
+      ipoPools: ipoPools ?? this.ipoPools,
       currency: currency ?? this.currency,
       themeMode: themeMode ?? this.themeMode,
       appLockEnabled: appLockEnabled ?? this.appLockEnabled,
@@ -378,6 +384,17 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final onboardingCompleted = settingsMap['onboardingCompleted'] == 'true' || isOnboarded;
       final firstAccountCreated = settingsMap['firstAccountCreated'] == 'true' || accounts.isNotEmpty;
 
+      List<IpoPool> ipoPools = [];
+      final ipoPoolsData = settingsMap['ipo_pools_data'];
+      if (ipoPoolsData != null) {
+        try {
+          final decoded = jsonDecode(ipoPoolsData) as List<dynamic>;
+          ipoPools = decoded.map((item) => IpoPool.fromJson(item as Map<String, dynamic>)).toList();
+        } catch (e) {
+          // ignore parsing issues
+        }
+      }
+
       state = MockDatabaseState(
         accounts: accounts,
         people: people,
@@ -389,6 +406,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         goals: goals,
         snapshots: snapshots,
         adjustments: adjustments,
+        ipoPools: ipoPools,
         currency: currency,
         themeMode: themeMode,
         appLockEnabled: appLockEnabled,
@@ -1864,6 +1882,37 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     }
   }
 
+  // --- IPO Pool Mutations ---
+
+  Future<void> addIpoPool(IpoPool pool) async {
+    final updatedList = [...state.ipoPools, pool];
+    state = state.copyWith(ipoPools: updatedList);
+    await _saveIpoPoolsToDb();
+  }
+
+  Future<void> updateIpoPool(IpoPool pool) async {
+    final updatedList = state.ipoPools.map((p) => p.id == pool.id ? pool : p).toList();
+    state = state.copyWith(ipoPools: updatedList);
+    await _saveIpoPoolsToDb();
+  }
+
+  Future<void> deleteIpoPool(String id) async {
+    final updatedList = state.ipoPools.where((p) => p.id != id).toList();
+    state = state.copyWith(ipoPools: updatedList);
+    await _saveIpoPoolsToDb();
+  }
+
+  Future<void> _saveIpoPoolsToDb() async {
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      final jsonStr = jsonEncode(state.ipoPools.map((p) => p.toJson()).toList());
+      await db.into(db.settings).insertOnConflictUpdate(
+        Setting(key: 'ipo_pools_data', value: jsonStr),
+      );
+    }
+  }
+
   // --- Initial seed data ---
 
   static MockDatabaseState initialState() {
@@ -1878,6 +1927,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       goals: const [],
       snapshots: getMockSnapshots(DateTime.now()),
       adjustments: const [],
+      ipoPools: const [],
       currency: mockCurrency,
       themeMode: 'dark', // Premium Dark Theme by default
       appLockEnabled: false,

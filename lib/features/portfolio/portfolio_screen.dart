@@ -11,6 +11,7 @@ import '../../core/providers/dependency_provider.dart';
 import '../../core/constants/asset_paths.dart';
 import '../../core/constants/asset_constants.dart';
 import '../../database/database.dart';
+import '../../core/widgets/empty_state_widget.dart';
 
 class PortfolioScreen extends ConsumerStatefulWidget {
   const PortfolioScreen({super.key});
@@ -308,7 +309,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
 
               if (name.isNotEmpty && units > 0 && price > 0) {
                 final notifier = ref.read(mockDatabaseProvider.notifier);
-                final inv = notifier.addInvestment(name, type, symbol.isNotEmpty ? symbol : null, 'Manual creation', units * price);
+                final inv = notifier.addInvestment(name, type, symbol.isNotEmpty ? symbol : null, 'Manual creation', price);
                 notifier.buyInvestment(inv.id, 'acc_primary_bank_uuid', units, price, 'Opening Buy', DateTime.now().toUtc());
                 Navigator.pop(context);
               }
@@ -599,6 +600,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     final nameController = TextEditingController(text: inv.name);
     final symbolController = TextEditingController(text: inv.symbol ?? '');
     final notesController = TextEditingController(text: inv.notes ?? '');
+    final priceController = TextEditingController(text: inv.marketValue?.toString() ?? '0');
     String type = inv.type;
 
     showDialog(
@@ -607,42 +609,51 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
         builder: (context, setState) => AlertDialog(
           
           title: const Text('Edit Investment', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Investment Name', labelStyle: TextStyle(color: AppColors.grey500)),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: symbolController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Symbol / Ticker', labelStyle: TextStyle(color: AppColors.grey500)),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: type,
-                dropdownColor: AppColors.layer1,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Type', labelStyle: TextStyle(color: AppColors.grey500)),
-                items: const [
-                  DropdownMenuItem(value: 'mutual_fund', child: Text('Mutual Fund')),
-                  DropdownMenuItem(value: 'stock', child: Text('Direct Equity')),
-                  DropdownMenuItem(value: 'etf', child: Text('ETF')),
-                  DropdownMenuItem(value: 'crypto', child: Text('Crypto')),
-                  DropdownMenuItem(value: 'bond', child: Text('Bond / FD')),
-                ],
-                onChanged: (val) => setState(() => type = val!),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: notesController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Notes', labelStyle: TextStyle(color: AppColors.grey500)),
-              ),
-            ],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Investment Name', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: symbolController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Symbol / Ticker', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: type,
+                  dropdownColor: AppColors.layer1,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Type', labelStyle: TextStyle(color: AppColors.grey500)),
+                  items: const [
+                    DropdownMenuItem(value: 'mutual_fund', child: Text('Mutual Fund')),
+                    DropdownMenuItem(value: 'stock', child: Text('Direct Equity')),
+                    DropdownMenuItem(value: 'etf', child: Text('ETF')),
+                    DropdownMenuItem(value: 'crypto', child: Text('Crypto')),
+                    DropdownMenuItem(value: 'bond', child: Text('Bond / FD')),
+                  ],
+                  onChanged: (val) => setState(() => type = val!),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: priceController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Live Price / Unit', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Notes', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -654,6 +665,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                 final name = nameController.text.trim();
                 final symbol = symbolController.text.trim();
                 final notes = notesController.text.trim();
+                final price = double.tryParse(priceController.text.trim()) ?? 0.0;
                 if (name.isNotEmpty) {
                   ref.read(mockDatabaseProvider.notifier).updateInvestment(
                         inv.id,
@@ -662,6 +674,9 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         symbol.isNotEmpty ? symbol : null,
                         notes.isNotEmpty ? notes : null,
                       );
+                  if (price > 0) {
+                    ref.read(mockDatabaseProvider.notifier).updateInvestmentMarketValue(inv.id, price);
+                  }
                   Navigator.pop(context);
                 }
               },
@@ -970,19 +985,11 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     if (assets.isEmpty) {
       return Scaffold(
         backgroundColor: Colors.transparent,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                AssetPaths.noAssets,
-                height: AssetConstants.emptyStateImageHeight,
-                semanticLabel: AssetConstants.noAssetsLabel,
-              ),
-              const SizedBox(height: 8),
-              _buildAddButton('Add New Account', _showAddAccountDialog),
-            ],
-          ),
+        body: EmptyStateWidget(
+          icon: Icons.account_balance_wallet_outlined,
+          title: 'No Assets Yet',
+          description: 'Start building your portfolio to see your wealth grow.',
+          action: _buildAddButton('Add New Account', _showAddAccountDialog),
         ),
       );
     }
@@ -1068,19 +1075,11 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     if (ccLiabilities.isEmpty && peopleLiabilities.isEmpty) {
       return Scaffold(
         backgroundColor: Colors.transparent,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                AssetPaths.noLiabilities,
-                height: AssetConstants.emptyStateImageHeight,
-                semanticLabel: AssetConstants.noLiabilitiesLabel,
-              ),
-              const SizedBox(height: 8),
-              _buildAddButton('Add New Liability', () => _showAddPersonDialog(false)),
-            ],
-          ),
+        body: EmptyStateWidget(
+          icon: Icons.trending_down_outlined,
+          title: 'No Liabilities Yet',
+          description: 'You have zero outstanding dues and your debt balance is empty.',
+          action: _buildAddButton('Add New Liability', () => _showAddPersonDialog(false)),
         ),
       );
     }
@@ -1220,19 +1219,11 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     if (investments.isEmpty) {
       return Scaffold(
         backgroundColor: Colors.transparent,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                AssetPaths.noInvestments,
-                height: AssetConstants.emptyStateImageHeight,
-                semanticLabel: AssetConstants.noInvestmentsLabel,
-              ),
-              const SizedBox(height: 8),
-              _buildAddButton('Add New Investment', _showAddInvestmentDialog),
-            ],
-          ),
+        body: EmptyStateWidget(
+          icon: Icons.show_chart_outlined,
+          title: 'No Investments Yet',
+          description: 'Track your stocks, mutual funds, and crypto portfolios here.',
+          action: _buildAddButton('Add New Investment', _showAddInvestmentDialog),
         ),
       );
     }
@@ -1330,19 +1321,11 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     if (receivables.isEmpty) {
       return Scaffold(
         backgroundColor: Colors.transparent,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                AssetPaths.noReceivables,
-                height: AssetConstants.emptyStateImageHeight,
-                semanticLabel: AssetConstants.noReceivablesLabel,
-              ),
-              const SizedBox(height: 8),
-              _buildAddButton('Add New Receivable', () => _showAddPersonDialog(true)),
-            ],
-          ),
+        body: EmptyStateWidget(
+          icon: Icons.handshake_outlined,
+          title: 'No Receivables Yet',
+          description: 'Your outstanding payment list is empty. You currently have zero outstanding money owed.',
+          action: _buildAddButton('Add New Receivable', () => _showAddPersonDialog(true)),
         ),
       );
     }
@@ -1424,19 +1407,11 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     if (expected.isEmpty) {
       return Scaffold(
         backgroundColor: Colors.transparent,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                AssetPaths.noExpectedIncome,
-                height: AssetConstants.emptyStateImageHeight,
-                semanticLabel: AssetConstants.noExpectedIncomeLabel,
-              ),
-              const SizedBox(height: 8),
-              _buildAddButton('Add Expected Income', _showAddExpectedDialog),
-            ],
-          ),
+        body: EmptyStateWidget(
+          icon: Icons.next_plan_outlined,
+          title: 'No Expected Income Yet',
+          description: 'Plan and track expected cash flow and future income streams.',
+          action: _buildAddButton('Add Expected Income', _showAddExpectedDialog),
         ),
       );
     }
@@ -1526,19 +1501,11 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     if (goals.isEmpty) {
       return Scaffold(
         backgroundColor: Colors.transparent,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                AssetPaths.noGoals,
-                height: AssetConstants.emptyStateImageHeight,
-                semanticLabel: AssetConstants.noGoalsLabel,
-              ),
-              const SizedBox(height: 8),
-              _buildAddButton('Add New Goal', _showAddGoalDialog),
-            ],
-          ),
+        body: EmptyStateWidget(
+          icon: Icons.flag_outlined,
+          title: 'No Goals Yet',
+          description: 'Define financial milestones to keep your savings motivated.',
+          action: _buildAddButton('Add New Goal', _showAddGoalDialog),
         ),
       );
     }

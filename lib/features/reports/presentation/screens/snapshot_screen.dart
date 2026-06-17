@@ -8,6 +8,7 @@ import '../../../../core/constants/asset_paths.dart';
 import '../../../../core/constants/asset_constants.dart';
 import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/providers/mock_database.dart';
+import '../../../../core/widgets/empty_state_widget.dart';
 import '../../../../core/providers/app_providers.dart';
 import '../../../../database/database.dart';
 
@@ -29,35 +30,10 @@ class SnapshotScreen extends ConsumerWidget {
       ),
       body: SafeArea(
         child: snapshots.isEmpty
-            ? Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Image.asset(
-                        AssetPaths.noExpectedIncome,
-                        height: AssetConstants.emptyStateImageHeight,
-                        semanticLabel: 'No Snapshots',
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        'No Snapshots Yet',
-                        style: GoogleFonts.outfit(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Take a snapshot of your current net worth to lock in your progress and start tracking historical changes.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(color: AppColors.grey500, height: 1.4),
-                      ),
-                    ],
-                  ),
-                ),
+            ? const EmptyStateWidget(
+                icon: Icons.camera_alt_outlined,
+                title: 'No Snapshots Yet',
+                description: 'Take a snapshot of your current net worth to lock in your progress and start tracking historical changes.',
               )
             : ListView.builder(
                 padding: const EdgeInsets.all(16.0),

@@ -22,6 +22,11 @@ import '../../features/settings/settings_screen.dart';
 import '../../features/settings/presentation/screens/profile_screen.dart';
 import '../../features/settings/presentation/screens/advanced_settings_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/ipo_pool/presentation/screens/ipo_dashboard_screen.dart';
+import '../../features/ipo_pool/presentation/screens/ipo_detail_screen.dart';
+import '../../features/ipo_pool/presentation/screens/ipo_contributors_list_screen.dart';
+import '../../features/ipo_pool/presentation/screens/contributor_profile_screen.dart';
+import '../../features/ipo_pool/presentation/screens/ipo_archive_screen.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/auth/providers/auth_providers.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
@@ -570,6 +575,56 @@ final routerProvider = Provider<GoRouter>((ref) {
                       state: state,
                       child: const AdvancedSettingsScreen(),
                     ),
+                  ),
+                  GoRoute(
+                    path: 'ipo_pool',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) => buildPremiumTransitionPage(
+                      state: state,
+                      child: const IpoDashboardScreen(),
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: 'contributors',
+                        parentNavigatorKey: _rootNavigatorKey,
+                        pageBuilder: (context, state) => buildPremiumTransitionPage(
+                          state: state,
+                          child: const IpoContributorsListScreen(),
+                        ),
+                        routes: [
+                          GoRoute(
+                            path: ':name',
+                            parentNavigatorKey: _rootNavigatorKey,
+                            pageBuilder: (context, state) {
+                              final name = state.pathParameters['name']!;
+                              return buildPremiumTransitionPage(
+                                state: state,
+                                child: ContributorProfileScreen(contributorName: name),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      GoRoute(
+                        path: 'archive',
+                        parentNavigatorKey: _rootNavigatorKey,
+                        pageBuilder: (context, state) => buildPremiumTransitionPage(
+                          state: state,
+                          child: const IpoArchiveScreen(),
+                        ),
+                      ),
+                      GoRoute(
+                        path: ':id',
+                        parentNavigatorKey: _rootNavigatorKey,
+                        pageBuilder: (context, state) {
+                          final id = state.pathParameters['id']!;
+                          return buildPremiumTransitionPage(
+                            state: state,
+                            child: IpoDetailScreen(ipoId: id),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),

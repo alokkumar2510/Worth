@@ -212,7 +212,7 @@ export default function Home() {
               <Github className="w-5 h-5" />
             </a>
             <a
-              href="https://github.com/alokkumar2510/Worth/releases/download/v1.0.0/app-release.apk"
+              href="https://github.com/alokkumar2510/Worth/releases/download/v1.1.0/app-release.apk"
               onMouseMove={handleMagneticMove}
               onMouseLeave={handleMagneticLeave}
               className="hidden sm:flex items-center gap-1.5 bg-[#7C4DFF] hover:bg-[#673AB7] text-white text-xs font-bold px-4 py-2.5 rounded-full transition-all duration-300 shadow-[0_4px_20px_rgba(124,77,255,0.4)]"
@@ -288,7 +288,7 @@ export default function Home() {
             className="flex flex-col sm:flex-row items-center gap-6 justify-center w-full max-w-sm sm:max-w-none"
           >
             <a
-              href="https://github.com/alokkumar2510/Worth/releases/download/v1.0.0/app-release.apk"
+              href="https://github.com/alokkumar2510/Worth/releases/download/v1.1.0/app-release.apk"
               onMouseMove={handleMagneticMove}
               onMouseLeave={handleMagneticLeave}
               className="w-full sm:w-auto flex items-center justify-center gap-2.5 bg-white text-black hover:bg-[#A78BFA] hover:text-black font-bold text-sm px-8 py-5 rounded-full transition-all duration-300 shadow-[0_10px_35px_rgba(255,255,255,0.15)] hover:scale-105"
@@ -857,7 +857,7 @@ export default function Home() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <a
-                href="https://github.com/alokkumar2510/Worth/releases/download/v1.0.0/app-release.apk"
+                href="https://github.com/alokkumar2510/Worth/releases/download/v1.1.0/app-release.apk"
                 onMouseMove={handleMagneticMove}
                 onMouseLeave={handleMagneticLeave}
                 className="w-full sm:w-auto flex items-center justify-center gap-2.5 bg-[#7C4DFF] hover:bg-[#673AB7] text-white text-sm font-bold px-8 py-5 rounded-full shadow-[0_6px_25px_rgba(124,77,255,0.4)]"
