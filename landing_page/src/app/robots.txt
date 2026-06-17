@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /_next/
+
+Sitemap: https://worth.alokkumarsahu.in/sitemap.xml
