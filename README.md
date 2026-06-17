@@ -8,6 +8,8 @@
 
 **Worth** is a privacy-first, premium personal wealth operating system and dashboard. Inspired by the designs of *Wealthfront*, *Copilot Money*, *Arc Browser*, and *Linear*, it completely moves away from generic finance templates and offers a state-of-the-art **Wealth Intelligence Center**. Track your net worth, manage assets, liabilities, receivables, investments, and expected income, and unlock beautifully animated custom-painted milestones.
 
+🔗 **Live Landing Page:** [worth.alokkumarsahu.in](https://worth.alokkumarsahu.in)
+
 ---
 
 ## 🎨 Visual Showcase & Interactive UIs
@@ -50,7 +52,9 @@ Timeline grouping, collapsible advanced filter trays, and multi-category chips p
 
 - **📊 Wealth Intelligence Reports & Spending Intelligence**: Custom multi-trend charts, allocation summaries (assets/liabilities/investments), and automatic textual financial insights. Spending Intelligence provides category breakdowns, daily heatmaps, monthly trend analysis, and dynamic insights for permanent wealth outflows.
 - **✨ Premium Onboarding Carousel**: A high-end, glassmorphic onboarding experience that introduces Worth's local-first architecture and key features prior to user sign-up.
-- **📈 Margin Trading Facility (MTF) Tracking**: Enhanced position date tracking and automatic daily and total accrued interest calculations (Days Held, Daily Interest, Total Interest Accrued).
+- **📈 Margin Trading Facility (MTF) Tracking**: Enhanced position date tracking, Position Open Date selection, and automatic daily and total accrued interest calculations (Days Held, Daily Interest, Total Interest Accrued).
+- **📅 Investment Date Audit & Validation**: Prevent silent defaulting of purchase dates; prompt for custom date/time selection with confirmation on creation/edit across all transaction forms.
+- **🔒 Permanent Member Since Lock**: Robust profile join date that locks in the account creation timestamp permanently, preventing resets after app updates or profile edits.
 - **📅 Systematic Investment Plans (SIPs)**: Automatic SIP scheduling and portfolio integration.
 - **💎 Custom-Painted Milestones & Achievements**: Net worth milestones (from ₹1K to ₹10M+) and 23 custom achievements. Celebrated using a fluid, Apple-Fitness-style Achievement Banner Queue with sweep gradients.
 - **🔔 Daily Financial Check-Ins**: Smart, non-spammy transaction logging reminders with custom daily notification schedules.
@@ -104,7 +108,7 @@ Worth is structured following clean coding patterns and responsive architectures
 ## 📦 Releases
 
 Download the latest production-ready APK directly from our releases:
-* **[Download Worth v1.3.0 APK](https://github.com/alokkumar2510/Worth/releases/download/v1.3.0/app-release.apk)**
+* **[Download Worth v1.4.0 APK](https://github.com/alokkumar2510/Worth/releases/download/v1.4.0/app-release.apk)**
 
 ---
 

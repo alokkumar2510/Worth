@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../database/database.dart';
 import '../../database/seeder.dart';
 export '../../database/database.dart' hide Transaction, Snapshot, Account, Investment, Goal, ExpectedIncome, Milestone, Achievement, AchievementProgress, Sip;
@@ -51,6 +52,13 @@ class MockDatabaseState {
   final String checkInReminderCount;
   final String checkInCompletedDate;
   final String lastTriggeredCheckIn;
+  final bool notificationsEnabled;
+  final bool notificationPrefTransactions;
+  final bool notificationPrefCheckIns;
+  final bool notificationPrefSip;
+  final bool notificationPrefGoals;
+  final bool notificationsAsked;
+  final DateTime? userCreatedAt;
 
   MockDatabaseState({
     required this.accounts,
@@ -80,6 +88,13 @@ class MockDatabaseState {
     required this.checkInReminderCount,
     required this.checkInCompletedDate,
     required this.lastTriggeredCheckIn,
+    required this.notificationsEnabled,
+    required this.notificationPrefTransactions,
+    required this.notificationPrefCheckIns,
+    required this.notificationPrefSip,
+    required this.notificationPrefGoals,
+    required this.notificationsAsked,
+    this.userCreatedAt,
   });
 
   MockDatabaseState copyWith({
@@ -110,6 +125,13 @@ class MockDatabaseState {
     String? checkInReminderCount,
     String? checkInCompletedDate,
     String? lastTriggeredCheckIn,
+    bool? notificationsEnabled,
+    bool? notificationPrefTransactions,
+    bool? notificationPrefCheckIns,
+    bool? notificationPrefSip,
+    bool? notificationPrefGoals,
+    bool? notificationsAsked,
+    DateTime? userCreatedAt,
   }) {
     return MockDatabaseState(
       accounts: accounts ?? this.accounts,
@@ -139,6 +161,13 @@ class MockDatabaseState {
       checkInReminderCount: checkInReminderCount ?? this.checkInReminderCount,
       checkInCompletedDate: checkInCompletedDate ?? this.checkInCompletedDate,
       lastTriggeredCheckIn: lastTriggeredCheckIn ?? this.lastTriggeredCheckIn,
+      notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+      notificationPrefTransactions: notificationPrefTransactions ?? this.notificationPrefTransactions,
+      notificationPrefCheckIns: notificationPrefCheckIns ?? this.notificationPrefCheckIns,
+      notificationPrefSip: notificationPrefSip ?? this.notificationPrefSip,
+      notificationPrefGoals: notificationPrefGoals ?? this.notificationPrefGoals,
+      notificationsAsked: notificationsAsked ?? this.notificationsAsked,
+      userCreatedAt: userCreatedAt ?? this.userCreatedAt,
     );
   }
 
@@ -395,6 +424,21 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     }
   }
 
+  void _queueSync(String entityType, String entityId, String operation) {
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      _ref.read(syncServiceProvider).queueOperation(
+        entityType: entityType,
+        entityId: entityId,
+        operation: operation,
+      );
+    }
+  }
+
+  void _syncSetting(String key) {
+    _queueSync('setting', key, 'upsert');
+  }
+
   Future<void> loadStateFromDatabase() async {
     try {
       final db = _ref.read(realDatabaseProvider);
@@ -428,6 +472,56 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final checkInReminderCount = settingsMap['checkInReminderCount'] ?? '4';
       final checkInCompletedDate = settingsMap['checkInCompletedDate'] ?? '';
       final lastTriggeredCheckIn = settingsMap['lastTriggeredCheckIn'] ?? '';
+      final notificationsEnabled = settingsMap['notificationsEnabled'] == 'true';
+      final notificationPrefTransactions = settingsMap['notificationPrefTransactions'] != 'false';
+      final notificationPrefCheckIns = settingsMap['notificationPrefCheckIns'] != 'false';
+      final notificationPrefSip = settingsMap['notificationPrefSip'] != 'false';
+      final notificationPrefGoals = settingsMap['notificationPrefGoals'] != 'false';
+      final notificationsAsked = settingsMap['notificationsAsked'] == 'true';
+
+      final userCreatedAtStr = settingsMap['user_created_at'];
+      DateTime? userCreatedAt;
+      if (userCreatedAtStr != null) {
+        userCreatedAt = DateTime.tryParse(userCreatedAtStr);
+      }
+
+      if (userCreatedAt == null) {
+        // Fallback checks
+        // 1. Firebase Auth user metadata
+        try {
+          final currentUser = FirebaseAuth.instance.currentUser;
+          if (currentUser != null && currentUser.metadata.creationTime != null) {
+            userCreatedAt = currentUser.metadata.creationTime;
+          }
+        } catch (e) {
+          // ignore
+        }
+
+        // 2. Oldest record in database
+        if (userCreatedAt == null) {
+          DateTime oldest = DateTime.now().toUtc();
+          for (final a in accounts) {
+            if (a.createdAt.isBefore(oldest)) oldest = a.createdAt;
+          }
+          for (final t in transactions) {
+            if (t.createdAt.isBefore(oldest)) oldest = t.createdAt;
+          }
+          for (final g in goals) {
+            if (g.createdAt.isBefore(oldest)) oldest = g.createdAt;
+          }
+          userCreatedAt = oldest;
+        }
+
+        // Save permanently to SQLite settings
+        final resolvedString = userCreatedAt!.toUtc().toIso8601String();
+        final isMock = _ref.read(mockModeProvider);
+        if (!isMock) {
+          final db = _ref.read(realDatabaseProvider);
+          await db.into(db.settings).insertOnConflictUpdate(
+            Setting(key: 'user_created_at', value: resolvedString),
+          );
+        }
+      }
 
       List<IpoPool> ipoPools = [];
       final ipoPoolsData = settingsMap['ipo_pools_data'];
@@ -468,6 +562,13 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         checkInReminderCount: checkInReminderCount,
         checkInCompletedDate: checkInCompletedDate,
         lastTriggeredCheckIn: lastTriggeredCheckIn,
+        notificationsEnabled: notificationsEnabled,
+        notificationPrefTransactions: notificationPrefTransactions,
+        notificationPrefCheckIns: notificationPrefCheckIns,
+        notificationPrefSip: notificationPrefSip,
+        notificationPrefGoals: notificationPrefGoals,
+        notificationsAsked: notificationsAsked,
+        userCreatedAt: userCreatedAt,
       );
 
       // Trigger background operations & gamification engine evaluation
@@ -495,6 +596,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
       db.into(db.settings).insertOnConflictUpdate(Setting(key: 'isLoggedIn', value: 'true'));
+      _syncSetting('isLoggedIn');
     }
   }
 
@@ -504,6 +606,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
       db.into(db.settings).insertOnConflictUpdate(Setting(key: 'isLoggedIn', value: 'false'));
+      _syncSetting('isLoggedIn');
     }
   }
 
@@ -513,6 +616,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
       await db.into(db.settings).insertOnConflictUpdate(Setting(key: 'onboardingCompleted', value: 'true'));
+      _syncSetting('onboardingCompleted');
     }
   }
 
@@ -522,21 +626,80 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
       await db.into(db.settings).insertOnConflictUpdate(Setting(key: 'firstAccountCreated', value: 'true'));
+      _syncSetting('firstAccountCreated');
     }
   }
 
   Future<void> completeOnboarding() async {
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await db.transaction(() async {
+        await db.into(db.settings).insertOnConflictUpdate(Setting(key: 'isOnboarded', value: 'true'));
+        await db.into(db.settings).insertOnConflictUpdate(Setting(key: 'onboardingCompleted', value: 'true'));
+        await db.into(db.settings).insertOnConflictUpdate(Setting(key: 'firstAccountCreated', value: 'true'));
+      });
+      _syncSetting('isOnboarded');
+      _syncSetting('onboardingCompleted');
+      _syncSetting('firstAccountCreated');
+    }
     state = state.copyWith(
       isOnboarded: true,
       onboardingCompleted: true,
       firstAccountCreated: true,
     );
+  }
+
+  void updateNotificationsEnabled(bool enabled) {
+    state = state.copyWith(notificationsEnabled: enabled);
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
-      await db.into(db.settings).insertOnConflictUpdate(Setting(key: 'isOnboarded', value: 'true'));
-      await db.into(db.settings).insertOnConflictUpdate(Setting(key: 'onboardingCompleted', value: 'true'));
-      await db.into(db.settings).insertOnConflictUpdate(Setting(key: 'firstAccountCreated', value: 'true'));
+      db.into(db.settings).insertOnConflictUpdate(Setting(key: 'notificationsEnabled', value: enabled ? 'true' : 'false'));
+      _syncSetting('notificationsEnabled');
+    }
+  }
+
+  void updateNotificationPref(String preferenceKey, bool value) {
+    final isMock = _ref.read(mockModeProvider);
+    if (preferenceKey == 'transactions') {
+      state = state.copyWith(notificationPrefTransactions: value);
+      if (!isMock) {
+        final db = _ref.read(realDatabaseProvider);
+        db.into(db.settings).insertOnConflictUpdate(Setting(key: 'notificationPrefTransactions', value: value ? 'true' : 'false'));
+        _syncSetting('notificationPrefTransactions');
+      }
+    } else if (preferenceKey == 'checkins') {
+      state = state.copyWith(notificationPrefCheckIns: value);
+      if (!isMock) {
+        final db = _ref.read(realDatabaseProvider);
+        db.into(db.settings).insertOnConflictUpdate(Setting(key: 'notificationPrefCheckIns', value: value ? 'true' : 'false'));
+        _syncSetting('notificationPrefCheckIns');
+      }
+    } else if (preferenceKey == 'sip') {
+      state = state.copyWith(notificationPrefSip: value);
+      if (!isMock) {
+        final db = _ref.read(realDatabaseProvider);
+        db.into(db.settings).insertOnConflictUpdate(Setting(key: 'notificationPrefSip', value: value ? 'true' : 'false'));
+        _syncSetting('notificationPrefSip');
+      }
+    } else if (preferenceKey == 'goals') {
+      state = state.copyWith(notificationPrefGoals: value);
+      if (!isMock) {
+        final db = _ref.read(realDatabaseProvider);
+        db.into(db.settings).insertOnConflictUpdate(Setting(key: 'notificationPrefGoals', value: value ? 'true' : 'false'));
+        _syncSetting('notificationPrefGoals');
+      }
+    }
+  }
+
+  void setNotificationsAsked(bool asked) {
+    state = state.copyWith(notificationsAsked: asked);
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      db.into(db.settings).insertOnConflictUpdate(Setting(key: 'notificationsAsked', value: asked ? 'true' : 'false'));
+      _syncSetting('notificationsAsked');
     }
   }
 
@@ -548,6 +711,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
       db.into(db.settings).insertOnConflictUpdate(Setting(key: 'currency', value: newCurrency));
+      _syncSetting('currency');
     }
   }
 
@@ -557,6 +721,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
       db.into(db.settings).insertOnConflictUpdate(Setting(key: 'themeMode', value: theme));
+      _syncSetting('themeMode');
     }
   }
 
@@ -567,6 +732,8 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final db = _ref.read(realDatabaseProvider);
       db.into(db.settings).insertOnConflictUpdate(Setting(key: 'appLockEnabled', value: enabled ? 'true' : 'false'));
       db.into(db.settings).insertOnConflictUpdate(Setting(key: 'appLockPin', value: pin));
+      _syncSetting('appLockEnabled');
+      _syncSetting('appLockPin');
     }
   }
 
@@ -576,6 +743,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
       db.into(db.settings).insertOnConflictUpdate(Setting(key: 'appLockTimeout', value: seconds.toString()));
+      _syncSetting('appLockTimeout');
     }
   }
 
@@ -620,6 +788,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
       await db.into(db.accounts).insert(newAccount);
+      _queueSync('account', actualId, 'upsert');
       if (openingBalance > 0) {
         if (type == 'credit') {
           await addBorrowTransaction(actualId, actualId, openingBalance, 'Opening Balance Owed', now);
@@ -672,6 +841,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       db.update(db.accounts)
         ..where((tbl) => tbl.id.equals(accountId))
         ..write(AccountsCompanion(isArchived: const Value(1), updatedAt: Value(DateTime.now().toUtc())));
+      _queueSync('account', accountId, 'upsert');
     } else {
       state = state.copyWith(
         accounts: state.accounts.map((a) {
@@ -704,6 +874,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
           notes: Value(notes),
           updatedAt: Value(DateTime.now().toUtc()),
         ));
+      _queueSync('account', id, 'upsert');
     } else {
       state = state.copyWith(
         accounts: state.accounts.map((a) {
@@ -733,6 +904,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final count = (await countQuery.get()).length;
       if (count > 0) return false;
       await (db.delete(db.accounts)..where((tbl) => tbl.id.equals(id))).go();
+      _queueSync('account', id, 'delete');
       return true;
     } else {
       final count = state.transactions.where((t) => t.fromAccountId == id || t.toAccountId == id).length;
@@ -768,6 +940,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
           .write(TransactionsCompanion(toAccountId: Value(toId)));
         await (db.delete(db.accounts)..where((tbl) => tbl.id.equals(fromId))).go();
       });
+      _queueSync('account', fromId, 'delete');
       await _ref.read(realBalanceCacheServiceProvider).rebuildCache();
     } else {
       state = state.copyWith(
@@ -801,6 +974,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
       db.into(db.people).insert(newPerson);
+      _queueSync('person', id, 'upsert');
     } else {
       state = state.copyWith(people: [...state.people, newPerson]);
     }
@@ -818,6 +992,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
           notes: Value(notes),
           updatedAt: Value(DateTime.now().toUtc()),
         ));
+      _queueSync('person', id, 'upsert');
     } else {
       state = state.copyWith(
         people: state.people.map((p) {
@@ -847,6 +1022,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final count = (await countQuery.get()).length;
       if (count > 0) return false;
       await (db.delete(db.people)..where((tbl) => tbl.id.equals(id))).go();
+      _queueSync('person', id, 'delete');
       return true;
     } else {
       final count = state.transactions.where((t) => t.personId == id).length;
@@ -867,6 +1043,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
           isArchived: const Value(1),
           updatedAt: Value(DateTime.now().toUtc()),
         ));
+      _queueSync('person', id, 'upsert');
     } else {
       state = state.copyWith(
         people: state.people.map((p) {
@@ -932,7 +1109,15 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     );
   }
 
-  Investment addInvestment(String name, String type, String? symbol, String? notes, double marketValue) {
+  Investment addInvestment(
+    String name,
+    String type,
+    String? symbol,
+    String? notes,
+    double marketValue, {
+    DateTime? purchaseDate,
+    String? purchaseTime,
+  }) {
     final id = _uuid.v4();
     final now = DateTime.now().toUtc();
     final newInvestment = Investment(
@@ -944,6 +1129,8 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       marketValueUpdatedAt: now,
       isArchived: 0,
       notes: notes,
+      purchaseDate: purchaseDate,
+      purchaseTime: purchaseTime,
       createdAt: now,
       updatedAt: now,
       syncStatus: 'pending',
@@ -953,6 +1140,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
       db.into(db.investments).insert(newInvestment);
+      _queueSync('investment', id, 'upsert');
     } else {
       state = state.copyWith(investments: [...state.investments, newInvestment]);
     }
@@ -963,6 +1151,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
       _ref.read(realInvestmentServiceProvider).updateMarketValue(investmentId, newValue);
+      _queueSync('investment', investmentId, 'upsert');
     } else {
       state = state.copyWith(
         investments: state.investments.map((i) {
@@ -987,7 +1176,15 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     }
   }
 
-  Future<void> updateInvestment(String id, String name, String type, String? symbol, String? notes) async {
+  Future<void> updateInvestment(
+    String id,
+    String name,
+    String type,
+    String? symbol,
+    String? notes, {
+    DateTime? purchaseDate,
+    String? purchaseTime,
+  }) async {
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
@@ -997,8 +1194,11 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
           type: Value(type),
           symbol: Value(symbol),
           notes: Value(notes),
+          purchaseDate: Value(purchaseDate),
+          purchaseTime: Value(purchaseTime),
           updatedAt: Value(DateTime.now().toUtc()),
         ));
+      _queueSync('investment', id, 'upsert');
     } else {
       state = state.copyWith(
         investments: state.investments.map((i) {
@@ -1008,6 +1208,8 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
               type: type,
               symbol: Value(symbol),
               notes: Value(notes),
+              purchaseDate: Value(purchaseDate),
+              purchaseTime: Value(purchaseTime),
               updatedAt: DateTime.now().toUtc(),
             );
           }
@@ -1025,6 +1227,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final count = (await countQuery.get()).length;
       if (count > 0) return false;
       await (db.delete(db.investments)..where((tbl) => tbl.id.equals(id))).go();
+      _queueSync('investment', id, 'delete');
       return true;
     } else {
       final count = state.investmentLots.where((l) => l.investmentId == id).length;
@@ -1045,6 +1248,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
           isArchived: const Value(1),
           updatedAt: Value(DateTime.now().toUtc()),
         ));
+      _queueSync('investment', id, 'upsert');
     } else {
       state = state.copyWith(
         investments: state.investments.map((i) {
@@ -1282,6 +1486,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         syncStatus: 'pending',
       );
       await db.update(db.expectedIncomes).replace(dbInc);
+      _queueSync('expected_income', item.id, 'upsert');
     } else {
       state = state.copyWith(
         expectedIncomes: state.expectedIncomes.map((i) => i.id == item.id ? item : i).toList(),
@@ -1294,6 +1499,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
       await (db.delete(db.expectedIncomes)..where((tbl) => tbl.id.equals(id))).go();
+      _queueSync('expected_income', id, 'delete');
     } else {
       state = state.copyWith(
         expectedIncomes: state.expectedIncomes.where((i) => i.id != id).toList(),
@@ -1345,6 +1551,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         syncStatus: 'pending',
       );
       await db.update(db.goals).replace(dbGoal);
+      _queueSync('goal', goal.id, 'upsert');
     } else {
       state = state.copyWith(
         goals: state.goals.map((g) => g.id == goal.id ? goal : g).toList(),
@@ -1357,6 +1564,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
       await (db.delete(db.goals)..where((tbl) => tbl.id.equals(id))).go();
+      _queueSync('goal', id, 'delete');
     } else {
       state = state.copyWith(
         goals: state.goals.where((g) => g.id != id).toList(),
@@ -1373,6 +1581,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
           isArchived: const Value(1),
           updatedAt: Value(DateTime.now().toUtc()),
         ));
+      _queueSync('goal', id, 'upsert');
     } else {
       state = state.copyWith(
         goals: state.goals.map((g) {
@@ -1631,6 +1840,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         updatedAt: tx.updatedAt,
       );
       await _ref.read(realTransactionServiceProvider).createTransaction(companion);
+      _queueSync('transaction', tx.id, 'upsert');
       return tx;
     } else {
       return _createTransactionInternal(
@@ -1651,6 +1861,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
       _ref.read(realTransactionServiceProvider).voidTransaction(transactionId);
+      _queueSync('transaction', transactionId, 'upsert');
     } else {
       final orig = state.transactions.firstWhere((t) => t.id == transactionId);
       final voidTxId = _uuid.v4();
@@ -1774,6 +1985,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         syncStatus: 'pending',
       );
       await db.update(db.transactions).replace(dbTx);
+      _queueSync('transaction', transaction.id, 'upsert');
       
       if (transaction.type == 'investment_buy') {
         final double units = transaction.units ?? 0.0;
@@ -1824,6 +2036,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         await (db.delete(db.investmentLotConsumptions)..where((tbl) => tbl.sellTransactionId.equals(id))).go();
         await (db.delete(db.transactions)..where((tbl) => tbl.id.equals(id))).go();
       });
+      _queueSync('transaction', id, 'delete');
       await _ref.read(realBalanceCacheServiceProvider).rebuildCache();
     } else {
       state = state.copyWith(
@@ -1858,6 +2071,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
           updatedAt: Value(DateTime.now().toUtc()),
         );
         await _ref.read(realTransactionServiceProvider).createTransaction(companion);
+        _queueSync('transaction', newId, 'upsert');
       }
     } else {
       final orig = state.transactions.firstWhereOrNull((t) => t.id == id);
@@ -1956,6 +2170,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final db = _ref.read(realDatabaseProvider);
       await db.into(db.adjustments).insert(newAdj);
       await db.into(db.auditLogs).insert(newAudit);
+      _queueSync('adjustment', id, 'upsert');
     } else {
       state = state.copyWith(
         adjustments: [...state.adjustments, newAdj],
@@ -1978,7 +2193,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
   }
 
   Future<void> deleteIpoPool(String id) async {
-    final updatedList = state.ipoPools.where((p) => p.id != id).toList();
+    final updatedList = state.ipoPools.map((p) {
+      if (p.id == id) {
+        return p.copyWith(deletedAt: () => DateTime.now());
+      }
+      return p;
+    }).toList();
     state = state.copyWith(ipoPools: updatedList);
     await _saveIpoPoolsToDb();
   }
@@ -2006,6 +2226,8 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     required double interestRate,
     required DateTime openingDate,
     required DateTime interestStartDate,
+    DateTime? purchaseDate,
+    String? purchaseTime,
     String? investmentId,
   }) async {
     final id = _uuid.v4();
@@ -2033,6 +2255,8 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       interestRate: interestRate,
       openingDate: openingDate,
       interestStartDate: interestStartDate,
+      purchaseDate: purchaseDate,
+      purchaseTime: purchaseTime,
       isClosed: 0,
       createdAt: now,
       updatedAt: now,
@@ -2055,18 +2279,21 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         interestRate: interestRate,
         openingDate: openingDate,
         interestStartDate: interestStartDate,
+        purchaseDate: purchaseDate,
+        purchaseTime: purchaseTime,
         isClosed: 0,
         createdAt: now,
         updatedAt: now,
         lastAccrualDate: interestStartDate,
         syncStatus: 'pending',
       ));
+      _queueSync('mtf_position', id, 'upsert');
     }
 
     state = state.copyWith(mtfPositions: [...state.mtfPositions, newPos]);
 
     // 3. Add Buy Transaction (decreases cash by units * averagePrice)
-    buyInvestment(actualInvestmentId, 'acc_primary_bank_uuid', units, averagePrice, 'MTF Buy: $instrument', openingDate);
+    buyInvestment(actualInvestmentId, 'acc_primary_bank_uuid', units, averagePrice, 'MTF Buy: $instrument', purchaseDate ?? openingDate);
 
     // 4. Add Borrow Transaction (deposits borrowedCapital back to offset cash)
     await addBorrowTransaction('person_broker_uuid_placeholder', 'acc_primary_bank_uuid', borrowedCapital, 'MTF Borrowed Funding for $instrument', openingDate);
@@ -2083,10 +2310,37 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         MtfPositionsCompanion(
           broker: Value(pos.broker),
           interestRate: Value(pos.interestRate),
+          openingDate: Value(pos.openingDate),
+          interestStartDate: Value(pos.interestStartDate),
+          purchaseDate: Value(pos.purchaseDate),
+          purchaseTime: Value(pos.purchaseTime),
           updatedAt: Value(DateTime.now().toUtc()),
         ),
       );
+      _queueSync('mtf_position', pos.id, 'upsert');
     }
+
+    // Update linked buy transaction if one exists
+    final buyTx = state.transactions.firstWhereOrNull((t) => t.investmentId == pos.investmentId && t.type == 'investment_buy');
+    if (buyTx != null) {
+      final updatedTxDate = pos.purchaseDate ?? pos.openingDate;
+      if (buyTx.transactionDate != updatedTxDate) {
+        if (!isMock) {
+          final db = _ref.read(realDatabaseProvider);
+          await (db.update(db.transactions)..where((tbl) => tbl.id.equals(buyTx.id))).write(
+            TransactionsCompanion(
+              transactionDate: Value(updatedTxDate),
+              updatedAt: Value(DateTime.now().toUtc()),
+            ),
+          );
+          _queueSync('transaction', buyTx.id, 'upsert');
+        }
+        state = state.copyWith(
+          transactions: state.transactions.map((t) => t.id == buyTx.id ? t.copyWith(transactionDate: updatedTxDate, updatedAt: DateTime.now().toUtc()) : t).toList(),
+        );
+      }
+    }
+
     state = state.copyWith(
       mtfPositions: state.mtfPositions.map((p) => p.id == pos.id ? pos : p).toList(),
     );
@@ -2115,6 +2369,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
           updatedAt: Value(now),
         ),
       );
+      _queueSync('mtf_position', id, 'upsert');
     }
 
     state = state.copyWith(
@@ -2134,6 +2389,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
       await (db.delete(db.mtfPositions)..where((tbl) => tbl.id.equals(id))).go();
+      _queueSync('mtf_position', id, 'delete');
     }
     state = state.copyWith(
       mtfPositions: state.mtfPositions.where((p) => p.id != id).toList(),
@@ -2225,6 +2481,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         syncStatus: 'pending',
       );
       await repo.createSip(domainSip);
+      _queueSync('sip', id, 'upsert');
     } else {
       final newSip = Sip(
         id: id,
@@ -2267,6 +2524,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         syncStatus: sip.syncStatus,
       );
       await repo.updateSip(domainSip);
+      _queueSync('sip', sip.id, 'upsert');
     } else {
       state = state.copyWith(
         sips: state.sips.map((s) => s.id == sip.id ? updatedSip : s).toList(),
@@ -2279,6 +2537,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     if (!isMock) {
       final repo = _ref.read(realSipRepositoryProvider);
       await repo.deleteSip(id);
+      _queueSync('sip', id, 'delete');
     } else {
       state = state.copyWith(
         sips: state.sips.where((s) => s.id != id).toList(),
@@ -2310,6 +2569,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         syncStatus: updatedSip.syncStatus,
       );
       await repo.updateSip(domainSip);
+      _queueSync('sip', updatedSip.id, 'upsert');
     } else {
       state = state.copyWith(
         sips: state.sips.map((s) => s.id == id ? updatedSip : s).toList(),
@@ -2422,6 +2682,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       checkInReminderCount: '4',
       checkInCompletedDate: '',
       lastTriggeredCheckIn: '',
+      notificationsEnabled: false,
+      notificationPrefTransactions: true,
+      notificationPrefCheckIns: true,
+      notificationPrefSip: true,
+      notificationPrefGoals: true,
+      notificationsAsked: false,
     );
   }
 }

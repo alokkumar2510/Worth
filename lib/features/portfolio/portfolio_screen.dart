@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:collection/collection.dart';
+import 'package:drift/drift.dart' show Value;
 
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/glass_card.dart';
@@ -243,6 +244,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     String type = 'mutual_fund';
     DateTime openingDate = DateTime.now();
     DateTime interestStartDate = DateTime.now();
+    final purchaseTimeController = TextEditingController();
+    DateTime? purchaseDate;
 
     showDialog(
       context: context,
@@ -332,6 +335,42 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      purchaseDate != null
+                          ? 'Purchase Date: ${DateFormat('dd MMM yyyy').format(purchaseDate!)}'
+                          : 'Purchase Date: Not Selected',
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                    subtitle: const Text('Required - Tap to select date', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
+                    trailing: const Icon(Icons.calendar_today, color: AppColors.darkPrimary, size: 18),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: purchaseDate ?? DateTime.now(),
+                        firstDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (picked != null) {
+                        setDialogState(() {
+                          purchaseDate = picked;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: purchaseTimeController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Purchase Time (Optional, e.g. 10:30 AM)',
+                      labelStyle: TextStyle(color: AppColors.grey500),
+                      hintText: 'HH:MM or standard format',
+                      hintStyle: const TextStyle(color: AppColors.grey500, fontSize: 12),
+                    ),
                   ),
                   if (showMtfSwitch) ...[
                     const SizedBox(height: 8),
@@ -457,21 +496,58 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                 child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
               ),
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   final name = nameController.text.trim();
                   final symbol = symbolController.text.trim();
                   final unitsVal = double.tryParse(unitsController.text.trim()) ?? 0.0;
                   final priceVal = double.tryParse(priceController.text.trim()) ?? 0.0;
 
                   if (name.isNotEmpty && unitsVal > 0 && priceVal > 0) {
+                    DateTime finalPurchaseDate;
+                    if (purchaseDate == null) {
+                      final confirmToday = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('No Purchase Date Selected', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          content: const Text(
+                            'You have not selected a purchase date. Would you like to use today\'s date as the purchase date?',
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Select Date', style: TextStyle(color: AppColors.darkPrimary)),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
+                              child: const Text('Use Today', style: TextStyle(color: Colors.white)),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirmToday == true) {
+                        finalPurchaseDate = DateTime.now();
+                      } else {
+                        return; // Cancel saving
+                      }
+                    } else {
+                      finalPurchaseDate = purchaseDate!;
+                    }
+
                     final notifier = ref.read(mockDatabaseProvider.notifier);
+                    final purchaseTimeStr = purchaseTimeController.text.trim().isNotEmpty
+                        ? purchaseTimeController.text.trim()
+                        : null;
+
                     if (isMtf) {
                       final broker = brokerController.text.trim();
                       final ownCap = double.tryParse(ownCapitalController.text.trim()) ?? (unitsVal * priceVal * 0.5);
                       final intRate = double.tryParse(interestRateController.text.trim()) ?? 12.0;
                       final borrowed = (unitsVal * priceVal) - ownCap;
 
-                      notifier.addMtfPosition(
+                      await notifier.addMtfPosition(
                         broker: broker.isNotEmpty ? broker : 'Broker',
                         instrument: name,
                         units: unitsVal,
@@ -481,12 +557,24 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         interestRate: intRate,
                         openingDate: openingDate,
                         interestStartDate: interestStartDate,
+                        purchaseDate: finalPurchaseDate,
+                        purchaseTime: purchaseTimeStr,
                       );
                     } else {
-                      final inv = notifier.addInvestment(name, type, symbol.isNotEmpty ? symbol : null, 'Manual creation', priceVal);
-                      notifier.buyInvestment(inv.id, 'acc_primary_bank_uuid', unitsVal, priceVal, 'Opening Buy', DateTime.now().toUtc());
+                      final inv = notifier.addInvestment(
+                        name,
+                        type,
+                        symbol.isNotEmpty ? symbol : null,
+                        'Manual creation',
+                        priceVal,
+                        purchaseDate: finalPurchaseDate,
+                        purchaseTime: purchaseTimeStr,
+                      );
+                      notifier.buyInvestment(inv.id, 'acc_primary_bank_uuid', unitsVal, priceVal, 'Opening Buy', finalPurchaseDate);
                     }
-                    Navigator.pop(context);
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                    }
                   }
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
@@ -2264,51 +2352,180 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
   void _showEditMtfDialog(MtfPosition pos) {
     final brokerController = TextEditingController(text: pos.broker);
     final interestRateController = TextEditingController(text: pos.interestRate.toString());
+    final purchaseTimeController = TextEditingController(text: pos.purchaseTime ?? '');
+    DateTime? purchaseDate = pos.purchaseDate;
+    DateTime openingDate = pos.openingDate;
+    DateTime interestStartDate = pos.interestStartDate;
 
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit MTF Position', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: brokerController,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Broker', labelStyle: TextStyle(color: AppColors.grey500)),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Edit MTF Position', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: brokerController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Broker', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: interestRateController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Interest Rate % p.a.', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 16),
+                
+                // Purchase Date Picker
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    purchaseDate != null
+                        ? 'Purchase Date: ${DateFormat('dd MMM yyyy').format(purchaseDate!)}'
+                        : 'Purchase Date: Not Selected',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  subtitle: const Text('Tap to select purchase date', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
+                  trailing: const Icon(Icons.calendar_today, color: AppColors.darkPrimary, size: 18),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: purchaseDate ?? DateTime.now(),
+                      firstDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (picked != null) {
+                      setDialogState(() {
+                        purchaseDate = picked;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 4),
+                TextField(
+                  controller: purchaseTimeController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Purchase Time (Optional, e.g. 10:30 AM)',
+                    labelStyle: TextStyle(color: AppColors.grey500),
+                    hintText: 'HH:MM or standard format',
+                    hintStyle: const TextStyle(color: AppColors.grey500, fontSize: 12),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Position Open Date Picker
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Position Open Date: ${DateFormat('dd MMM yyyy').format(openingDate)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  subtitle: const Text('Required - Tap to select date', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
+                  trailing: const Icon(Icons.calendar_month, color: AppColors.darkPrimary, size: 18),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: openingDate,
+                      firstDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (picked != null) {
+                      setDialogState(() {
+                        openingDate = picked;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Interest Start Date Picker
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Interest Start Date: ${DateFormat('dd MMM yyyy').format(interestStartDate)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  subtitle: const Text('Required - Tap to select date', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
+                  trailing: const Icon(Icons.percent, color: AppColors.darkPrimary, size: 18),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: interestStartDate,
+                      firstDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (picked != null) {
+                      setDialogState(() {
+                        interestStartDate = picked;
+                      });
+                    }
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: interestRateController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Interest Rate % p.a.', labelStyle: TextStyle(color: AppColors.grey500)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final broker = brokerController.text.trim();
+                final rate = double.tryParse(interestRateController.text.trim()) ?? pos.interestRate;
+                if (broker.isNotEmpty) {
+                  // Confirmation Dialog
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Confirm Date Changes', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      content: const Text(
+                        'Are you sure you want to update these dates? Changing Position Open Date or Interest Start Date will affect the holding days and interest accrual calculations.',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
+                          child: const Text('Confirm', style: TextStyle(color: Colors.white)),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirm != true) return;
+
+                  final purchaseTimeVal = purchaseTimeController.text.trim();
+                  final updated = pos.copyWith(
+                    broker: broker,
+                    interestRate: rate,
+                    openingDate: openingDate,
+                    interestStartDate: interestStartDate,
+                    purchaseDate: Value(purchaseDate),
+                    purchaseTime: Value(purchaseTimeVal.isNotEmpty ? purchaseTimeVal : null),
+                    updatedAt: DateTime.now().toUtc(),
+                  );
+                  await ref.read(mockDatabaseProvider.notifier).editMtfPosition(updated);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
+              child: const Text('Save', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final broker = brokerController.text.trim();
-              final rate = double.tryParse(interestRateController.text.trim()) ?? pos.interestRate;
-              if (broker.isNotEmpty) {
-                final updated = pos.copyWith(
-                  broker: broker,
-                  interestRate: rate,
-                  updatedAt: DateTime.now().toUtc(),
-                );
-                ref.read(mockDatabaseProvider.notifier).editMtfPosition(updated);
-                Navigator.pop(context);
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
-            child: const Text('Save', style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }

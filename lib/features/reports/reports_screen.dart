@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_colors.dart';
@@ -107,6 +106,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
                 // SECTION 6: AUTOMATIC INSIGHTS
                 _buildInsightsCard(data),
+                const SizedBox(height: 24),
+
+                // SECTION 7: PORTFOLIO PERFORMANCE & METRICS
+                _buildPortfolioMetricsCard(data, format, currency),
                 const SizedBox(height: 24),
 
                 // SECTION 4: WEALTH TIMELINE FEED
@@ -699,6 +702,242 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   ],
                 ),
               )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPortfolioMetricsCard(WealthIntelligenceData data, NumberFormat format, String currency) {
+    final sipPerf = data.sipPerformance;
+    final mtfSummary = data.mtfInterestSummary;
+    final formatDec = NumberFormat.currency(symbol: currency, decimalDigits: 2);
+
+    final double consistencyRate = (sipPerf['consistencyRate'] as num?)?.toDouble() ?? 100.0;
+    final double investedCapital = (sipPerf['investedCapital'] as num?)?.toDouble() ?? 0.0;
+    final double currentValuation = (sipPerf['currentValuation'] as num?)?.toDouble() ?? 0.0;
+    final double growth = (sipPerf['growth'] as num?)?.toDouble() ?? 0.0;
+
+    final double accruedInterest = (mtfSummary['accrued'] as num?)?.toDouble() ?? 0.0;
+    final double paidInterest = (mtfSummary['paid'] as num?)?.toDouble() ?? 0.0;
+    final double outstandingInterest = (mtfSummary['outstanding'] as num?)?.toDouble() ?? 0.0;
+
+    return GlassCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.pie_chart_outline_outlined, color: AppColors.darkPrimary, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'PORTFOLIO PERFORMANCE & METRICS',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.grey500,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Sub-Section 1: Average Holding Period & Holding Durations
+          Text(
+            'HOLDING ANALYSIS',
+            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Average Holding Period', style: TextStyle(color: AppColors.grey400, fontSize: 13)),
+              Text(
+                '${data.averageHoldingPeriod.toStringAsFixed(1)} Days',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (data.holdingDurations.isEmpty)
+            const Text('No active investments found.', style: TextStyle(color: AppColors.grey500, fontSize: 12))
+          else
+            Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                title: const Text('View Individual Holding Periods', style: TextStyle(color: AppColors.darkPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: EdgeInsets.zero,
+                children: data.holdingDurations.map((hd) {
+                  final String hdName = hd['name']?.toString() ?? 'Unknown';
+                  final int hdDays = (hd['days'] as num?)?.toInt() ?? 0;
+                  final int ageDays = (hd['age'] as num?)?.toInt() ?? 0;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(hdName, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                              const SizedBox(height: 2),
+                              Text('Age: $ageDays Days', style: const TextStyle(color: AppColors.grey500, fontSize: 10)),
+                            ],
+                          ),
+                        ),
+                        Text('Held: $hdDays Days', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+
+          const Divider(color: AppColors.glassBorder, height: 24),
+
+          // Sub-Section 2: SIP Performance
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'SIP PERFORMANCE',
+                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: consistencyRate >= 80.0
+                      ? AppColors.darkSuccess.withOpacity(0.12)
+                      : (consistencyRate >= 50.0
+                          ? Colors.orange.withOpacity(0.12)
+                          : AppColors.darkDanger.withOpacity(0.12)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Consistency: ${consistencyRate.toStringAsFixed(0)}%',
+                  style: TextStyle(
+                    color: consistencyRate >= 80.0
+                        ? AppColors.darkSuccess
+                        : (consistencyRate >= 50.0 ? Colors.orange : AppColors.darkDanger),
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Total SIP Capital Invested', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+              Text(format.format(investedCapital), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Current SIP Valuation', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+              Text(format.format(currentValuation), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Growth (SIP Profits)', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+              Text(
+                '${growth >= 0.0 ? '+' : ''}${format.format(growth)}',
+                style: TextStyle(
+                  color: growth >= 0.0 ? AppColors.darkSuccess : AppColors.darkDanger,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+
+          const Divider(color: AppColors.glassBorder, height: 24),
+
+          // Sub-Section 3: MTF Interest Summary
+          Text(
+            'MTF INTEREST SUMMARY',
+            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Total Interest Accrued', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+              Text(formatDec.format(accruedInterest), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Total Interest Paid', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+              Text(formatDec.format(paidInterest), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Outstanding Unpaid Interest', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+              Text(
+                formatDec.format(outstandingInterest),
+                style: TextStyle(
+                  color: outstandingInterest > 0.0 ? AppColors.darkWarning : Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (data.mtfInterestHistory.isEmpty)
+            const Text('No MTF interest accrual history found.', style: TextStyle(color: AppColors.grey500, fontSize: 12))
+          else
+            Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                title: const Text('View Interest Accrual History', style: TextStyle(color: AppColors.darkPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: EdgeInsets.zero,
+                children: data.mtfInterestHistory.map((item) {
+                  final String instrument = item['instrument'] as String;
+                  final double amount = (item['amount'] as num?)?.toDouble() ?? 0.0;
+                  final DateTime date = item['date'] as DateTime;
+                  final String notes = item['notes'] as String;
+
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(instrument, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                              const SizedBox(height: 2),
+                              Text(notes, style: const TextStyle(color: AppColors.grey500, fontSize: 10)),
+                              Text(DateFormat('dd MMM yyyy').format(date), style: const TextStyle(color: AppColors.grey500, fontSize: 9)),
+                            ],
+                          ),
+                        ),
+                        Text(formatDec.format(amount), style: const TextStyle(color: AppColors.darkDanger, fontSize: 12, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
         ],
       ),
     );

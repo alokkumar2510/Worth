@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/custom_segmented_control.dart';
@@ -48,6 +49,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   // Additional fields for investments
   final _unitsController = TextEditingController();
   final _priceController = TextEditingController();
+  DateTime? _purchaseDate;
+  final _purchaseTimeController = TextEditingController();
   
   // MTF Fields
   bool _isMtf = false;
@@ -92,13 +95,14 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     _notesController.dispose();
     _unitsController.dispose();
     _priceController.dispose();
+    _purchaseTimeController.dispose();
     _brokerController.dispose();
     _ownCapitalController.dispose();
     _interestRateController.dispose();
     super.dispose();
   }
 
-  void _saveTransaction() {
+  Future<void> _saveTransaction() async {
     final amount = double.tryParse(_amountController.text.trim()) ?? 0.0;
     if (amount <= 0 && _segmentedIndex != 3) return; // Allow investment buys/sells to calculate amount
 
@@ -159,6 +163,43 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       final units = double.tryParse(_unitsController.text.trim()) ?? 0.0;
       final price = double.tryParse(_priceController.text.trim()) ?? 0.0;
       if (_selectedInvestmentId != null && units > 0 && price > 0) {
+        DateTime finalPurchaseDate;
+        if (_purchaseDate == null) {
+          final confirmToday = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('No Purchase Date Selected', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              content: const Text(
+                'You have not selected a purchase date. Would you like to use today\'s date as the purchase date?',
+                style: TextStyle(color: Colors.white70),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Select Date', style: TextStyle(color: AppColors.darkPrimary)),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
+                  child: const Text('Use Today', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+          );
+
+          if (confirmToday == true) {
+            finalPurchaseDate = DateTime.now();
+          } else {
+            return; // Abort saving
+          }
+        } else {
+          finalPurchaseDate = _purchaseDate!;
+        }
+
+        final purchaseTimeStr = _purchaseTimeController.text.trim().isNotEmpty
+            ? _purchaseTimeController.text.trim()
+            : null;
+
         if (_isMtf) {
           final broker = _brokerController.text.trim();
           final ownCap = double.tryParse(_ownCapitalController.text.trim()) ?? (units * price * 0.5);
@@ -166,7 +207,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
           final borrowed = (units * price) - ownCap;
 
           final inv = ref.read(mockDatabaseProvider).investments.firstWhere((i) => i.id == _selectedInvestmentId);
-          notifier.addMtfPosition(
+          await notifier.addMtfPosition(
             broker: broker.isNotEmpty ? broker : 'Broker',
             instrument: inv.name,
             units: units,
@@ -174,12 +215,14 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
             ownCapital: ownCap,
             borrowedCapital: borrowed,
             interestRate: intRate,
-            openingDate: DateTime.now().toUtc(),
-            interestStartDate: DateTime.now().toUtc(),
+            openingDate: finalPurchaseDate,
+            interestStartDate: finalPurchaseDate,
+            purchaseDate: finalPurchaseDate,
+            purchaseTime: purchaseTimeStr,
             investmentId: _selectedInvestmentId,
           );
         } else {
-          notifier.buyInvestment(_selectedInvestmentId!, _selectedFromAccountId ?? 'acc_primary_bank_uuid', units, price, notes, DateTime.now().toUtc());
+          notifier.buyInvestment(_selectedInvestmentId!, _selectedFromAccountId ?? 'acc_primary_bank_uuid', units, price, notes, finalPurchaseDate);
         }
       }
     } else if (finalType == 'investment_sell') {
@@ -194,10 +237,12 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       }
     }
 
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Transaction saved successfully.')),
-    );
+    if (context.mounted) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Transaction saved successfully.')),
+      );
+    }
   }
 
   @override
@@ -427,6 +472,42 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                 ],
               ),
               if (_selectedMoreType == 'investment_buy') ...[
+                // Purchase Date & Time Picker
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    _purchaseDate != null
+                        ? 'Purchase Date: ${DateFormat('dd MMM yyyy').format(_purchaseDate!)}'
+                        : 'Purchase Date: Not Selected',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  subtitle: const Text('Tap to select purchase date', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
+                  trailing: const Icon(Icons.calendar_today, color: AppColors.darkPrimary, size: 18),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _purchaseDate ?? DateTime.now(),
+                      firstDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (picked != null) {
+                      setState(() {
+                        _purchaseDate = picked;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 4),
+                TextField(
+                  controller: _purchaseTimeController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Purchase Time (Optional, e.g. 10:30 AM)',
+                    labelStyle: TextStyle(color: AppColors.grey500),
+                    hintText: 'HH:MM or standard format',
+                    hintStyle: const TextStyle(color: AppColors.grey500, fontSize: 12),
+                  ),
+                ),
                 const SizedBox(height: 8),
                 SwitchListTile(
                   title: const Text('MTF Position?', style: TextStyle(color: Colors.white, fontSize: 14)),

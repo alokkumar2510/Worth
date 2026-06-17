@@ -89,6 +89,8 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
     final notesController = TextEditingController(text: inv.notes ?? '');
     final priceController = TextEditingController(text: inv.marketValue?.toString() ?? '0');
     String type = inv.type;
+    DateTime? purchaseDate = inv.purchaseDate;
+    String? purchaseTime = inv.purchaseTime;
 
     showDialog(
       context: context,
@@ -140,6 +142,80 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(labelText: 'Notes', labelStyle: TextStyle(color: AppColors.grey500)),
                 ),
+                const SizedBox(height: 12),
+                InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: purchaseDate ?? inv.createdAt,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) {
+                      setState(() => purchaseDate = picked);
+                    }
+                  },
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      labelText: 'Purchase Date',
+                      labelStyle: const TextStyle(color: AppColors.grey500),
+                      suffixIcon: purchaseDate != null
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 16, color: AppColors.grey500),
+                              onPressed: () {
+                                setState(() => purchaseDate = null);
+                              },
+                            )
+                          : null,
+                    ),
+                    child: Text(
+                      purchaseDate == null ? 'Not Set (Defaults to Created Date)' : DateFormat('dd MMM yyyy').format(purchaseDate!),
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                InkWell(
+                  onTap: () async {
+                    TimeOfDay initial = const TimeOfDay(hour: 9, minute: 30);
+                    if (purchaseTime != null) {
+                      final parts = purchaseTime!.split(':');
+                      if (parts.length == 2) {
+                        initial = TimeOfDay(
+                          hour: int.tryParse(parts[0]) ?? 9,
+                          minute: int.tryParse(parts[1]) ?? 30,
+                        );
+                      }
+                    }
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: initial,
+                    );
+                    if (picked != null) {
+                      setState(() {
+                        purchaseTime = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+                      });
+                    }
+                  },
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      labelText: 'Purchase Time',
+                      labelStyle: const TextStyle(color: AppColors.grey500),
+                      suffixIcon: purchaseTime != null
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 16, color: AppColors.grey500),
+                              onPressed: () {
+                                setState(() => purchaseTime = null);
+                              },
+                            )
+                          : null,
+                    ),
+                    child: Text(
+                      purchaseTime == null ? 'Not Set' : purchaseTime!,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -161,6 +237,8 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                         type,
                         symbol.isNotEmpty ? symbol : null,
                         notes.isNotEmpty ? notes : null,
+                        purchaseDate: purchaseDate,
+                        purchaseTime: purchaseTime,
                       );
                   if (price > 0) {
                     ref.read(mockDatabaseProvider.notifier).updateInvestmentMarketValue(inv.id, price);
@@ -228,58 +306,151 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
   }
 
   void _showBuyDialog(Investment inv, String currency) {
+    DateTime? purchaseDate;
+    final purchaseTimeController = TextEditingController();
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        
-        
-        title: const Text('Record Purchase Lot', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _buyUnitsController,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Units Purchased', labelStyle: TextStyle(color: AppColors.grey500)),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Record Purchase Lot', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: _buyUnitsController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Units Purchased', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _buyPriceController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Price per Unit',
+                    labelStyle: const TextStyle(color: AppColors.grey500),
+                    prefixText: '$currency ',
+                    prefixStyle: const TextStyle(color: Colors.white),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Purchase Date Picker
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    purchaseDate != null
+                        ? 'Purchase Date: ${DateFormat('dd MMM yyyy').format(purchaseDate!)}'
+                        : 'Purchase Date: Not Selected',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  subtitle: const Text('Tap to select purchase date', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
+                  trailing: const Icon(Icons.calendar_today, color: AppColors.darkPrimary, size: 18),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: purchaseDate ?? DateTime.now(),
+                      firstDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (picked != null) {
+                      setDialogState(() {
+                        purchaseDate = picked;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 4),
+                TextField(
+                  controller: purchaseTimeController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Purchase Time (Optional, e.g. 10:30 AM)',
+                    labelStyle: TextStyle(color: AppColors.grey500),
+                    hintText: 'HH:MM or standard format',
+                    hintStyle: const TextStyle(color: AppColors.grey500, fontSize: 12),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _buyPriceController,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                labelText: 'Price per Unit',
-                labelStyle: const TextStyle(color: AppColors.grey500),
-                prefixText: '$currency ',
-                prefixStyle: const TextStyle(color: Colors.white),
-              ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                purchaseTimeController.dispose();
+                Navigator.pop(context);
+              },
+              child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final units = double.tryParse(_buyUnitsController.text.trim()) ?? 0.0;
+                final price = double.tryParse(_buyPriceController.text.trim()) ?? 0.0;
+                if (units > 0 && price > 0) {
+                  DateTime finalPurchaseDate;
+                  if (purchaseDate == null) {
+                    final confirmToday = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('No Purchase Date Selected', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        content: const Text(
+                          'You have not selected a purchase date. Would you like to use today\'s date as the purchase date?',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Select Date', style: TextStyle(color: AppColors.darkPrimary)),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
+                            child: const Text('Use Today', style: TextStyle(color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirmToday == true) {
+                      finalPurchaseDate = DateTime.now();
+                    } else {
+                      return; // Abort saving
+                    }
+                  } else {
+                    finalPurchaseDate = purchaseDate!;
+                  }
+
+                  final purchaseTimeStr = purchaseTimeController.text.trim();
+                  final notes = purchaseTimeStr.isNotEmpty ? 'Purchase at $purchaseTimeStr' : null;
+
+                  ref.read(mockDatabaseProvider.notifier).buyInvestment(
+                    inv.id,
+                    'acc_primary_bank_uuid',
+                    units,
+                    price,
+                    notes,
+                    finalPurchaseDate,
+                  );
+                  _buyUnitsController.clear();
+                  _buyPriceController.clear();
+                  purchaseTimeController.dispose();
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Lot recorded: $units units bought.')),
+                    );
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
+              child: const Text('Save Lot', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final units = double.tryParse(_buyUnitsController.text.trim()) ?? 0.0;
-              final price = double.tryParse(_buyPriceController.text.trim()) ?? 0.0;
-              if (units > 0 && price > 0) {
-                ref.read(mockDatabaseProvider.notifier).buyInvestment(inv.id, 'acc_primary_bank_uuid', units, price, null, DateTime.now().toUtc());
-                _buyUnitsController.clear();
-                _buyPriceController.clear();
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Lot recorded: $units units bought.')),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
-            child: const Text('Save Lot', style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }
@@ -443,6 +614,11 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
     
     final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
 
+    final purchaseDateTime = inv.purchaseDate ?? inv.createdAt;
+    final today = DateTime.now();
+    final difference = today.difference(purchaseDateTime);
+    final holdingDays = difference.inDays >= 0 ? difference.inDays : 0;
+
     final lots = dbState.investmentLots.where((l) => l.investmentId == inv.id).toList();
     final txs = dbState.transactions.where((t) => t.investmentId == inv.id && t.voidedTransactionId == null).toList();
 
@@ -538,6 +714,28 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                       'REALIZED GAIN (FIFO)', 
                       format.format(realized),
                       realized >= 0 ? AppColors.darkSuccess : AppColors.darkDanger,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMetricCard(
+                      'HOLDING PERIOD', 
+                      '$holdingDays Days',
+                      Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildMetricCard(
+                      'PURCHASE DATE', 
+                      inv.purchaseDate != null
+                          ? DateFormat('dd MMM yyyy').format(inv.purchaseDate!)
+                          : DateFormat('dd MMM yyyy').format(inv.createdAt),
+                      AppColors.grey400,
                     ),
                   ),
                 ],
@@ -1035,6 +1233,7 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
     String frequency = existingSip?.frequency ?? 'monthly';
     int sipDate = existingSip?.sipDate ?? 5;
     DateTime startDate = existingSip?.startDate ?? DateTime.now();
+    DateTime? endDate = existingSip?.endDate;
     bool autoCreate = (existingSip?.autoCreate ?? 1) == 1;
 
     showDialog(
@@ -1155,6 +1354,39 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                     ),
                   ),
                   const SizedBox(height: 16),
+                  // End Date picker
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: endDate ?? startDate.add(const Duration(days: 365)),
+                        firstDate: startDate,
+                        lastDate: DateTime(2040),
+                      );
+                      if (picked != null) {
+                        setDialogState(() => endDate = picked);
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: 'End Date (Optional)',
+                        labelStyle: const TextStyle(color: AppColors.grey500),
+                        suffixIcon: endDate != null
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 16, color: AppColors.grey500),
+                                onPressed: () {
+                                  setDialogState(() => endDate = null);
+                                },
+                              )
+                            : null,
+                      ),
+                      child: Text(
+                        endDate == null ? 'No End Date' : DateFormat('dd MMM yyyy').format(endDate!),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   SwitchListTile(
                     title: const Text('Auto-Create Transactions', style: TextStyle(color: Colors.white, fontSize: 14)),
                     subtitle: const Text('Automatically record purchase lot on SIP day', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
@@ -1182,6 +1414,7 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                         frequency: frequency,
                         sipDate: sipDate,
                         startDate: startDate,
+                        endDate: endDate,
                         autoCreate: autoCreate ? 1 : 0,
                       );
                     } else {
@@ -1190,6 +1423,7 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                         frequency: frequency,
                         sipDate: sipDate,
                         startDate: startDate,
+                        endDate: endDate,
                         autoCreate: autoCreate ? 1 : 0,
                       );
                       ref.read(sipServiceProvider).editSip(updated);
