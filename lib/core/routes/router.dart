@@ -1,0 +1,582 @@
+import 'package:flutter/material.dart' hide LockState;
+import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import '../constants/app_colors.dart';
+import '../constants/asset_paths.dart';
+import '../providers/dependency_provider.dart';
+import '../../features/accounts/domain/entities/account.dart' as domain;
+import '../../features/dashboard/dashboard_screen.dart';
+import '../../features/portfolio/portfolio_screen.dart';
+import '../../features/portfolio/presentation/screens/asset_detail_screen.dart';
+import '../../features/portfolio/presentation/screens/investment_detail_screen.dart';
+import '../../features/portfolio/presentation/screens/receivable_detail_screen.dart';
+import '../../features/portfolio/presentation/screens/liability_detail_screen.dart';
+import '../../features/portfolio/presentation/screens/expected_income_detail_screen.dart';
+import '../../features/transactions/transactions_screen.dart';
+import '../../features/reports/reports_screen.dart';
+import '../../features/reports/presentation/screens/snapshot_screen.dart';
+import '../../features/settings/settings_screen.dart';
+import '../../features/settings/presentation/screens/profile_screen.dart';
+import '../../features/settings/presentation/screens/advanced_settings_screen.dart';
+import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/auth/presentation/screens/splash_screen.dart';
+import '../../features/auth/providers/auth_providers.dart';
+import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
+import '../../features/search/presentation/screens/search_screen.dart';
+import '../../features/definitions/presentation/screens/definitions_screen.dart';
+import '../../features/portfolio/presentation/screens/goal_detail_screen.dart';
+import '../widgets/app_lock_guard.dart';
+import '../providers/app_lock_provider.dart';
+import '../providers/mock_database.dart';
+import '../../features/achievements/presentation/screens/achievements_screen.dart';
+
+final GlobalKey<NavigatorState> rootNavigatorKey =
+    GlobalKey<NavigatorState>(debugLabel: 'root');
+final GlobalKey<NavigatorState> _rootNavigatorKey = rootNavigatorKey;
+
+CustomTransitionPage<T> buildPremiumTransitionPage<T>({
+  required GoRouterState state,
+  required Widget child,
+}) {
+  return CustomTransitionPage<T>(
+    key: state.pageKey,
+    child: child,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      const begin = Offset(0.0, 0.08);
+      const end = Offset.zero;
+      const curve = Curves.easeOutQuart;
+
+      var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+      var offsetAnimation = animation.drive(tween);
+
+      var fadeTween = Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeOut));
+      var scaleTween = Tween<double>(begin: 0.96, end: 1.0).chain(CurveTween(curve: Curves.easeOutQuart));
+
+      return FadeTransition(
+        opacity: animation.drive(fadeTween),
+        child: ScaleTransition(
+          scale: animation.drive(scaleTween),
+          child: SlideTransition(
+            position: offsetAnimation,
+            child: child,
+          ),
+        ),
+      );
+    },
+    transitionDuration: const Duration(milliseconds: 300),
+    reverseTransitionDuration: const Duration(milliseconds: 220),
+  );
+}
+
+class NavigationShellScreen extends StatelessWidget {
+  const NavigationShellScreen({
+    required this.navigationShell,
+    super.key,
+  });
+
+  final StatefulNavigationShell navigationShell;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Scaffold(
+      body: navigationShell,
+      bottomNavigationBar: NavigationBar(
+        elevation: 8,
+        shadowColor: isDark ? Colors.black : Colors.black12,
+        selectedIndex: navigationShell.currentIndex,
+        onDestinationSelected: (int index) {
+          navigationShell.goBranch(
+            index,
+            initialLocation: index == navigationShell.currentIndex,
+          );
+        },
+        destinations: <NavigationDestination>[
+          NavigationDestination(
+            icon: SvgPicture.asset(
+              AssetPaths.icDashboard,
+              width: 24,
+              height: 24,
+              colorFilter: ColorFilter.mode(
+                isDark ? Colors.white60 : Colors.black54,
+                BlendMode.srcIn,
+              ),
+            ),
+            selectedIcon: SvgPicture.asset(
+              AssetPaths.icDashboard,
+              width: 24,
+              height: 24,
+              colorFilter: const ColorFilter.mode(
+                AppColors.darkPrimary,
+                BlendMode.srcIn,
+              ),
+            ),
+            label: 'Dashboard',
+          ),
+          NavigationDestination(
+            icon: SvgPicture.asset(
+              AssetPaths.icPortfolio,
+              width: 24,
+              height: 24,
+              colorFilter: ColorFilter.mode(
+                isDark ? Colors.white60 : Colors.black54,
+                BlendMode.srcIn,
+              ),
+            ),
+            selectedIcon: SvgPicture.asset(
+              AssetPaths.icPortfolio,
+              width: 24,
+              height: 24,
+              colorFilter: const ColorFilter.mode(
+                AppColors.darkPrimary,
+                BlendMode.srcIn,
+              ),
+            ),
+            label: 'Portfolio',
+          ),
+          NavigationDestination(
+            icon: SvgPicture.asset(
+              AssetPaths.icTransactions,
+              width: 24,
+              height: 24,
+              colorFilter: ColorFilter.mode(
+                isDark ? Colors.white60 : Colors.black54,
+                BlendMode.srcIn,
+              ),
+            ),
+            selectedIcon: SvgPicture.asset(
+              AssetPaths.icTransactions,
+              width: 24,
+              height: 24,
+              colorFilter: const ColorFilter.mode(
+                AppColors.darkPrimary,
+                BlendMode.srcIn,
+              ),
+            ),
+            label: 'Transactions',
+          ),
+          NavigationDestination(
+            icon: SvgPicture.asset(
+              AssetPaths.icReports,
+              width: 24,
+              height: 24,
+              colorFilter: ColorFilter.mode(
+                isDark ? Colors.white60 : Colors.black54,
+                BlendMode.srcIn,
+              ),
+            ),
+            selectedIcon: SvgPicture.asset(
+              AssetPaths.icReports,
+              width: 24,
+              height: 24,
+              colorFilter: const ColorFilter.mode(
+                AppColors.darkPrimary,
+                BlendMode.srcIn,
+              ),
+            ),
+            label: 'Reports',
+          ),
+          NavigationDestination(
+            icon: SvgPicture.asset(
+              AssetPaths.icSettings,
+              width: 24,
+              height: 24,
+              colorFilter: ColorFilter.mode(
+                isDark ? Colors.white60 : Colors.black54,
+                BlendMode.srcIn,
+              ),
+            ),
+            selectedIcon: SvgPicture.asset(
+              AssetPaths.icSettings,
+              width: 24,
+              height: 24,
+              colorFilter: const ColorFilter.mode(
+                AppColors.darkPrimary,
+                BlendMode.srcIn,
+              ),
+            ),
+            label: 'More',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RouterNotifier — bridges Riverpod to GoRouter's ChangeNotifier / listenable
+// This pattern creates ONE GoRouter instance for the app lifetime and refreshes
+// it when auth or account state changes, rather than rebuilding the GoRouter.
+// ─────────────────────────────────────────────────────────────────────────────
+class RouterNotifier extends ChangeNotifier {
+  final Ref _ref;
+
+  // Track state to avoid infinite notifications
+  AsyncValue<User?> _authState = const AsyncValue.loading();
+  AsyncValue<List<domain.Account>> _accountsState = const AsyncValue.loading();
+
+  RouterNotifier(this._ref);
+
+  void updateAuthState(AsyncValue<User?> next) {
+    if (_authState != next) {
+      _authState = next;
+      notifyListeners();
+    }
+  }
+
+  void updateAccountsState(AsyncValue<List<domain.Account>> next) {
+    if (_accountsState != next) {
+      _accountsState = next;
+      notifyListeners();
+    }
+  }
+
+  /// Called on every navigation event to determine redirect target.
+  /// Returns null to allow navigation, or a path string to redirect.
+  String? redirect(BuildContext context, GoRouterState state) {
+    final path = state.matchedLocation;
+
+    // Check App Lock redirect rules first
+    final lockState = _ref.read(appLockProvider);
+    final dbState = _ref.read(mockDatabaseProvider);
+
+    if (dbState.appLockEnabled && lockState.lockState == LockState.locked) {
+      if (path == '/lock') return null;
+      debugPrint('[ROUTING] Navigation executed: Redirecting to /lock');
+      return '/lock';
+    }
+
+    if (path == '/lock') {
+      debugPrint('[ROUTING] Navigation executed: Redirecting to /');
+      return '/'; // Go to root to determine destination (onboarding/dashboard/etc)
+    }
+
+    // Auth state is still loading — stay on splash, do NOT redirect in a loop
+    // Return null so the user sees the SplashScreen while we wait.
+    if (_authState.isLoading) {
+      if (path == '/') return null; // already on splash, wait
+      debugPrint('[ROUTING] Navigation executed: Redirecting to / (splash)');
+      return '/'; // redirect to splash while auth resolves
+    }
+
+    final user = _authState.value;
+    final isLoggedIn = user != null;
+
+    if (!isLoggedIn) {
+      // Not logged in: only allow login
+      if (path == '/login') return null;
+      debugPrint('[ROUTING] Navigation executed: Redirecting to /login');
+      return '/login';
+    }
+
+    // User IS logged in — now check if they have accounts
+    // While accounts are loading, let them stay on current page
+    if (_accountsState.isLoading) {
+      return null;
+    }
+
+    final onboardingCompleted = dbState.onboardingCompleted;
+    final hasAccounts = dbState.firstAccountCreated || (_accountsState.value ?? []).isNotEmpty;
+
+    if (!onboardingCompleted) {
+      // Authenticated but onboarding incomplete: show onboarding starting at page 0
+      if (path == '/onboarding') return null;
+      debugPrint('[ROUTING] Navigation executed: Redirecting to /onboarding');
+      return '/onboarding';
+    }
+
+    if (!hasAccounts) {
+      // Authenticated and onboarding complete, but no accounts: show onboarding starting at page 3 (Create First Account)
+      if (path == '/onboarding') return null;
+      debugPrint('[ROUTING] Navigation executed: Redirecting to /onboarding (Create First Account)');
+      return '/onboarding';
+    }
+
+    // Fully authenticated with accounts: redirect away from auth screens
+    if (path == '/' || path == '/login' || path == '/onboarding') {
+      debugPrint('[ROUTING] Navigation executed: Redirecting to /dashboard');
+      return '/dashboard';
+    }
+
+    return null; // allow navigation
+  }
+}
+
+final routerNotifierProvider = ChangeNotifierProvider<RouterNotifier>((ref) {
+  final notifier = RouterNotifier(ref);
+
+  ref.listen<AsyncValue<User?>>(
+    authStateChangesProvider,
+    (_, next) {
+      notifier.updateAuthState(next);
+    },
+    fireImmediately: true,
+  );
+
+  ref.listen<AsyncValue<List<domain.Account>>>(
+    activeAccountsProvider,
+    (_, next) {
+      notifier.updateAccountsState(next);
+    },
+    fireImmediately: true,
+  );
+
+  ref.listen<AppLockState>(
+    appLockProvider,
+    (_, next) {
+      notifier.notifyListeners();
+    },
+    fireImmediately: true,
+  );
+
+  ref.listen<MockDatabaseState>(
+    mockDatabaseProvider,
+    (_, next) {
+      notifier.notifyListeners();
+    },
+    fireImmediately: true,
+  );
+
+  return notifier;
+});
+
+// The GoRouter is created ONCE as a Provider. It uses RouterNotifier as
+// its refreshListenable so navigation is re-evaluated when auth changes.
+final routerProvider = Provider<GoRouter>((ref) {
+  final notifier = ref.read(routerNotifierProvider);
+
+  return GoRouter(
+    navigatorKey: _rootNavigatorKey,
+    initialLocation: '/',
+    refreshListenable: notifier,
+    redirect: notifier.redirect,
+    routes: <RouteBase>[
+      // Splash Screen Route
+      GoRoute(
+        path: '/',
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => buildPremiumTransitionPage(
+          state: state,
+          child: const SplashScreen(),
+        ),
+      ),
+      // Lock Screen Route
+      GoRoute(
+        path: '/lock',
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => buildPremiumTransitionPage(
+          state: state,
+          child: const AppLockScreen(),
+        ),
+      ),
+      // Login & Onboarding Routes
+      GoRoute(
+        path: '/login',
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => buildPremiumTransitionPage(
+          state: state,
+          child: const LoginScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/onboarding',
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => buildPremiumTransitionPage(
+          state: state,
+          child: const OnboardingScreen(),
+        ),
+      ),
+
+      // Global Search Screen
+      GoRoute(
+        path: '/search',
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => buildPremiumTransitionPage(
+          state: state,
+          child: const SearchScreen(),
+        ),
+      ),
+
+      // Definitions Center Screen
+      GoRoute(
+        path: '/definitions',
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => buildPremiumTransitionPage(
+          state: state,
+          child: const DefinitionsScreen(),
+        ),
+      ),
+
+      // Monthly Snapshots Screen
+      GoRoute(
+        path: '/monthly_snapshot',
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => buildPremiumTransitionPage(
+          state: state,
+          child: const SnapshotScreen(),
+        ),
+      ),
+
+      // Profile Information Screen
+      GoRoute(
+        path: '/profile',
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => buildPremiumTransitionPage(
+          state: state,
+          child: const ProfileScreen(),
+        ),
+      ),
+
+      // Achievements Center Screen
+      GoRoute(
+        path: '/achievements',
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => buildPremiumTransitionPage(
+          state: state,
+          child: const AchievementsScreen(),
+        ),
+      ),
+
+      // Shell Route for Bottom Nav
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return NavigationShellScreen(navigationShell: navigationShell);
+        },
+        branches: <StatefulShellBranch>[
+          // Branch 1: Dashboard
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: '/dashboard',
+                builder: (context, state) => const DashboardScreen(),
+              ),
+            ],
+          ),
+
+          // Branch 2: Portfolio
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: '/portfolio',
+                builder: (context, state) => const PortfolioScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'asset/:id',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return buildPremiumTransitionPage(
+                        state: state,
+                        child: AssetDetailScreen(accountId: id),
+                      );
+                    },
+                  ),
+                  GoRoute(
+                    path: 'investment/:id',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return buildPremiumTransitionPage(
+                        state: state,
+                        child: InvestmentDetailScreen(investmentId: id),
+                      );
+                    },
+                  ),
+                  GoRoute(
+                    path: 'receivable/:id',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return buildPremiumTransitionPage(
+                        state: state,
+                        child: ReceivableDetailScreen(personId: id),
+                      );
+                    },
+                  ),
+                  GoRoute(
+                    path: 'liability/:id',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return buildPremiumTransitionPage(
+                        state: state,
+                        child: LiabilityDetailScreen(id: id),
+                      );
+                    },
+                  ),
+                  GoRoute(
+                    path: 'expected/:id',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return buildPremiumTransitionPage(
+                        state: state,
+                        child: ExpectedIncomeDetailScreen(incomeId: id),
+                      );
+                    },
+                  ),
+                  GoRoute(
+                    path: 'goal/:id',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return buildPremiumTransitionPage(
+                        state: state,
+                        child: GoalDetailScreen(goalId: id),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          // Branch 3: Transactions
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: '/transactions',
+                builder: (context, state) => const TransactionsScreen(),
+              ),
+            ],
+          ),
+
+          // Branch 4: Reports
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: '/reports',
+                builder: (context, state) => const ReportsScreen(),
+              ),
+            ],
+          ),
+
+          // Branch 5: Settings (Labeled "More")
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: '/settings',
+                builder: (context, state) => const SettingsScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'advanced',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) => buildPremiumTransitionPage(
+                      state: state,
+                      child: const AdvancedSettingsScreen(),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    ],
+  );
+});

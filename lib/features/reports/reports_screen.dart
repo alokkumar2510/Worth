@@ -1,0 +1,838 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../core/constants/app_colors.dart';
+import '../../core/widgets/glass_card.dart';
+import '../../core/widgets/premium_chart.dart';
+import '../../core/providers/dependency_provider.dart';
+import '../../core/providers/app_providers.dart';
+import '../../core/providers/mock_database.dart';
+import 'presentation/providers/wealth_intelligence_provider.dart';
+
+class ReportsScreen extends ConsumerStatefulWidget {
+  const ReportsScreen({super.key});
+
+  @override
+  ConsumerState<ReportsScreen> createState() => _ReportsScreenState();
+}
+
+class _ReportsScreenState extends ConsumerState<ReportsScreen> {
+  int _activeAllocationTab = 0; // 0: Assets, 1: Liabilities, 2: Investments
+  bool _showGrowthChart = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Lazy snapshots creation on launch
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!ref.read(mockModeProvider)) {
+        ref.read(realReportServiceProvider).generateMissingSnapshots();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final data = ref.watch(wealthIntelligenceProvider);
+    final dbState = ref.watch(mockDatabaseProvider);
+    final currency = dbState.currency;
+    final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
+
+    if (!data.hasData || (data.trendSpots.isEmpty && data.totalAssets == 0)) {
+      return _buildEmptyState(context);
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // Elegant Header
+          SliverAppBar(
+            expandedHeight: 120.0,
+            floating: false,
+            pinned: true,
+            backgroundColor: Colors.black,
+            flexibleSpace: FlexibleSpaceBar(
+              titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
+              title: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Wealth Intelligence',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Understand how your financial position evolved.',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      color: AppColors.grey500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Core Content
+          SliverPadding(
+            padding: const EdgeInsets.all(16.0),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                // SECTION 1: NET WORTH PERFORMANCE CARD
+                _buildNetWorthPerformanceCard(data, format, currency),
+                const SizedBox(height: 24),
+
+                // SECTION 2: WEALTH BREAKDOWN & ALLOCATIONS
+                _buildWealthBreakdownCard(data, format, currency),
+                const SizedBox(height: 24),
+
+                // SECTION 3: THIS MONTH SUMMARY
+                _buildThisMonthSummary(data, format),
+                const SizedBox(height: 24),
+
+                // SECTION 5: BIGGEST CHANGES (Logical order before timeline)
+                _buildBiggestChanges(data, format),
+                const SizedBox(height: 24),
+
+                // SECTION 6: AUTOMATIC INSIGHTS
+                _buildInsightsCard(data),
+                const SizedBox(height: 24),
+
+                // SECTION 4: WEALTH TIMELINE FEED
+                _buildWealthTimeline(data, format),
+                const SizedBox(height: 40),
+              ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- UI Section Builders ---
+
+  Widget _buildNetWorthPerformanceCard(WealthIntelligenceData data, NumberFormat format, String currency) {
+    return GlassCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Title & Sparkline Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'NET WORTH PERFORMANCE',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.grey500,
+                  letterSpacing: 1.0,
+                ),
+              ),
+              GestureDetector(
+                onTap: () => setState(() => _showGrowthChart = !_showGrowthChart),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.darkPrimary.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    _showGrowthChart ? 'Show Curve' : 'Show Growth',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.darkPrimary,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Large Net Worth Text
+          Text(
+            format.format(data.currentNetWorth),
+            style: GoogleFonts.outfit(
+              fontSize: 36,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 3-Column Changes (Monthly, Quarterly, Yearly)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildChangeColumn('Monthly Change', data.monthlyChange, data.monthlyChangePercent, format),
+              _buildChangeColumn('Quarterly Change', data.quarterlyChange, data.quarterlyChangePercent, format),
+              _buildChangeColumn('Yearly Change', data.yearlyChange, data.yearlyChangePercent, format),
+            ],
+          ),
+          const SizedBox(height: 28),
+
+          // Performance Charts
+          AnimatedCrossFade(
+            firstChild: SizedBox(
+              height: 200,
+              child: NetWorthLineChart(
+                spots: data.trendSpots,
+                dates: data.trendDates,
+                currency: currency,
+              ),
+            ),
+            secondChild: SizedBox(
+              height: 200,
+              child: GrowthBarChart(
+                growthData: data.growthData,
+                months: data.growthMonths,
+                currency: currency,
+              ),
+            ),
+            crossFadeState: _showGrowthChart ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 300),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChangeColumn(String title, double value, double percent, NumberFormat format) {
+    final isPositive = value >= 0;
+    final color = isPositive ? AppColors.darkSuccess : AppColors.darkDanger;
+    final prefix = isPositive ? '+' : '';
+
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title.toUpperCase(),
+            style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w600, color: AppColors.grey500),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$prefix${format.format(value)}',
+            style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '$prefix${percent.toStringAsFixed(1)}%',
+            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: color),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWealthBreakdownCard(WealthIntelligenceData data, NumberFormat format, String currency) {
+    Map<String, double> activeAllocation;
+    if (_activeAllocationTab == 0) {
+      activeAllocation = data.assetAllocation;
+    } else if (_activeAllocationTab == 1) {
+      activeAllocation = data.liabilityAllocation;
+    } else {
+      activeAllocation = data.investmentAllocation;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Grid of 5 Wealth Breakdown Pillars
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          childAspectRatio: 1.5,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          children: [
+            _buildPillarTile('Assets', data.totalAssets, format, const Color(0xFF22C55E), Icons.account_balance_wallet_outlined),
+            _buildPillarTile('Liabilities', data.totalLiabilities, format, const Color(0xFFEF4444), Icons.trending_down_outlined),
+            _buildPillarTile('Invested Capital', data.totalInvestedCapital, format, AppColors.darkPrimary, Icons.show_chart_outlined),
+            _buildPillarTile('Receivables', data.totalReceivables, format, const Color(0xFF06B6D4), Icons.call_received_outlined),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _buildPillarTile('Expected Income', data.totalExpectedIncome, format, const Color(0xFFF59E0B), Icons.hourglass_empty_outlined, isWide: true),
+        const SizedBox(height: 24),
+
+        // Allocation Card
+        GlassCard(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'ALLOCATION BREAKDOWN',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.grey500,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      _buildTabPill('Assets', 0),
+                      _buildTabPill('Liabilities', 1),
+                      _buildTabPill('Investments', 2),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Allocation Pie Chart
+              SizedBox(
+                height: 160,
+                child: AllocationPieChart(
+                  data: activeAllocation,
+                  currency: currency,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPillarTile(String label, double value, NumberFormat format, Color accentColor, IconData icon, {bool isWide = false}) {
+    return GlassCard(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: accentColor.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: accentColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.grey500,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  format.format(value),
+                  style: GoogleFonts.outfit(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabPill(String label, int index) {
+    final isActive = _activeAllocationTab == index;
+    return GestureDetector(
+      onTap: () => setState(() => _activeAllocationTab = index),
+      child: Container(
+        margin: const EdgeInsets.only(left: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.darkPrimary.withOpacity(0.16) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+            color: isActive ? Colors.white : AppColors.grey500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThisMonthSummary(WealthIntelligenceData data, NumberFormat format) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 16),
+          child: Text(
+            'THIS MONTH ACTIVITY',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: AppColors.grey500,
+              letterSpacing: 1.0,
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 140,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            children: [
+              _buildActivityRingCard('New Assets', data.newAssetsAdded, format, const Color(0xFF22C55E), Icons.add_circle_outline),
+              _buildActivityRingCard('Liabilities Reduced', data.liabilitiesReduced, format, const Color(0xFFEF4444), Icons.remove_circle_outline),
+              _buildActivityRingCard('Receivables Recovered', data.receivablesRecovered, format, const Color(0xFF06B6D4), Icons.replay_circle_filled_outlined),
+              _buildActivityRingCard('Investments Added', data.investmentsAdded, format, AppColors.darkPrimary, Icons.trending_up_outlined),
+              _buildActivityRingCard('Expected Received', data.expectedIncomeReceived, format, const Color(0xFFF59E0B), Icons.check_circle_outline),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActivityRingCard(String label, double val, NumberFormat format, Color color, IconData icon) {
+    final maxValue = val > 100000 ? val : 100000.0;
+    final pct = (val / maxValue).clamp(0.0, 1.0);
+
+    return Container(
+      width: 140,
+      margin: const EdgeInsets.only(right: 12),
+      child: GlassCard(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Expanded(
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SizedBox(
+                    width: 54,
+                    height: 54,
+                    child: CircularProgressIndicator(
+                      value: pct,
+                      strokeWidth: 4.5,
+                      backgroundColor: Colors.white.withOpacity(0.06),
+                      valueColor: AlwaysStoppedAnimation<Color>(color),
+                    ),
+                  ),
+                  Icon(icon, color: color, size: 20),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: AppColors.grey400,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              format.format(val),
+              style: GoogleFonts.outfit(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWealthTimeline(WealthIntelligenceData data, NumberFormat format) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 16),
+          child: Text(
+            'WEALTH TIMELINE',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: AppColors.grey500,
+              letterSpacing: 1.0,
+            ),
+          ),
+        ),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: data.timeline.length,
+          itemBuilder: (context, index) {
+            final item = data.timeline[index];
+            final isLast = index == data.timeline.length - 1;
+
+            return IntrinsicHeight(
+              child: Row(
+                children: [
+                  // Vertical timeline line and node
+                  Column(
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: isLast ? AppColors.darkPrimary : Colors.transparent,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isLast ? Colors.white : AppColors.grey500,
+                            width: 2,
+                          ),
+                          boxShadow: isLast
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.darkPrimary.withOpacity(0.5),
+                                    blurRadius: 10,
+                                    spreadRadius: 2,
+                                  )
+                                ]
+                              : null,
+                        ),
+                      ),
+                      Expanded(
+                        child: Container(
+                          width: 2,
+                          color: isLast ? Colors.transparent : AppColors.glassBorder,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 16),
+                  // Timeline details card
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: GlassCard(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              item.month,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: isLast ? FontWeight.bold : FontWeight.w500,
+                                color: isLast ? Colors.white : AppColors.grey400,
+                              ),
+                            ),
+                            Text(
+                              format.format(item.netWorth),
+                              style: GoogleFonts.outfit(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: isLast ? AppColors.darkPrimary : Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBiggestChanges(WealthIntelligenceData data, NumberFormat format) {
+    if (data.biggestChanges.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(
+            'BIGGEST CHANGES THIS MONTH',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: AppColors.grey500,
+              letterSpacing: 1.0,
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 110,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: data.biggestChanges.length,
+            itemBuilder: (context, index) {
+              final change = data.biggestChanges[index];
+              return Container(
+                width: 200,
+                margin: const EdgeInsets.only(right: 12),
+                child: GlassCard(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        change.label.toUpperCase(),
+                        style: GoogleFonts.inter(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.grey500,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        change.name,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const Spacer(),
+                      Text(
+                        format.format(change.amount),
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.darkPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInsightsCard(WealthIntelligenceData data) {
+    return GlassCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.analytics_outlined, color: AppColors.darkPrimary, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'WEALTH INSIGHTS',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.grey500,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...data.insights.map((insight) => Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 6),
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: AppColors.darkPrimary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        insight,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          height: 1.4,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      appBar: AppBar(
+        title: Text(
+          'Wealth Intelligence',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 24, color: Colors.white),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Premium layered illustration showing depth
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Outer glowing rings
+                  Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.darkPrimary.withOpacity(0.05), width: 1),
+                    ),
+                  ),
+                  Container(
+                    width: 110,
+                    height: 110,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.darkPrimary.withOpacity(0.1), width: 1.5),
+                    ),
+                  ),
+                  // Layered glass card illustration
+                  Transform.translate(
+                    offset: const Offset(-15, -10),
+                    child: Transform.rotate(
+                      angle: -0.15,
+                      child: Container(
+                        width: 70,
+                        height: 45,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.03),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white.withOpacity(0.05)),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Transform.translate(
+                    offset: const Offset(15, 10),
+                    child: Transform.rotate(
+                      angle: 0.15,
+                      child: Container(
+                        width: 70,
+                        height: 45,
+                        decoration: BoxDecoration(
+                          color: AppColors.darkPrimary.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.darkPrimary.withOpacity(0.15)),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Central glass sphere
+                  Container(
+                    width: 76,
+                    height: 76,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.4),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white.withOpacity(0.15), width: 1),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.darkPrimary.withOpacity(0.2),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.insights_rounded, size: 32, color: AppColors.darkPrimary),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 36),
+              Text(
+                'No reports available yet.',
+                style: GoogleFonts.outfit(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Add more transactions to generate wealth insights.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: AppColors.grey500,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                onPressed: () => context.push('/monthly_snapshot'),
+                icon: const Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                label: const Text('Capture First Snapshot', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.darkPrimary,
+                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  elevation: 8,
+                  shadowColor: AppColors.darkPrimary.withOpacity(0.3),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

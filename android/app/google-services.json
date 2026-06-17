@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "478137199876",
+    "project_id": "worth-app-alokk",
+    "storage_bucket": "worth-app-alokk.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:478137199876:android:725573a623c1170f493451",
+        "android_client_info": {
+          "package_name": "com.example.worth"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "478137199876-85kre24qu0l1n7tkqnsabms8r2o6lduc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.worth",
+            "certificate_hash": "4216ee776c298e0da28671d85efbdd09e9991d46"
+          }
+        },
+        {
+          "client_id": "478137199876-j0k0hfhorlda1jqb7uqqta6vmu3hhkbf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCNBVAxLDCzzBSLLg3A4TFqQ6wr-6I-OUo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "478137199876-j0k0hfhorlda1jqb7uqqta6vmu3hhkbf.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

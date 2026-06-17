@@ -1,0 +1,278 @@
+import 'dart:math' as math;
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import '../constants/app_colors.dart';
+
+class GlassCard extends StatefulWidget {
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
+  final double? borderRadius;
+  final double blurSigma;
+  final Color? borderColor;
+  final List<Color>? gradientColors;
+  final VoidCallback? onTap;
+  final bool isPrimary; // True = 32px radius, False = 24px radius
+
+  const GlassCard({
+    required this.child,
+    this.padding,
+    this.margin,
+    this.borderRadius,
+    this.blurSigma = 16.0,
+    this.borderColor,
+    this.gradientColors,
+    this.onTap,
+    this.isPrimary = false,
+    super.key,
+  });
+
+  @override
+  State<GlassCard> createState() => _GlassCardState();
+}
+
+class _GlassCardState extends State<GlassCard> with TickerProviderStateMixin {
+  late AnimationController _scaleController;
+  late Animation<double> _scaleAnimation;
+  late AnimationController _shineController;
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Tactile press compression spring animation
+    _scaleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 80),
+      reverseDuration: const Duration(milliseconds: 250),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.96).animate(
+      CurvedAnimation(
+        parent: _scaleController,
+        curve: Curves.easeOut,
+        reverseCurve: Curves.elasticOut,
+      ),
+    );
+
+    // Continuous premium glass highlight sweep
+    _shineController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 5),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _scaleController.dispose();
+    _shineController.dispose();
+    super.dispose();
+  }
+
+  void _handleTapDown(TapDownDetails _) {
+    if (widget.onTap != null) {
+      _scaleController.forward();
+    }
+  }
+
+  void _handleTapUp(TapUpDetails _) {
+    if (widget.onTap != null) {
+      _scaleController.reverse();
+    }
+  }
+
+  void _handleTapCancel() {
+    if (widget.onTap != null) {
+      _scaleController.reverse();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    // Enforce border radius rules: Primary = 32px, Secondary = 24px
+    final double radius = widget.borderRadius ?? (widget.isPrimary ? 32.0 : 24.0);
+
+    final defaultBackground = isDark 
+        ? AppColors.darkCard.withOpacity(0.55) 
+        : Colors.white.withOpacity(0.7);
+
+    final borderGradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: isDark 
+          ? [
+              Colors.white.withOpacity(0.18),
+              Colors.white.withOpacity(0.03),
+              AppColors.darkPrimary.withOpacity(0.15),
+              Colors.white.withOpacity(0.01),
+            ]
+          : [
+              Colors.black.withOpacity(0.1),
+              Colors.black.withOpacity(0.02),
+              Colors.black.withOpacity(0.05),
+            ],
+      stops: isDark ? const [0.0, 0.4, 0.8, 1.0] : null,
+    );
+
+    Widget cardBody = Stack(
+      children: [
+        // Background and Child Container
+        Container(
+          padding: widget.padding ?? const EdgeInsets.all(20.0),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(radius - 1.0),
+            gradient: widget.gradientColors != null
+                ? LinearGradient(
+                    colors: widget.gradientColors!,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            color: widget.gradientColors == null ? defaultBackground : null,
+          ),
+          child: widget.child,
+        ),
+
+        // Premium Noise Overlay Layer
+        Positioned.fill(
+          child: IgnorePointer(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(radius - 1.0),
+              child: CustomPaint(
+                painter: NoisePainter(
+                  opacity: isDark ? 0.012 : 0.008,
+                  density: 0.12,
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // Animated Glass Shine Sweep
+        if (isDark)
+          AnimatedBuilder(
+            animation: _shineController,
+            builder: (context, child) {
+              final value = _shineController.value;
+              final begin = Alignment(
+                -4.0 + (value * 8.0),
+                -4.0 + (value * 8.0),
+              );
+              final end = Alignment(
+                begin.x + 1.2,
+                begin.y + 1.2,
+              );
+              return Positioned.fill(
+                child: IgnorePointer(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(radius - 1.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: begin,
+                          end: end,
+                          colors: [
+                            Colors.transparent,
+                            Colors.white.withOpacity(0.07),
+                            Colors.transparent,
+                          ],
+                          stops: const [0.3, 0.5, 0.7],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+      ],
+    );
+
+    // Dynamic Scale Transition
+    Widget animatedCard = ScaleTransition(
+      scale: _scaleAnimation,
+      child: Container(
+        margin: widget.margin,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(radius),
+          // Gradient light-edge catch border
+          gradient: borderGradient,
+          boxShadow: [
+            BoxShadow(
+              color: isDark ? const Color(0x3F000000) : const Color(0x0A000000),
+              blurRadius: 32,
+              spreadRadius: 2,
+              offset: const Offset(0, 12),
+            ),
+            if (isDark)
+              BoxShadow(
+                color: AppColors.darkPrimary.withOpacity(0.03),
+                blurRadius: 40,
+                spreadRadius: 1,
+                offset: const Offset(0, 0),
+              ),
+          ],
+        ),
+        // Glass backing padding of 1.0px to reveal gradient border catch
+        padding: const EdgeInsets.all(1.0),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(radius - 1.0),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: widget.blurSigma, sigmaY: widget.blurSigma),
+            child: cardBody,
+          ),
+        ),
+      ),
+    );
+
+    if (widget.onTap != null) {
+      return GestureDetector(
+        onTapDown: _handleTapDown,
+        onTapUp: _handleTapUp,
+        onTapCancel: _handleTapCancel,
+        onTap: widget.onTap,
+        child: animatedCard,
+      );
+    }
+
+    return animatedCard;
+  }
+}
+
+class NoisePainter extends CustomPainter {
+  final double opacity;
+  final double density;
+
+  const NoisePainter({
+    required this.opacity,
+    required this.density,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(opacity)
+      ..strokeWidth = 1.0;
+
+    final List<Offset> points = [];
+    
+    for (double x = 0; x < size.width; x += 2) {
+      for (double y = 0; y < size.height; y += 2) {
+        final val = math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+        final randomVal = val - val.floorToDouble();
+        if (randomVal < density) {
+          points.add(Offset(x, y));
+        }
+      }
+    }
+    
+    canvas.drawPoints(PointMode.points, points, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant NoisePainter oldDelegate) {
+    return oldDelegate.opacity != opacity || oldDelegate.density != density;
+  }
+}
