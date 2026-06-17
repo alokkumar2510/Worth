@@ -12,6 +12,7 @@ class MtfPositions extends Table {
   RealColumn get borrowedCapital => real()();
   RealColumn get interestRate => real()();
   DateTimeColumn get openingDate => dateTime()();
+  DateTimeColumn get interestStartDate => dateTime()();
   DateTimeColumn get closedDate => dateTime().nullable()();
   IntColumn get isClosed => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime()();

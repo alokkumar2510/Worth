@@ -51,34 +51,38 @@ class ProfileScreen extends ConsumerWidget {
             children: [
               // Profile Header Card
               GlassCard(
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 38,
-                      backgroundColor: tierColor.withOpacity(0.12),
-                      child: Icon(Icons.radar_rounded, size: 40, color: tierColor),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      userName,
-                      style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(userEmail, style: const TextStyle(color: AppColors.grey500, fontSize: 13)),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: tierColor.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: tierColor.withOpacity(0.3)),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      CircleAvatar(
+                        radius: 38,
+                        backgroundColor: tierColor.withOpacity(0.12),
+                        child: Icon(Icons.radar_rounded, size: 40, color: tierColor),
                       ),
-                      child: Text(
-                        wealthTier.toUpperCase(),
-                        style: TextStyle(color: tierColor, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                      const SizedBox(height: 16),
+                      Text(
+                        userName,
+                        style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 6),
+                      Text(userEmail, style: const TextStyle(color: AppColors.grey500, fontSize: 13)),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: tierColor.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: tierColor.withOpacity(0.3)),
+                        ),
+                        child: Text(
+                          wealthTier.toUpperCase(),
+                          style: TextStyle(color: tierColor, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 24),

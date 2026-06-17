@@ -7,26 +7,44 @@ class ReminderScheduler {
   final db.AppDatabase _db;
   final NotificationService _notificationService;
   final Future<void> Function()? onCheck;
+  final Future<void> Function()? onCheckIn;
   Timer? _timer;
+  Timer? _checkInTimer;
 
-  ReminderScheduler(this._db, this._notificationService, {this.onCheck});
+  ReminderScheduler(this._db, this._notificationService, {this.onCheck, this.onCheckIn});
 
   // Starts the scheduler to run checks immediately and then periodically (e.g., every 12 hours)
   void start() {
     _timer?.cancel();
+    _checkInTimer?.cancel();
     
-    // Run initial scan on startup
+    // Run initial scans on startup
     checkAndTriggerReminders();
+    _triggerCheckIn();
 
     // Schedule scan every 12 hours
     _timer = Timer.periodic(const Duration(hours: 12), (_) {
       checkAndTriggerReminders();
+    });
+
+    // Schedule check-in reminders scan every 15 minutes
+    _checkInTimer = Timer.periodic(const Duration(minutes: 15), (_) {
+      _triggerCheckIn();
     });
   }
 
   // Stop background timer
   void stop() {
     _timer?.cancel();
+    _checkInTimer?.cancel();
+  }
+
+  Future<void> _triggerCheckIn() async {
+    try {
+      if (onCheckIn != null) {
+        await onCheckIn!();
+      }
+    } catch (_) {}
   }
 
   // Scan database and trigger notifications

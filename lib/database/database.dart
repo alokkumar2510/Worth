@@ -23,6 +23,8 @@ import 'tables/milestones.dart';
 import 'tables/achievements.dart';
 import 'tables/achievement_progress.dart';
 import 'tables/mtf_positions.dart';
+import 'tables/sips.dart';
+import 'tables/daily_check_ins.dart';
 
 part 'database.g.dart';
 
@@ -48,12 +50,14 @@ part 'database.g.dart';
   Achievements,
   AchievementProgress,
   MtfPositions,
+  Sips,
+  DailyCheckIns,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 6; // Bumping version for MTF Position Tracker
+  int get schemaVersion => 8; // Bumping version for Daily Check-ins
  
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -94,6 +98,13 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 6) {
             await m.createTable(mtfPositions);
+          }
+          if (from < 7) {
+            await m.addColumn(mtfPositions, mtfPositions.interestStartDate);
+            await m.createTable(sips);
+          }
+          if (from < 8) {
+            await m.createTable(dailyCheckIns);
           }
         },
       );

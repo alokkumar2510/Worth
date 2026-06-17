@@ -9067,6 +9067,12 @@ class $MtfPositionsTable extends MtfPositions
   late final GeneratedColumn<DateTime> openingDate = GeneratedColumn<DateTime>(
       'opening_date', aliasedName, false,
       type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _interestStartDateMeta =
+      const VerificationMeta('interestStartDate');
+  @override
+  late final GeneratedColumn<DateTime> interestStartDate =
+      GeneratedColumn<DateTime>('interest_start_date', aliasedName, false,
+          type: DriftSqlType.dateTime, requiredDuringInsert: true);
   static const VerificationMeta _closedDateMeta =
       const VerificationMeta('closedDate');
   @override
@@ -9119,6 +9125,7 @@ class $MtfPositionsTable extends MtfPositions
         borrowedCapital,
         interestRate,
         openingDate,
+        interestStartDate,
         closedDate,
         isClosed,
         createdAt,
@@ -9209,6 +9216,14 @@ class $MtfPositionsTable extends MtfPositions
     } else if (isInserting) {
       context.missing(_openingDateMeta);
     }
+    if (data.containsKey('interest_start_date')) {
+      context.handle(
+          _interestStartDateMeta,
+          interestStartDate.isAcceptableOrUnknown(
+              data['interest_start_date']!, _interestStartDateMeta));
+    } else if (isInserting) {
+      context.missing(_interestStartDateMeta);
+    }
     if (data.containsKey('closed_date')) {
       context.handle(
           _closedDateMeta,
@@ -9272,6 +9287,9 @@ class $MtfPositionsTable extends MtfPositions
           .read(DriftSqlType.double, data['${effectivePrefix}interest_rate'])!,
       openingDate: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}opening_date'])!,
+      interestStartDate: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}interest_start_date'])!,
       closedDate: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}closed_date']),
       isClosed: attachedDatabase.typeMapping
@@ -9304,6 +9322,7 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
   final double borrowedCapital;
   final double interestRate;
   final DateTime openingDate;
+  final DateTime interestStartDate;
   final DateTime? closedDate;
   final int isClosed;
   final DateTime createdAt;
@@ -9321,6 +9340,7 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
       required this.borrowedCapital,
       required this.interestRate,
       required this.openingDate,
+      required this.interestStartDate,
       this.closedDate,
       required this.isClosed,
       required this.createdAt,
@@ -9340,6 +9360,7 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
     map['borrowed_capital'] = Variable<double>(borrowedCapital);
     map['interest_rate'] = Variable<double>(interestRate);
     map['opening_date'] = Variable<DateTime>(openingDate);
+    map['interest_start_date'] = Variable<DateTime>(interestStartDate);
     if (!nullToAbsent || closedDate != null) {
       map['closed_date'] = Variable<DateTime>(closedDate);
     }
@@ -9365,6 +9386,7 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
       borrowedCapital: Value(borrowedCapital),
       interestRate: Value(interestRate),
       openingDate: Value(openingDate),
+      interestStartDate: Value(interestStartDate),
       closedDate: closedDate == null && nullToAbsent
           ? const Value.absent()
           : Value(closedDate),
@@ -9392,6 +9414,8 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
       borrowedCapital: serializer.fromJson<double>(json['borrowedCapital']),
       interestRate: serializer.fromJson<double>(json['interestRate']),
       openingDate: serializer.fromJson<DateTime>(json['openingDate']),
+      interestStartDate:
+          serializer.fromJson<DateTime>(json['interestStartDate']),
       closedDate: serializer.fromJson<DateTime?>(json['closedDate']),
       isClosed: serializer.fromJson<int>(json['isClosed']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -9414,6 +9438,7 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
       'borrowedCapital': serializer.toJson<double>(borrowedCapital),
       'interestRate': serializer.toJson<double>(interestRate),
       'openingDate': serializer.toJson<DateTime>(openingDate),
+      'interestStartDate': serializer.toJson<DateTime>(interestStartDate),
       'closedDate': serializer.toJson<DateTime?>(closedDate),
       'isClosed': serializer.toJson<int>(isClosed),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -9434,6 +9459,7 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
           double? borrowedCapital,
           double? interestRate,
           DateTime? openingDate,
+          DateTime? interestStartDate,
           Value<DateTime?> closedDate = const Value.absent(),
           int? isClosed,
           DateTime? createdAt,
@@ -9451,6 +9477,7 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
         borrowedCapital: borrowedCapital ?? this.borrowedCapital,
         interestRate: interestRate ?? this.interestRate,
         openingDate: openingDate ?? this.openingDate,
+        interestStartDate: interestStartDate ?? this.interestStartDate,
         closedDate: closedDate.present ? closedDate.value : this.closedDate,
         isClosed: isClosed ?? this.isClosed,
         createdAt: createdAt ?? this.createdAt,
@@ -9483,6 +9510,9 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
           : this.interestRate,
       openingDate:
           data.openingDate.present ? data.openingDate.value : this.openingDate,
+      interestStartDate: data.interestStartDate.present
+          ? data.interestStartDate.value
+          : this.interestStartDate,
       closedDate:
           data.closedDate.present ? data.closedDate.value : this.closedDate,
       isClosed: data.isClosed.present ? data.isClosed.value : this.isClosed,
@@ -9509,6 +9539,7 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
           ..write('borrowedCapital: $borrowedCapital, ')
           ..write('interestRate: $interestRate, ')
           ..write('openingDate: $openingDate, ')
+          ..write('interestStartDate: $interestStartDate, ')
           ..write('closedDate: $closedDate, ')
           ..write('isClosed: $isClosed, ')
           ..write('createdAt: $createdAt, ')
@@ -9531,6 +9562,7 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
       borrowedCapital,
       interestRate,
       openingDate,
+      interestStartDate,
       closedDate,
       isClosed,
       createdAt,
@@ -9551,6 +9583,7 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
           other.borrowedCapital == this.borrowedCapital &&
           other.interestRate == this.interestRate &&
           other.openingDate == this.openingDate &&
+          other.interestStartDate == this.interestStartDate &&
           other.closedDate == this.closedDate &&
           other.isClosed == this.isClosed &&
           other.createdAt == this.createdAt &&
@@ -9570,6 +9603,7 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
   final Value<double> borrowedCapital;
   final Value<double> interestRate;
   final Value<DateTime> openingDate;
+  final Value<DateTime> interestStartDate;
   final Value<DateTime?> closedDate;
   final Value<int> isClosed;
   final Value<DateTime> createdAt;
@@ -9588,6 +9622,7 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
     this.borrowedCapital = const Value.absent(),
     this.interestRate = const Value.absent(),
     this.openingDate = const Value.absent(),
+    this.interestStartDate = const Value.absent(),
     this.closedDate = const Value.absent(),
     this.isClosed = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -9607,6 +9642,7 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
     required double borrowedCapital,
     required double interestRate,
     required DateTime openingDate,
+    required DateTime interestStartDate,
     this.closedDate = const Value.absent(),
     this.isClosed = const Value.absent(),
     required DateTime createdAt,
@@ -9624,6 +9660,7 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
         borrowedCapital = Value(borrowedCapital),
         interestRate = Value(interestRate),
         openingDate = Value(openingDate),
+        interestStartDate = Value(interestStartDate),
         createdAt = Value(createdAt),
         updatedAt = Value(updatedAt);
   static Insertable<MtfPosition> custom({
@@ -9637,6 +9674,7 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
     Expression<double>? borrowedCapital,
     Expression<double>? interestRate,
     Expression<DateTime>? openingDate,
+    Expression<DateTime>? interestStartDate,
     Expression<DateTime>? closedDate,
     Expression<int>? isClosed,
     Expression<DateTime>? createdAt,
@@ -9656,6 +9694,7 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
       if (borrowedCapital != null) 'borrowed_capital': borrowedCapital,
       if (interestRate != null) 'interest_rate': interestRate,
       if (openingDate != null) 'opening_date': openingDate,
+      if (interestStartDate != null) 'interest_start_date': interestStartDate,
       if (closedDate != null) 'closed_date': closedDate,
       if (isClosed != null) 'is_closed': isClosed,
       if (createdAt != null) 'created_at': createdAt,
@@ -9677,6 +9716,7 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
       Value<double>? borrowedCapital,
       Value<double>? interestRate,
       Value<DateTime>? openingDate,
+      Value<DateTime>? interestStartDate,
       Value<DateTime?>? closedDate,
       Value<int>? isClosed,
       Value<DateTime>? createdAt,
@@ -9695,6 +9735,7 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
       borrowedCapital: borrowedCapital ?? this.borrowedCapital,
       interestRate: interestRate ?? this.interestRate,
       openingDate: openingDate ?? this.openingDate,
+      interestStartDate: interestStartDate ?? this.interestStartDate,
       closedDate: closedDate ?? this.closedDate,
       isClosed: isClosed ?? this.isClosed,
       createdAt: createdAt ?? this.createdAt,
@@ -9738,6 +9779,9 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
     if (openingDate.present) {
       map['opening_date'] = Variable<DateTime>(openingDate.value);
     }
+    if (interestStartDate.present) {
+      map['interest_start_date'] = Variable<DateTime>(interestStartDate.value);
+    }
     if (closedDate.present) {
       map['closed_date'] = Variable<DateTime>(closedDate.value);
     }
@@ -9775,12 +9819,1061 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
           ..write('borrowedCapital: $borrowedCapital, ')
           ..write('interestRate: $interestRate, ')
           ..write('openingDate: $openingDate, ')
+          ..write('interestStartDate: $interestStartDate, ')
           ..write('closedDate: $closedDate, ')
           ..write('isClosed: $isClosed, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('lastAccrualDate: $lastAccrualDate, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SipsTable extends Sips with TableInfo<$SipsTable, Sip> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SipsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _investmentIdMeta =
+      const VerificationMeta('investmentId');
+  @override
+  late final GeneratedColumn<String> investmentId = GeneratedColumn<String>(
+      'investment_id', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: true,
+      $customConstraints: 'NOT NULL REFERENCES investments(id)');
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<double> amount = GeneratedColumn<double>(
+      'amount', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _frequencyMeta =
+      const VerificationMeta('frequency');
+  @override
+  late final GeneratedColumn<String> frequency = GeneratedColumn<String>(
+      'frequency', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _sipDateMeta =
+      const VerificationMeta('sipDate');
+  @override
+  late final GeneratedColumn<int> sipDate = GeneratedColumn<int>(
+      'sip_date', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _startDateMeta =
+      const VerificationMeta('startDate');
+  @override
+  late final GeneratedColumn<DateTime> startDate = GeneratedColumn<DateTime>(
+      'start_date', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _endDateMeta =
+      const VerificationMeta('endDate');
+  @override
+  late final GeneratedColumn<DateTime> endDate = GeneratedColumn<DateTime>(
+      'end_date', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _autoCreateMeta =
+      const VerificationMeta('autoCreate');
+  @override
+  late final GeneratedColumn<int> autoCreate = GeneratedColumn<int>(
+      'auto_create', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _isActiveMeta =
+      const VerificationMeta('isActive');
+  @override
+  late final GeneratedColumn<int> isActive = GeneratedColumn<int>(
+      'is_active', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(1));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _syncStatusMeta =
+      const VerificationMeta('syncStatus');
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+      'sync_status', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('pending'));
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        investmentId,
+        amount,
+        frequency,
+        sipDate,
+        startDate,
+        endDate,
+        autoCreate,
+        isActive,
+        createdAt,
+        updatedAt,
+        syncStatus
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sips';
+  @override
+  VerificationContext validateIntegrity(Insertable<Sip> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('investment_id')) {
+      context.handle(
+          _investmentIdMeta,
+          investmentId.isAcceptableOrUnknown(
+              data['investment_id']!, _investmentIdMeta));
+    } else if (isInserting) {
+      context.missing(_investmentIdMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(_amountMeta,
+          amount.isAcceptableOrUnknown(data['amount']!, _amountMeta));
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('frequency')) {
+      context.handle(_frequencyMeta,
+          frequency.isAcceptableOrUnknown(data['frequency']!, _frequencyMeta));
+    } else if (isInserting) {
+      context.missing(_frequencyMeta);
+    }
+    if (data.containsKey('sip_date')) {
+      context.handle(_sipDateMeta,
+          sipDate.isAcceptableOrUnknown(data['sip_date']!, _sipDateMeta));
+    } else if (isInserting) {
+      context.missing(_sipDateMeta);
+    }
+    if (data.containsKey('start_date')) {
+      context.handle(_startDateMeta,
+          startDate.isAcceptableOrUnknown(data['start_date']!, _startDateMeta));
+    } else if (isInserting) {
+      context.missing(_startDateMeta);
+    }
+    if (data.containsKey('end_date')) {
+      context.handle(_endDateMeta,
+          endDate.isAcceptableOrUnknown(data['end_date']!, _endDateMeta));
+    }
+    if (data.containsKey('auto_create')) {
+      context.handle(
+          _autoCreateMeta,
+          autoCreate.isAcceptableOrUnknown(
+              data['auto_create']!, _autoCreateMeta));
+    }
+    if (data.containsKey('is_active')) {
+      context.handle(_isActiveMeta,
+          isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+          _syncStatusMeta,
+          syncStatus.isAcceptableOrUnknown(
+              data['sync_status']!, _syncStatusMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Sip map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Sip(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      investmentId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}investment_id'])!,
+      amount: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}amount'])!,
+      frequency: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}frequency'])!,
+      sipDate: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}sip_date'])!,
+      startDate: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}start_date'])!,
+      endDate: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}end_date']),
+      autoCreate: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}auto_create'])!,
+      isActive: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}is_active'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      syncStatus: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}sync_status'])!,
+    );
+  }
+
+  @override
+  $SipsTable createAlias(String alias) {
+    return $SipsTable(attachedDatabase, alias);
+  }
+}
+
+class Sip extends DataClass implements Insertable<Sip> {
+  final String id;
+  final String investmentId;
+  final double amount;
+  final String frequency;
+  final int sipDate;
+  final DateTime startDate;
+  final DateTime? endDate;
+  final int autoCreate;
+  final int isActive;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final String syncStatus;
+  const Sip(
+      {required this.id,
+      required this.investmentId,
+      required this.amount,
+      required this.frequency,
+      required this.sipDate,
+      required this.startDate,
+      this.endDate,
+      required this.autoCreate,
+      required this.isActive,
+      required this.createdAt,
+      required this.updatedAt,
+      required this.syncStatus});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['investment_id'] = Variable<String>(investmentId);
+    map['amount'] = Variable<double>(amount);
+    map['frequency'] = Variable<String>(frequency);
+    map['sip_date'] = Variable<int>(sipDate);
+    map['start_date'] = Variable<DateTime>(startDate);
+    if (!nullToAbsent || endDate != null) {
+      map['end_date'] = Variable<DateTime>(endDate);
+    }
+    map['auto_create'] = Variable<int>(autoCreate);
+    map['is_active'] = Variable<int>(isActive);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['sync_status'] = Variable<String>(syncStatus);
+    return map;
+  }
+
+  SipsCompanion toCompanion(bool nullToAbsent) {
+    return SipsCompanion(
+      id: Value(id),
+      investmentId: Value(investmentId),
+      amount: Value(amount),
+      frequency: Value(frequency),
+      sipDate: Value(sipDate),
+      startDate: Value(startDate),
+      endDate: endDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endDate),
+      autoCreate: Value(autoCreate),
+      isActive: Value(isActive),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      syncStatus: Value(syncStatus),
+    );
+  }
+
+  factory Sip.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Sip(
+      id: serializer.fromJson<String>(json['id']),
+      investmentId: serializer.fromJson<String>(json['investmentId']),
+      amount: serializer.fromJson<double>(json['amount']),
+      frequency: serializer.fromJson<String>(json['frequency']),
+      sipDate: serializer.fromJson<int>(json['sipDate']),
+      startDate: serializer.fromJson<DateTime>(json['startDate']),
+      endDate: serializer.fromJson<DateTime?>(json['endDate']),
+      autoCreate: serializer.fromJson<int>(json['autoCreate']),
+      isActive: serializer.fromJson<int>(json['isActive']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      syncStatus: serializer.fromJson<String>(json['syncStatus']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'investmentId': serializer.toJson<String>(investmentId),
+      'amount': serializer.toJson<double>(amount),
+      'frequency': serializer.toJson<String>(frequency),
+      'sipDate': serializer.toJson<int>(sipDate),
+      'startDate': serializer.toJson<DateTime>(startDate),
+      'endDate': serializer.toJson<DateTime?>(endDate),
+      'autoCreate': serializer.toJson<int>(autoCreate),
+      'isActive': serializer.toJson<int>(isActive),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'syncStatus': serializer.toJson<String>(syncStatus),
+    };
+  }
+
+  Sip copyWith(
+          {String? id,
+          String? investmentId,
+          double? amount,
+          String? frequency,
+          int? sipDate,
+          DateTime? startDate,
+          Value<DateTime?> endDate = const Value.absent(),
+          int? autoCreate,
+          int? isActive,
+          DateTime? createdAt,
+          DateTime? updatedAt,
+          String? syncStatus}) =>
+      Sip(
+        id: id ?? this.id,
+        investmentId: investmentId ?? this.investmentId,
+        amount: amount ?? this.amount,
+        frequency: frequency ?? this.frequency,
+        sipDate: sipDate ?? this.sipDate,
+        startDate: startDate ?? this.startDate,
+        endDate: endDate.present ? endDate.value : this.endDate,
+        autoCreate: autoCreate ?? this.autoCreate,
+        isActive: isActive ?? this.isActive,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        syncStatus: syncStatus ?? this.syncStatus,
+      );
+  Sip copyWithCompanion(SipsCompanion data) {
+    return Sip(
+      id: data.id.present ? data.id.value : this.id,
+      investmentId: data.investmentId.present
+          ? data.investmentId.value
+          : this.investmentId,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      frequency: data.frequency.present ? data.frequency.value : this.frequency,
+      sipDate: data.sipDate.present ? data.sipDate.value : this.sipDate,
+      startDate: data.startDate.present ? data.startDate.value : this.startDate,
+      endDate: data.endDate.present ? data.endDate.value : this.endDate,
+      autoCreate:
+          data.autoCreate.present ? data.autoCreate.value : this.autoCreate,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      syncStatus:
+          data.syncStatus.present ? data.syncStatus.value : this.syncStatus,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Sip(')
+          ..write('id: $id, ')
+          ..write('investmentId: $investmentId, ')
+          ..write('amount: $amount, ')
+          ..write('frequency: $frequency, ')
+          ..write('sipDate: $sipDate, ')
+          ..write('startDate: $startDate, ')
+          ..write('endDate: $endDate, ')
+          ..write('autoCreate: $autoCreate, ')
+          ..write('isActive: $isActive, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      investmentId,
+      amount,
+      frequency,
+      sipDate,
+      startDate,
+      endDate,
+      autoCreate,
+      isActive,
+      createdAt,
+      updatedAt,
+      syncStatus);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Sip &&
+          other.id == this.id &&
+          other.investmentId == this.investmentId &&
+          other.amount == this.amount &&
+          other.frequency == this.frequency &&
+          other.sipDate == this.sipDate &&
+          other.startDate == this.startDate &&
+          other.endDate == this.endDate &&
+          other.autoCreate == this.autoCreate &&
+          other.isActive == this.isActive &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.syncStatus == this.syncStatus);
+}
+
+class SipsCompanion extends UpdateCompanion<Sip> {
+  final Value<String> id;
+  final Value<String> investmentId;
+  final Value<double> amount;
+  final Value<String> frequency;
+  final Value<int> sipDate;
+  final Value<DateTime> startDate;
+  final Value<DateTime?> endDate;
+  final Value<int> autoCreate;
+  final Value<int> isActive;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<String> syncStatus;
+  final Value<int> rowid;
+  const SipsCompanion({
+    this.id = const Value.absent(),
+    this.investmentId = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.frequency = const Value.absent(),
+    this.sipDate = const Value.absent(),
+    this.startDate = const Value.absent(),
+    this.endDate = const Value.absent(),
+    this.autoCreate = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SipsCompanion.insert({
+    required String id,
+    required String investmentId,
+    required double amount,
+    required String frequency,
+    required int sipDate,
+    required DateTime startDate,
+    this.endDate = const Value.absent(),
+    this.autoCreate = const Value.absent(),
+    this.isActive = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.syncStatus = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        investmentId = Value(investmentId),
+        amount = Value(amount),
+        frequency = Value(frequency),
+        sipDate = Value(sipDate),
+        startDate = Value(startDate),
+        createdAt = Value(createdAt),
+        updatedAt = Value(updatedAt);
+  static Insertable<Sip> custom({
+    Expression<String>? id,
+    Expression<String>? investmentId,
+    Expression<double>? amount,
+    Expression<String>? frequency,
+    Expression<int>? sipDate,
+    Expression<DateTime>? startDate,
+    Expression<DateTime>? endDate,
+    Expression<int>? autoCreate,
+    Expression<int>? isActive,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<String>? syncStatus,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (investmentId != null) 'investment_id': investmentId,
+      if (amount != null) 'amount': amount,
+      if (frequency != null) 'frequency': frequency,
+      if (sipDate != null) 'sip_date': sipDate,
+      if (startDate != null) 'start_date': startDate,
+      if (endDate != null) 'end_date': endDate,
+      if (autoCreate != null) 'auto_create': autoCreate,
+      if (isActive != null) 'is_active': isActive,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SipsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? investmentId,
+      Value<double>? amount,
+      Value<String>? frequency,
+      Value<int>? sipDate,
+      Value<DateTime>? startDate,
+      Value<DateTime?>? endDate,
+      Value<int>? autoCreate,
+      Value<int>? isActive,
+      Value<DateTime>? createdAt,
+      Value<DateTime>? updatedAt,
+      Value<String>? syncStatus,
+      Value<int>? rowid}) {
+    return SipsCompanion(
+      id: id ?? this.id,
+      investmentId: investmentId ?? this.investmentId,
+      amount: amount ?? this.amount,
+      frequency: frequency ?? this.frequency,
+      sipDate: sipDate ?? this.sipDate,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      autoCreate: autoCreate ?? this.autoCreate,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (investmentId.present) {
+      map['investment_id'] = Variable<String>(investmentId.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<double>(amount.value);
+    }
+    if (frequency.present) {
+      map['frequency'] = Variable<String>(frequency.value);
+    }
+    if (sipDate.present) {
+      map['sip_date'] = Variable<int>(sipDate.value);
+    }
+    if (startDate.present) {
+      map['start_date'] = Variable<DateTime>(startDate.value);
+    }
+    if (endDate.present) {
+      map['end_date'] = Variable<DateTime>(endDate.value);
+    }
+    if (autoCreate.present) {
+      map['auto_create'] = Variable<int>(autoCreate.value);
+    }
+    if (isActive.present) {
+      map['is_active'] = Variable<int>(isActive.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SipsCompanion(')
+          ..write('id: $id, ')
+          ..write('investmentId: $investmentId, ')
+          ..write('amount: $amount, ')
+          ..write('frequency: $frequency, ')
+          ..write('sipDate: $sipDate, ')
+          ..write('startDate: $startDate, ')
+          ..write('endDate: $endDate, ')
+          ..write('autoCreate: $autoCreate, ')
+          ..write('isActive: $isActive, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $DailyCheckInsTable extends DailyCheckIns
+    with TableInfo<$DailyCheckInsTable, DailyCheckIn> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DailyCheckInsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(
+      'date', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _transactionCountMeta =
+      const VerificationMeta('transactionCount');
+  @override
+  late final GeneratedColumn<int> transactionCount = GeneratedColumn<int>(
+      'transaction_count', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _lastTransactionTimeMeta =
+      const VerificationMeta('lastTransactionTime');
+  @override
+  late final GeneratedColumn<DateTime> lastTransactionTime =
+      GeneratedColumn<DateTime>('last_transaction_time', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _isCompletedMeta =
+      const VerificationMeta('isCompleted');
+  @override
+  late final GeneratedColumn<bool> isCompleted = GeneratedColumn<bool>(
+      'is_completed', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("is_completed" IN (0, 1))'),
+      defaultValue: const Constant(false));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _syncStatusMeta =
+      const VerificationMeta('syncStatus');
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+      'sync_status', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('pending'));
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        date,
+        transactionCount,
+        lastTransactionTime,
+        isCompleted,
+        createdAt,
+        updatedAt,
+        syncStatus
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'daily_check_ins';
+  @override
+  VerificationContext validateIntegrity(Insertable<DailyCheckIn> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+          _dateMeta, date.isAcceptableOrUnknown(data['date']!, _dateMeta));
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    if (data.containsKey('transaction_count')) {
+      context.handle(
+          _transactionCountMeta,
+          transactionCount.isAcceptableOrUnknown(
+              data['transaction_count']!, _transactionCountMeta));
+    }
+    if (data.containsKey('last_transaction_time')) {
+      context.handle(
+          _lastTransactionTimeMeta,
+          lastTransactionTime.isAcceptableOrUnknown(
+              data['last_transaction_time']!, _lastTransactionTimeMeta));
+    }
+    if (data.containsKey('is_completed')) {
+      context.handle(
+          _isCompletedMeta,
+          isCompleted.isAcceptableOrUnknown(
+              data['is_completed']!, _isCompletedMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+          _syncStatusMeta,
+          syncStatus.isAcceptableOrUnknown(
+              data['sync_status']!, _syncStatusMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DailyCheckIn map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DailyCheckIn(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      date: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}date'])!,
+      transactionCount: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}transaction_count'])!,
+      lastTransactionTime: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}last_transaction_time']),
+      isCompleted: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_completed'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+      syncStatus: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}sync_status'])!,
+    );
+  }
+
+  @override
+  $DailyCheckInsTable createAlias(String alias) {
+    return $DailyCheckInsTable(attachedDatabase, alias);
+  }
+}
+
+class DailyCheckIn extends DataClass implements Insertable<DailyCheckIn> {
+  final String id;
+  final DateTime date;
+  final int transactionCount;
+  final DateTime? lastTransactionTime;
+  final bool isCompleted;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final String syncStatus;
+  const DailyCheckIn(
+      {required this.id,
+      required this.date,
+      required this.transactionCount,
+      this.lastTransactionTime,
+      required this.isCompleted,
+      required this.createdAt,
+      required this.updatedAt,
+      required this.syncStatus});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['date'] = Variable<DateTime>(date);
+    map['transaction_count'] = Variable<int>(transactionCount);
+    if (!nullToAbsent || lastTransactionTime != null) {
+      map['last_transaction_time'] = Variable<DateTime>(lastTransactionTime);
+    }
+    map['is_completed'] = Variable<bool>(isCompleted);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['sync_status'] = Variable<String>(syncStatus);
+    return map;
+  }
+
+  DailyCheckInsCompanion toCompanion(bool nullToAbsent) {
+    return DailyCheckInsCompanion(
+      id: Value(id),
+      date: Value(date),
+      transactionCount: Value(transactionCount),
+      lastTransactionTime: lastTransactionTime == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastTransactionTime),
+      isCompleted: Value(isCompleted),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      syncStatus: Value(syncStatus),
+    );
+  }
+
+  factory DailyCheckIn.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DailyCheckIn(
+      id: serializer.fromJson<String>(json['id']),
+      date: serializer.fromJson<DateTime>(json['date']),
+      transactionCount: serializer.fromJson<int>(json['transactionCount']),
+      lastTransactionTime:
+          serializer.fromJson<DateTime?>(json['lastTransactionTime']),
+      isCompleted: serializer.fromJson<bool>(json['isCompleted']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      syncStatus: serializer.fromJson<String>(json['syncStatus']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'date': serializer.toJson<DateTime>(date),
+      'transactionCount': serializer.toJson<int>(transactionCount),
+      'lastTransactionTime': serializer.toJson<DateTime?>(lastTransactionTime),
+      'isCompleted': serializer.toJson<bool>(isCompleted),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'syncStatus': serializer.toJson<String>(syncStatus),
+    };
+  }
+
+  DailyCheckIn copyWith(
+          {String? id,
+          DateTime? date,
+          int? transactionCount,
+          Value<DateTime?> lastTransactionTime = const Value.absent(),
+          bool? isCompleted,
+          DateTime? createdAt,
+          DateTime? updatedAt,
+          String? syncStatus}) =>
+      DailyCheckIn(
+        id: id ?? this.id,
+        date: date ?? this.date,
+        transactionCount: transactionCount ?? this.transactionCount,
+        lastTransactionTime: lastTransactionTime.present
+            ? lastTransactionTime.value
+            : this.lastTransactionTime,
+        isCompleted: isCompleted ?? this.isCompleted,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        syncStatus: syncStatus ?? this.syncStatus,
+      );
+  DailyCheckIn copyWithCompanion(DailyCheckInsCompanion data) {
+    return DailyCheckIn(
+      id: data.id.present ? data.id.value : this.id,
+      date: data.date.present ? data.date.value : this.date,
+      transactionCount: data.transactionCount.present
+          ? data.transactionCount.value
+          : this.transactionCount,
+      lastTransactionTime: data.lastTransactionTime.present
+          ? data.lastTransactionTime.value
+          : this.lastTransactionTime,
+      isCompleted:
+          data.isCompleted.present ? data.isCompleted.value : this.isCompleted,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      syncStatus:
+          data.syncStatus.present ? data.syncStatus.value : this.syncStatus,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DailyCheckIn(')
+          ..write('id: $id, ')
+          ..write('date: $date, ')
+          ..write('transactionCount: $transactionCount, ')
+          ..write('lastTransactionTime: $lastTransactionTime, ')
+          ..write('isCompleted: $isCompleted, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('syncStatus: $syncStatus')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, date, transactionCount,
+      lastTransactionTime, isCompleted, createdAt, updatedAt, syncStatus);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DailyCheckIn &&
+          other.id == this.id &&
+          other.date == this.date &&
+          other.transactionCount == this.transactionCount &&
+          other.lastTransactionTime == this.lastTransactionTime &&
+          other.isCompleted == this.isCompleted &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.syncStatus == this.syncStatus);
+}
+
+class DailyCheckInsCompanion extends UpdateCompanion<DailyCheckIn> {
+  final Value<String> id;
+  final Value<DateTime> date;
+  final Value<int> transactionCount;
+  final Value<DateTime?> lastTransactionTime;
+  final Value<bool> isCompleted;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<String> syncStatus;
+  final Value<int> rowid;
+  const DailyCheckInsCompanion({
+    this.id = const Value.absent(),
+    this.date = const Value.absent(),
+    this.transactionCount = const Value.absent(),
+    this.lastTransactionTime = const Value.absent(),
+    this.isCompleted = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DailyCheckInsCompanion.insert({
+    required String id,
+    required DateTime date,
+    this.transactionCount = const Value.absent(),
+    this.lastTransactionTime = const Value.absent(),
+    this.isCompleted = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.syncStatus = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        date = Value(date),
+        createdAt = Value(createdAt),
+        updatedAt = Value(updatedAt);
+  static Insertable<DailyCheckIn> custom({
+    Expression<String>? id,
+    Expression<DateTime>? date,
+    Expression<int>? transactionCount,
+    Expression<DateTime>? lastTransactionTime,
+    Expression<bool>? isCompleted,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<String>? syncStatus,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (date != null) 'date': date,
+      if (transactionCount != null) 'transaction_count': transactionCount,
+      if (lastTransactionTime != null)
+        'last_transaction_time': lastTransactionTime,
+      if (isCompleted != null) 'is_completed': isCompleted,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DailyCheckInsCompanion copyWith(
+      {Value<String>? id,
+      Value<DateTime>? date,
+      Value<int>? transactionCount,
+      Value<DateTime?>? lastTransactionTime,
+      Value<bool>? isCompleted,
+      Value<DateTime>? createdAt,
+      Value<DateTime>? updatedAt,
+      Value<String>? syncStatus,
+      Value<int>? rowid}) {
+    return DailyCheckInsCompanion(
+      id: id ?? this.id,
+      date: date ?? this.date,
+      transactionCount: transactionCount ?? this.transactionCount,
+      lastTransactionTime: lastTransactionTime ?? this.lastTransactionTime,
+      isCompleted: isCompleted ?? this.isCompleted,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<DateTime>(date.value);
+    }
+    if (transactionCount.present) {
+      map['transaction_count'] = Variable<int>(transactionCount.value);
+    }
+    if (lastTransactionTime.present) {
+      map['last_transaction_time'] =
+          Variable<DateTime>(lastTransactionTime.value);
+    }
+    if (isCompleted.present) {
+      map['is_completed'] = Variable<bool>(isCompleted.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DailyCheckInsCompanion(')
+          ..write('id: $id, ')
+          ..write('date: $date, ')
+          ..write('transactionCount: $transactionCount, ')
+          ..write('lastTransactionTime: $lastTransactionTime, ')
+          ..write('isCompleted: $isCompleted, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('syncStatus: $syncStatus, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -9817,6 +10910,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $AchievementProgressTable achievementProgress =
       $AchievementProgressTable(this);
   late final $MtfPositionsTable mtfPositions = $MtfPositionsTable(this);
+  late final $SipsTable sips = $SipsTable(this);
+  late final $DailyCheckInsTable dailyCheckIns = $DailyCheckInsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -9842,7 +10937,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         milestones,
         achievements,
         achievementProgress,
-        mtfPositions
+        mtfPositions,
+        sips,
+        dailyCheckIns
       ];
 }
 
@@ -10524,6 +11621,21 @@ final class $$InvestmentsTableReferences
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: cache));
   }
+
+  static MultiTypedResultKey<$SipsTable, List<Sip>> _sipsRefsTable(
+          _$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(db.sips,
+          aliasName:
+              $_aliasNameGenerator(db.investments.id, db.sips.investmentId));
+
+  $$SipsTableProcessedTableManager get sipsRefs {
+    final manager = $$SipsTableTableManager($_db, $_db.sips).filter(
+        (f) => f.investmentId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_sipsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
 }
 
 class $$InvestmentsTableFilterComposer
@@ -10605,6 +11717,27 @@ class $$InvestmentsTableFilterComposer
             $$MtfPositionsTableFilterComposer(
               $db: $db,
               $table: $db.mtfPositions,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
+
+  Expression<bool> sipsRefs(
+      Expression<bool> Function($$SipsTableFilterComposer f) f) {
+    final $$SipsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.sips,
+        getReferencedColumn: (t) => t.investmentId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$SipsTableFilterComposer(
+              $db: $db,
+              $table: $db.sips,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -10743,6 +11876,27 @@ class $$InvestmentsTableAnnotationComposer
             ));
     return f(composer);
   }
+
+  Expression<T> sipsRefs<T extends Object>(
+      Expression<T> Function($$SipsTableAnnotationComposer a) f) {
+    final $$SipsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.id,
+        referencedTable: $db.sips,
+        getReferencedColumn: (t) => t.investmentId,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$SipsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.sips,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return f(composer);
+  }
 }
 
 class $$InvestmentsTableTableManager extends RootTableManager<
@@ -10757,7 +11911,9 @@ class $$InvestmentsTableTableManager extends RootTableManager<
     (Investment, $$InvestmentsTableReferences),
     Investment,
     PrefetchHooks Function(
-        {bool investmentBalanceCachesRefs, bool mtfPositionsRefs})> {
+        {bool investmentBalanceCachesRefs,
+        bool mtfPositionsRefs,
+        bool sipsRefs})> {
   $$InvestmentsTableTableManager(_$AppDatabase db, $InvestmentsTable table)
       : super(TableManagerState(
           db: db,
@@ -10831,12 +11987,15 @@ class $$InvestmentsTableTableManager extends RootTableManager<
                   ))
               .toList(),
           prefetchHooksCallback: (
-              {investmentBalanceCachesRefs = false, mtfPositionsRefs = false}) {
+              {investmentBalanceCachesRefs = false,
+              mtfPositionsRefs = false,
+              sipsRefs = false}) {
             return PrefetchHooks(
               db: db,
               explicitlyWatchedTables: [
                 if (investmentBalanceCachesRefs) db.investmentBalanceCaches,
-                if (mtfPositionsRefs) db.mtfPositions
+                if (mtfPositionsRefs) db.mtfPositions,
+                if (sipsRefs) db.sips
               ],
               addJoins: null,
               getPrefetchedDataCallback: (items) async {
@@ -10866,6 +12025,19 @@ class $$InvestmentsTableTableManager extends RootTableManager<
                         referencedItemsForCurrentItem:
                             (item, referencedItems) => referencedItems
                                 .where((e) => e.investmentId == item.id),
+                        typedResults: items),
+                  if (sipsRefs)
+                    await $_getPrefetchedData<Investment, $InvestmentsTable,
+                            Sip>(
+                        currentTable: table,
+                        referencedTable:
+                            $$InvestmentsTableReferences._sipsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$InvestmentsTableReferences(db, table, p0)
+                                .sipsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.investmentId == item.id),
                         typedResults: items)
                 ];
               },
@@ -10886,7 +12058,9 @@ typedef $$InvestmentsTableProcessedTableManager = ProcessedTableManager<
     (Investment, $$InvestmentsTableReferences),
     Investment,
     PrefetchHooks Function(
-        {bool investmentBalanceCachesRefs, bool mtfPositionsRefs})>;
+        {bool investmentBalanceCachesRefs,
+        bool mtfPositionsRefs,
+        bool sipsRefs})>;
 typedef $$InvestmentLotsTableCreateCompanionBuilder = InvestmentLotsCompanion
     Function({
   required String id,
@@ -15437,6 +16611,7 @@ typedef $$MtfPositionsTableCreateCompanionBuilder = MtfPositionsCompanion
   required double borrowedCapital,
   required double interestRate,
   required DateTime openingDate,
+  required DateTime interestStartDate,
   Value<DateTime?> closedDate,
   Value<int> isClosed,
   required DateTime createdAt,
@@ -15457,6 +16632,7 @@ typedef $$MtfPositionsTableUpdateCompanionBuilder = MtfPositionsCompanion
   Value<double> borrowedCapital,
   Value<double> interestRate,
   Value<DateTime> openingDate,
+  Value<DateTime> interestStartDate,
   Value<DateTime?> closedDate,
   Value<int> isClosed,
   Value<DateTime> createdAt,
@@ -15522,6 +16698,10 @@ class $$MtfPositionsTableFilterComposer
 
   ColumnFilters<DateTime> get openingDate => $composableBuilder(
       column: $table.openingDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get interestStartDate => $composableBuilder(
+      column: $table.interestStartDate,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get closedDate => $composableBuilder(
       column: $table.closedDate, builder: (column) => ColumnFilters(column));
@@ -15602,6 +16782,10 @@ class $$MtfPositionsTableOrderingComposer
   ColumnOrderings<DateTime> get openingDate => $composableBuilder(
       column: $table.openingDate, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<DateTime> get interestStartDate => $composableBuilder(
+      column: $table.interestStartDate,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get closedDate => $composableBuilder(
       column: $table.closedDate, builder: (column) => ColumnOrderings(column));
 
@@ -15678,6 +16862,9 @@ class $$MtfPositionsTableAnnotationComposer
   GeneratedColumn<DateTime> get openingDate => $composableBuilder(
       column: $table.openingDate, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get interestStartDate => $composableBuilder(
+      column: $table.interestStartDate, builder: (column) => column);
+
   GeneratedColumn<DateTime> get closedDate => $composableBuilder(
       column: $table.closedDate, builder: (column) => column);
 
@@ -15750,6 +16937,7 @@ class $$MtfPositionsTableTableManager extends RootTableManager<
             Value<double> borrowedCapital = const Value.absent(),
             Value<double> interestRate = const Value.absent(),
             Value<DateTime> openingDate = const Value.absent(),
+            Value<DateTime> interestStartDate = const Value.absent(),
             Value<DateTime?> closedDate = const Value.absent(),
             Value<int> isClosed = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
@@ -15769,6 +16957,7 @@ class $$MtfPositionsTableTableManager extends RootTableManager<
             borrowedCapital: borrowedCapital,
             interestRate: interestRate,
             openingDate: openingDate,
+            interestStartDate: interestStartDate,
             closedDate: closedDate,
             isClosed: isClosed,
             createdAt: createdAt,
@@ -15788,6 +16977,7 @@ class $$MtfPositionsTableTableManager extends RootTableManager<
             required double borrowedCapital,
             required double interestRate,
             required DateTime openingDate,
+            required DateTime interestStartDate,
             Value<DateTime?> closedDate = const Value.absent(),
             Value<int> isClosed = const Value.absent(),
             required DateTime createdAt,
@@ -15807,6 +16997,7 @@ class $$MtfPositionsTableTableManager extends RootTableManager<
             borrowedCapital: borrowedCapital,
             interestRate: interestRate,
             openingDate: openingDate,
+            interestStartDate: interestStartDate,
             closedDate: closedDate,
             isClosed: isClosed,
             createdAt: createdAt,
@@ -15871,6 +17062,602 @@ typedef $$MtfPositionsTableProcessedTableManager = ProcessedTableManager<
     (MtfPosition, $$MtfPositionsTableReferences),
     MtfPosition,
     PrefetchHooks Function({bool investmentId})>;
+typedef $$SipsTableCreateCompanionBuilder = SipsCompanion Function({
+  required String id,
+  required String investmentId,
+  required double amount,
+  required String frequency,
+  required int sipDate,
+  required DateTime startDate,
+  Value<DateTime?> endDate,
+  Value<int> autoCreate,
+  Value<int> isActive,
+  required DateTime createdAt,
+  required DateTime updatedAt,
+  Value<String> syncStatus,
+  Value<int> rowid,
+});
+typedef $$SipsTableUpdateCompanionBuilder = SipsCompanion Function({
+  Value<String> id,
+  Value<String> investmentId,
+  Value<double> amount,
+  Value<String> frequency,
+  Value<int> sipDate,
+  Value<DateTime> startDate,
+  Value<DateTime?> endDate,
+  Value<int> autoCreate,
+  Value<int> isActive,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+  Value<String> syncStatus,
+  Value<int> rowid,
+});
+
+final class $$SipsTableReferences
+    extends BaseReferences<_$AppDatabase, $SipsTable, Sip> {
+  $$SipsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $InvestmentsTable _investmentIdTable(_$AppDatabase db) =>
+      db.investments.createAlias(
+          $_aliasNameGenerator(db.sips.investmentId, db.investments.id));
+
+  $$InvestmentsTableProcessedTableManager get investmentId {
+    final $_column = $_itemColumn<String>('investment_id')!;
+
+    final manager = $$InvestmentsTableTableManager($_db, $_db.investments)
+        .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_investmentIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$SipsTableFilterComposer extends Composer<_$AppDatabase, $SipsTable> {
+  $$SipsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get amount => $composableBuilder(
+      column: $table.amount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get frequency => $composableBuilder(
+      column: $table.frequency, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get sipDate => $composableBuilder(
+      column: $table.sipDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get startDate => $composableBuilder(
+      column: $table.startDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get endDate => $composableBuilder(
+      column: $table.endDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get autoCreate => $composableBuilder(
+      column: $table.autoCreate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get isActive => $composableBuilder(
+      column: $table.isActive, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => ColumnFilters(column));
+
+  $$InvestmentsTableFilterComposer get investmentId {
+    final $$InvestmentsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.investmentId,
+        referencedTable: $db.investments,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$InvestmentsTableFilterComposer(
+              $db: $db,
+              $table: $db.investments,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$SipsTableOrderingComposer extends Composer<_$AppDatabase, $SipsTable> {
+  $$SipsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get amount => $composableBuilder(
+      column: $table.amount, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get frequency => $composableBuilder(
+      column: $table.frequency, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get sipDate => $composableBuilder(
+      column: $table.sipDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get startDate => $composableBuilder(
+      column: $table.startDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get endDate => $composableBuilder(
+      column: $table.endDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get autoCreate => $composableBuilder(
+      column: $table.autoCreate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get isActive => $composableBuilder(
+      column: $table.isActive, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => ColumnOrderings(column));
+
+  $$InvestmentsTableOrderingComposer get investmentId {
+    final $$InvestmentsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.investmentId,
+        referencedTable: $db.investments,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$InvestmentsTableOrderingComposer(
+              $db: $db,
+              $table: $db.investments,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$SipsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SipsTable> {
+  $$SipsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<double> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<String> get frequency =>
+      $composableBuilder(column: $table.frequency, builder: (column) => column);
+
+  GeneratedColumn<int> get sipDate =>
+      $composableBuilder(column: $table.sipDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get startDate =>
+      $composableBuilder(column: $table.startDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get endDate =>
+      $composableBuilder(column: $table.endDate, builder: (column) => column);
+
+  GeneratedColumn<int> get autoCreate => $composableBuilder(
+      column: $table.autoCreate, builder: (column) => column);
+
+  GeneratedColumn<int> get isActive =>
+      $composableBuilder(column: $table.isActive, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => column);
+
+  $$InvestmentsTableAnnotationComposer get investmentId {
+    final $$InvestmentsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.investmentId,
+        referencedTable: $db.investments,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$InvestmentsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.investments,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$SipsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $SipsTable,
+    Sip,
+    $$SipsTableFilterComposer,
+    $$SipsTableOrderingComposer,
+    $$SipsTableAnnotationComposer,
+    $$SipsTableCreateCompanionBuilder,
+    $$SipsTableUpdateCompanionBuilder,
+    (Sip, $$SipsTableReferences),
+    Sip,
+    PrefetchHooks Function({bool investmentId})> {
+  $$SipsTableTableManager(_$AppDatabase db, $SipsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SipsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SipsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SipsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> investmentId = const Value.absent(),
+            Value<double> amount = const Value.absent(),
+            Value<String> frequency = const Value.absent(),
+            Value<int> sipDate = const Value.absent(),
+            Value<DateTime> startDate = const Value.absent(),
+            Value<DateTime?> endDate = const Value.absent(),
+            Value<int> autoCreate = const Value.absent(),
+            Value<int> isActive = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+            Value<String> syncStatus = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              SipsCompanion(
+            id: id,
+            investmentId: investmentId,
+            amount: amount,
+            frequency: frequency,
+            sipDate: sipDate,
+            startDate: startDate,
+            endDate: endDate,
+            autoCreate: autoCreate,
+            isActive: isActive,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            syncStatus: syncStatus,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String investmentId,
+            required double amount,
+            required String frequency,
+            required int sipDate,
+            required DateTime startDate,
+            Value<DateTime?> endDate = const Value.absent(),
+            Value<int> autoCreate = const Value.absent(),
+            Value<int> isActive = const Value.absent(),
+            required DateTime createdAt,
+            required DateTime updatedAt,
+            Value<String> syncStatus = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              SipsCompanion.insert(
+            id: id,
+            investmentId: investmentId,
+            amount: amount,
+            frequency: frequency,
+            sipDate: sipDate,
+            startDate: startDate,
+            endDate: endDate,
+            autoCreate: autoCreate,
+            isActive: isActive,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            syncStatus: syncStatus,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) =>
+                  (e.readTable(table), $$SipsTableReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: ({investmentId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (investmentId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.investmentId,
+                    referencedTable:
+                        $$SipsTableReferences._investmentIdTable(db),
+                    referencedColumn:
+                        $$SipsTableReferences._investmentIdTable(db).id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$SipsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $SipsTable,
+    Sip,
+    $$SipsTableFilterComposer,
+    $$SipsTableOrderingComposer,
+    $$SipsTableAnnotationComposer,
+    $$SipsTableCreateCompanionBuilder,
+    $$SipsTableUpdateCompanionBuilder,
+    (Sip, $$SipsTableReferences),
+    Sip,
+    PrefetchHooks Function({bool investmentId})>;
+typedef $$DailyCheckInsTableCreateCompanionBuilder = DailyCheckInsCompanion
+    Function({
+  required String id,
+  required DateTime date,
+  Value<int> transactionCount,
+  Value<DateTime?> lastTransactionTime,
+  Value<bool> isCompleted,
+  required DateTime createdAt,
+  required DateTime updatedAt,
+  Value<String> syncStatus,
+  Value<int> rowid,
+});
+typedef $$DailyCheckInsTableUpdateCompanionBuilder = DailyCheckInsCompanion
+    Function({
+  Value<String> id,
+  Value<DateTime> date,
+  Value<int> transactionCount,
+  Value<DateTime?> lastTransactionTime,
+  Value<bool> isCompleted,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+  Value<String> syncStatus,
+  Value<int> rowid,
+});
+
+class $$DailyCheckInsTableFilterComposer
+    extends Composer<_$AppDatabase, $DailyCheckInsTable> {
+  $$DailyCheckInsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get date => $composableBuilder(
+      column: $table.date, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get transactionCount => $composableBuilder(
+      column: $table.transactionCount,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lastTransactionTime => $composableBuilder(
+      column: $table.lastTransactionTime,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isCompleted => $composableBuilder(
+      column: $table.isCompleted, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => ColumnFilters(column));
+}
+
+class $$DailyCheckInsTableOrderingComposer
+    extends Composer<_$AppDatabase, $DailyCheckInsTable> {
+  $$DailyCheckInsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get date => $composableBuilder(
+      column: $table.date, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get transactionCount => $composableBuilder(
+      column: $table.transactionCount,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lastTransactionTime => $composableBuilder(
+      column: $table.lastTransactionTime,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<bool> get isCompleted => $composableBuilder(
+      column: $table.isCompleted, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => ColumnOrderings(column));
+}
+
+class $$DailyCheckInsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DailyCheckInsTable> {
+  $$DailyCheckInsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<int> get transactionCount => $composableBuilder(
+      column: $table.transactionCount, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastTransactionTime => $composableBuilder(
+      column: $table.lastTransactionTime, builder: (column) => column);
+
+  GeneratedColumn<bool> get isCompleted => $composableBuilder(
+      column: $table.isCompleted, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => column);
+}
+
+class $$DailyCheckInsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $DailyCheckInsTable,
+    DailyCheckIn,
+    $$DailyCheckInsTableFilterComposer,
+    $$DailyCheckInsTableOrderingComposer,
+    $$DailyCheckInsTableAnnotationComposer,
+    $$DailyCheckInsTableCreateCompanionBuilder,
+    $$DailyCheckInsTableUpdateCompanionBuilder,
+    (
+      DailyCheckIn,
+      BaseReferences<_$AppDatabase, $DailyCheckInsTable, DailyCheckIn>
+    ),
+    DailyCheckIn,
+    PrefetchHooks Function()> {
+  $$DailyCheckInsTableTableManager(_$AppDatabase db, $DailyCheckInsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DailyCheckInsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DailyCheckInsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DailyCheckInsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<DateTime> date = const Value.absent(),
+            Value<int> transactionCount = const Value.absent(),
+            Value<DateTime?> lastTransactionTime = const Value.absent(),
+            Value<bool> isCompleted = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+            Value<String> syncStatus = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              DailyCheckInsCompanion(
+            id: id,
+            date: date,
+            transactionCount: transactionCount,
+            lastTransactionTime: lastTransactionTime,
+            isCompleted: isCompleted,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            syncStatus: syncStatus,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required DateTime date,
+            Value<int> transactionCount = const Value.absent(),
+            Value<DateTime?> lastTransactionTime = const Value.absent(),
+            Value<bool> isCompleted = const Value.absent(),
+            required DateTime createdAt,
+            required DateTime updatedAt,
+            Value<String> syncStatus = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              DailyCheckInsCompanion.insert(
+            id: id,
+            date: date,
+            transactionCount: transactionCount,
+            lastTransactionTime: lastTransactionTime,
+            isCompleted: isCompleted,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            syncStatus: syncStatus,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$DailyCheckInsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $DailyCheckInsTable,
+    DailyCheckIn,
+    $$DailyCheckInsTableFilterComposer,
+    $$DailyCheckInsTableOrderingComposer,
+    $$DailyCheckInsTableAnnotationComposer,
+    $$DailyCheckInsTableCreateCompanionBuilder,
+    $$DailyCheckInsTableUpdateCompanionBuilder,
+    (
+      DailyCheckIn,
+      BaseReferences<_$AppDatabase, $DailyCheckInsTable, DailyCheckIn>
+    ),
+    DailyCheckIn,
+    PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -15919,4 +17706,7 @@ class $AppDatabaseManager {
       $$AchievementProgressTableTableManager(_db, _db.achievementProgress);
   $$MtfPositionsTableTableManager get mtfPositions =>
       $$MtfPositionsTableTableManager(_db, _db.mtfPositions);
+  $$SipsTableTableManager get sips => $$SipsTableTableManager(_db, _db.sips);
+  $$DailyCheckInsTableTableManager get dailyCheckIns =>
+      $$DailyCheckInsTableTableManager(_db, _db.dailyCheckIns);
 }

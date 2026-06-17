@@ -6,6 +6,7 @@ import 'app_providers.dart';
 
 import '../../features/accounts/domain/entities/account.dart' as domain;
 import '../../features/investments/domain/entities/investment.dart' as domain;
+import '../../features/investments/domain/entities/sip.dart' as domain;
 import '../../features/expected_income/domain/entities/expected_income.dart' as domain;
 import '../../features/goals/domain/entities/goal.dart' as domain;
 import '../../features/transactions/domain/entities/transaction.dart' as domain;
@@ -278,3 +279,97 @@ final allSnapshotsProvider = StreamProvider<List<domain.Snapshot>>((ref) {
     return ref.watch(realReportRepositoryProvider).watchAllSnapshots();
   }
 });
+
+final activeSipsProvider = StreamProvider<List<domain.Sip>>((ref) {
+  final isMock = ref.watch(mockModeProvider);
+  if (isMock) {
+    final dbState = ref.watch(mockDatabaseProvider);
+    final list = dbState.sips.map((s) => domain.Sip(
+      id: s.id,
+      investmentId: s.investmentId,
+      amount: s.amount,
+      frequency: s.frequency,
+      sipDate: s.sipDate,
+      startDate: s.startDate,
+      endDate: s.endDate,
+      autoCreate: s.autoCreate,
+      isActive: s.isActive,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
+      syncStatus: s.syncStatus,
+    )).toList();
+    return Stream.value(list);
+  } else {
+    final db = ref.watch(realDatabaseProvider);
+    return db.select(db.sips).watch().map((list) => list.map((entity) => domain.Sip(
+      id: entity.id,
+      investmentId: entity.investmentId,
+      amount: entity.amount,
+      frequency: entity.frequency,
+      sipDate: entity.sipDate,
+      startDate: entity.startDate,
+      endDate: entity.endDate,
+      autoCreate: entity.autoCreate,
+      isActive: entity.isActive,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+      syncStatus: entity.syncStatus,
+    )).toList());
+  }
+});
+
+class MockSipService {
+  final Ref _ref;
+  MockSipService(this._ref);
+
+  Future<void> addSip({
+    required String investmentId,
+    required double amount,
+    required String frequency,
+    required int sipDate,
+    required DateTime startDate,
+    DateTime? endDate,
+    required int autoCreate,
+  }) async {
+    await _ref.read(mockDatabaseProvider.notifier).addSip(
+      investmentId: investmentId,
+      amount: amount,
+      frequency: frequency,
+      sipDate: sipDate,
+      startDate: startDate,
+      endDate: endDate,
+      autoCreate: autoCreate,
+    );
+  }
+
+  Future<void> editSip(domain.Sip sip) async {
+    final dbSip = db.Sip(
+      id: sip.id,
+      investmentId: sip.investmentId,
+      amount: sip.amount,
+      frequency: sip.frequency,
+      sipDate: sip.sipDate,
+      startDate: sip.startDate,
+      endDate: sip.endDate,
+      autoCreate: sip.autoCreate,
+      isActive: sip.isActive,
+      createdAt: sip.createdAt,
+      updatedAt: sip.updatedAt,
+      syncStatus: sip.syncStatus,
+    );
+    await _ref.read(mockDatabaseProvider.notifier).editSip(dbSip);
+  }
+
+  Future<void> deleteSip(String id) async {
+    await _ref.read(mockDatabaseProvider.notifier).deleteSip(id);
+  }
+
+  Future<void> toggleSipActive(String id) async {
+    await _ref.read(mockDatabaseProvider.notifier).toggleSipActive(id);
+  }
+}
+
+final sipServiceProvider = Provider<MockSipService>((ref) {
+  return MockSipService(ref);
+});
+

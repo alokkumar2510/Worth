@@ -37,6 +37,9 @@ import '../widgets/app_lock_guard.dart';
 import '../providers/app_lock_provider.dart';
 import '../providers/mock_database.dart';
 import '../../features/achievements/presentation/screens/achievements_screen.dart';
+import '../../features/portfolio/presentation/screens/sip_dashboard_screen.dart';
+import '../../features/checkins/presentation/screens/check_in_settings_screen.dart';
+import '../../features/spending/presentation/screens/spending_screen.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -271,38 +274,26 @@ class RouterNotifier extends ChangeNotifier {
 
     final user = _authState.value;
     final isLoggedIn = user != null;
+    final onboardingCompleted = dbState.onboardingCompleted;
 
     if (!isLoggedIn) {
-      // Not logged in: only allow login
+      if (!onboardingCompleted) {
+        if (path == '/onboarding') return null;
+        debugPrint('[ROUTING] Navigation executed: Redirecting to /onboarding');
+        return '/onboarding';
+      }
       if (path == '/login') return null;
       debugPrint('[ROUTING] Navigation executed: Redirecting to /login');
       return '/login';
     }
 
-    // User IS logged in — now check if they have accounts
-    // While accounts are loading, let them stay on current page
-    if (_accountsState.isLoading) {
-      return null;
-    }
-
-    final onboardingCompleted = dbState.onboardingCompleted;
-    final hasAccounts = dbState.firstAccountCreated || (_accountsState.value ?? []).isNotEmpty;
-
     if (!onboardingCompleted) {
-      // Authenticated but onboarding incomplete: show onboarding starting at page 0
       if (path == '/onboarding') return null;
       debugPrint('[ROUTING] Navigation executed: Redirecting to /onboarding');
       return '/onboarding';
     }
 
-    if (!hasAccounts) {
-      // Authenticated and onboarding complete, but no accounts: show onboarding starting at page 3 (Create First Account)
-      if (path == '/onboarding') return null;
-      debugPrint('[ROUTING] Navigation executed: Redirecting to /onboarding (Create First Account)');
-      return '/onboarding';
-    }
-
-    // Fully authenticated with accounts: redirect away from auth screens
+    // Fully authenticated with onboarding completed: redirect away from auth/onboarding screens
     if (path == '/' || path == '/login' || path == '/onboarding') {
       debugPrint('[ROUTING] Navigation executed: Redirecting to /dashboard');
       return '/dashboard';
@@ -437,6 +428,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
+      // SIP Automation Dashboard Screen
+      GoRoute(
+        path: '/sip',
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => buildPremiumTransitionPage(
+          state: state,
+          child: const SipDashboardScreen(),
+        ),
+      ),
+
       // Achievements Center Screen
       GoRoute(
         path: '/achievements',
@@ -444,6 +445,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => buildPremiumTransitionPage(
           state: state,
           child: const AchievementsScreen(),
+        ),
+      ),
+
+      // Spending Intelligence Screen
+      GoRoute(
+        path: '/spending',
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => buildPremiumTransitionPage(
+          state: state,
+          child: const SpendingScreen(),
         ),
       ),
 
@@ -574,6 +585,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                     pageBuilder: (context, state) => buildPremiumTransitionPage(
                       state: state,
                       child: const AdvancedSettingsScreen(),
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'checkins',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) => buildPremiumTransitionPage(
+                      state: state,
+                      child: const CheckInSettingsScreen(),
                     ),
                   ),
                   GoRoute(

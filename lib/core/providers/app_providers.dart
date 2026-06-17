@@ -22,6 +22,8 @@ import '../../features/transactions/domain/entities/transaction.dart';
 import '../../features/goals/domain/entities/goal.dart';
 import '../../features/reports/domain/entities/snapshot.dart';
 import '../../features/achievements/domain/services/gamification_engine.dart';
+import '../../features/achievements/domain/services/achievement_queue_service.dart';
+import '../../features/achievements/presentation/controllers/milestone_celebration_controller.dart';
 import 'mock_database.dart';
 
 // Import repositories
@@ -37,6 +39,8 @@ import '../../features/expected_income/domain/repositories/expected_income_repos
 import '../../features/expected_income/data/repositories/expected_income_repository_impl.dart';
 import '../../features/investments/domain/repositories/investment_repository.dart';
 import '../../features/investments/data/repositories/investment_repository_impl.dart';
+import '../../features/investments/domain/repositories/sip_repository.dart';
+import '../../features/investments/data/repositories/sip_repository_impl.dart';
 import '../../features/transactions/domain/repositories/transaction_repository.dart';
 import '../../features/transactions/data/repositories/transaction_repository_impl.dart';
 import '../../features/goals/domain/repositories/goal_repository.dart';
@@ -62,6 +66,7 @@ import '../services/notification_service.dart';
 import '../services/reminder_scheduler.dart';
 import '../services/network_monitor.dart';
 import '../services/sync_service.dart';
+import '../../features/checkins/presentation/providers/check_in_providers.dart';
 
 import '../../features/dashboard/domain/repositories/dashboard_repository.dart';
 import '../../features/dashboard/data/repositories/dashboard_repository_impl.dart';
@@ -110,6 +115,10 @@ final realExpectedIncomeRepositoryProvider = Provider<ExpectedIncomeRepository>(
 
 final realInvestmentRepositoryProvider = Provider<InvestmentRepository>((ref) {
   return InvestmentRepositoryImpl(ref.watch(realDatabaseProvider));
+});
+
+final realSipRepositoryProvider = Provider<SipRepository>((ref) {
+  return SipRepositoryImpl(ref.watch(realDatabaseProvider));
 });
 
 final realTransactionRepositoryProvider = Provider<TransactionRepository>((ref) {
@@ -219,6 +228,10 @@ final realReminderSchedulerProvider = Provider<ReminderScheduler>((ref) {
     ref.watch(realNotificationServiceProvider),
     onCheck: () async {
       await ref.read(mockDatabaseProvider.notifier).runAutoInterestAccrual();
+      await ref.read(mockDatabaseProvider.notifier).runAutoSipProcessing();
+    },
+    onCheckIn: () async {
+      await ref.read(checkInReminderEngineProvider).checkAndTrigger();
     },
   );
 });
@@ -284,6 +297,20 @@ final gamificationEngineProvider = Provider<GamificationEngine>((ref) {
   final engine = GamificationEngine(db);
   ref.onDispose(() => engine.dispose());
   return engine;
+});
+
+final achievementQueueServiceProvider = Provider<AchievementQueueService>((ref) {
+  final service = AchievementQueueService();
+  ref.onDispose(() => service.dispose());
+  return service;
+});
+
+final milestoneCelebrationControllerProvider = Provider<MilestoneCelebrationController>((ref) {
+  final queueService = ref.watch(achievementQueueServiceProvider);
+  final engine = ref.watch(gamificationEngineProvider);
+  final controller = MilestoneCelebrationController(queueService, engine);
+  ref.onDispose(() => controller.dispose());
+  return controller;
 });
 
 // ==========================================

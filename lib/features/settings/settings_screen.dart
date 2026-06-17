@@ -252,6 +252,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   const Divider(color: AppColors.glassBorder, height: 1),
                   _buildSettingsTile(
+                    icon: Icons.check_circle_outline_rounded,
+                    title: 'Daily Financial Check-ins',
+                    value: dbState.checkInEnabled ? 'Active' : 'Disabled',
+                    onTap: () => context.push('/settings/checkins'),
+                  ),
+                  const Divider(color: AppColors.glassBorder, height: 1),
+                  _buildSettingsTile(
                     icon: Icons.menu_book_outlined,
                     title: 'Definitions & Formulae',
                     value: 'Glossary & calculations',

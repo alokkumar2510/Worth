@@ -48,8 +48,12 @@ Timeline grouping, collapsible advanced filter trays, and multi-category chips p
 
 ## ✨ Key Features
 
-- **📊 Wealth Intelligence Reports**: Custom multi-trend charts, allocation summaries (assets/liabilities/investments), and automatic textual financial insights.
-- **💎 Custom-Painted Milestones & Achievements**: Net worth milestones (from ₹1K to ₹10M+) and 23 custom achievements. Uses custom-painted mathematical crystal structures with animated glowing sweep-gradients.
+- **📊 Wealth Intelligence Reports & Spending Intelligence**: Custom multi-trend charts, allocation summaries (assets/liabilities/investments), and automatic textual financial insights. Spending Intelligence provides category breakdowns, daily heatmaps, monthly trend analysis, and dynamic insights for permanent wealth outflows.
+- **✨ Premium Onboarding Carousel**: A high-end, glassmorphic onboarding experience that introduces Worth's local-first architecture and key features prior to user sign-up.
+- **📈 Margin Trading Facility (MTF) Tracking**: Enhanced position date tracking and automatic daily and total accrued interest calculations (Days Held, Daily Interest, Total Interest Accrued).
+- **📅 Systematic Investment Plans (SIPs)**: Automatic SIP scheduling and portfolio integration.
+- **💎 Custom-Painted Milestones & Achievements**: Net worth milestones (from ₹1K to ₹10M+) and 23 custom achievements. Celebrated using a fluid, Apple-Fitness-style Achievement Banner Queue with sweep gradients.
+- **🔔 Daily Financial Check-Ins**: Smart, non-spammy transaction logging reminders with custom daily notification schedules.
 - **🛡️ Flawless Biometric App Lock**: Secure local verification using `local_auth` integrated with GoRouter routing guards to prevent infinite authentication loops.
 - **🔄 Firestore Multi-Database Sync**: Off-line first local database caching using Drift (SQLite) with background synchronization capabilities.
 - **⚡ Advanced Transactions Activity**: Collapsible app bars, dynamic filtering, swipe gestures, and timeline groupings.
@@ -100,7 +104,7 @@ Worth is structured following clean coding patterns and responsive architectures
 ## 📦 Releases
 
 Download the latest production-ready APK directly from our releases:
-* **[Download Worth v1.0.0 APK](https://github.com/alokkumar2510/Worth/releases/download/v1.0.0/app-release.apk)**
+* **[Download Worth v1.3.0 APK](https://github.com/alokkumar2510/Worth/releases/download/v1.3.0/app-release.apk)**
 
 ---
 

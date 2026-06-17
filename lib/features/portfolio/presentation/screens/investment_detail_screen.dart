@@ -10,6 +10,8 @@ import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/providers/mock_database.dart';
 import '../../../../database/database.dart';
 import '../widgets/adjustment_widgets.dart';
+import '../../../../features/investments/domain/entities/sip.dart' as domain;
+import '../../../../core/providers/dependency_provider.dart';
 
 class InvestmentDetailScreen extends ConsumerStatefulWidget {
   final String investmentId;
@@ -430,6 +432,9 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
       );
     }
 
+    final sipsAsync = ref.watch(activeSipsProvider);
+    final sip = sipsAsync.value?.firstWhereOrNull((s) => s.investmentId == inv.id);
+
     final cap = dbState.getInvestmentInvestedCapital(inv.id);
     final value = dbState.getInvestmentMarketValue(inv.id);
     final unrealized = dbState.getInvestmentUnrealizedGain(inv.id);
@@ -575,6 +580,8 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                   ),
                 ],
               ),
+              const SizedBox(height: 20),
+              _buildSipSection(inv, currency, sip),
               const SizedBox(height: 28),
 
               ExpansionTile(
@@ -812,6 +819,393 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
             child: const Text('Save', style: TextStyle(color: Colors.white)),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSipSection(Investment inv, String currency, domain.Sip? sip) {
+    final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
+    
+    if (sip == null) {
+      return GlassCard(
+        borderColor: AppColors.darkPrimary.withOpacity(0.15),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.autorenew, color: AppColors.darkPrimary, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'RECURRING SIP PLAN',
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.8),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Set up a recurring systematic investment plan to automate your wealth building.',
+              style: TextStyle(color: AppColors.grey500, fontSize: 12, height: 1.4),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => _showSipDialog(inv: inv, currency: currency),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.darkPrimary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Text('Set up SIP', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final frequencyLabel = sip.frequency.substring(0, 1).toUpperCase() + sip.frequency.substring(1);
+    String dateLabel = '';
+    if (sip.frequency == 'weekly') {
+      final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      dateLabel = days[sip.sipDate - 1];
+    } else {
+      dateLabel = 'Day ${sip.sipDate}';
+    }
+
+    final isPaused = sip.isActive == 0;
+
+    return GlassCard(
+      borderColor: isPaused ? AppColors.grey500.withOpacity(0.15) : AppColors.darkPrimary.withOpacity(0.3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    isPaused ? Icons.pause_circle_outline : Icons.autorenew,
+                    color: isPaused ? AppColors.grey500 : AppColors.darkPrimary,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'ACTIVE SIP PLAN',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: isPaused ? AppColors.grey500 : Colors.white,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isPaused ? AppColors.grey500.withOpacity(0.12) : AppColors.darkPrimary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isPaused ? AppColors.grey500.withOpacity(0.3) : AppColors.darkPrimary.withOpacity(0.3),
+                  ),
+                ),
+                child: Text(
+                  isPaused ? 'PAUSED' : 'ACTIVE',
+                  style: TextStyle(
+                    color: isPaused ? AppColors.grey500 : AppColors.darkPrimary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Amount', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
+                  const SizedBox(height: 4),
+                  Text(format.format(sip.amount), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Frequency', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
+                  const SizedBox(height: 4),
+                  Text(frequencyLabel, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Schedule', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
+                  const SizedBox(height: 4),
+                  Text(dateLabel, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.grey500),
+              const SizedBox(width: 6),
+              Text(
+                'Starts: ${DateFormat('dd MMM yyyy').format(sip.startDate)}',
+                style: const TextStyle(color: AppColors.grey500, fontSize: 11),
+              ),
+              const Spacer(),
+              Icon(
+                sip.autoCreate == 1 ? Icons.bolt : Icons.notifications_none,
+                size: 12,
+                color: AppColors.grey500,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                sip.autoCreate == 1 ? 'Auto-Invest On' : 'Reminders Only',
+                style: const TextStyle(color: AppColors.grey500, fontSize: 11),
+              ),
+            ],
+          ),
+          const Divider(color: AppColors.glassBorder, height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton.icon(
+                onPressed: () => ref.read(sipServiceProvider).toggleSipActive(sip.id),
+                icon: Icon(isPaused ? Icons.play_arrow : Icons.pause, size: 16, color: Colors.white),
+                label: Text(isPaused ? 'Resume' : 'Pause', style: const TextStyle(color: Colors.white, fontSize: 12)),
+              ),
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: () => _showSipDialog(existingSip: sip, inv: inv, currency: currency),
+                icon: const Icon(Icons.edit, size: 16, color: Colors.white),
+                label: const Text('Edit', style: TextStyle(color: Colors.white, fontSize: 12)),
+              ),
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: () => _confirmDeleteSip(sip),
+                icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.darkDanger),
+                label: const Text('Delete', style: TextStyle(color: AppColors.darkDanger, fontSize: 12)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteSip(domain.Sip sip) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete SIP Plan?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: const Text('This will delete the recurring SIP configuration. Existing transactions will not be affected.', style: TextStyle(color: AppColors.grey400, fontSize: 13)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              ref.read(sipServiceProvider).deleteSip(sip.id);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('SIP plan deleted.')),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkDanger),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSipDialog({domain.Sip? existingSip, required Investment inv, required String currency}) {
+    final amountController = TextEditingController(text: existingSip?.amount.toString() ?? '2000');
+    String frequency = existingSip?.frequency ?? 'monthly';
+    int sipDate = existingSip?.sipDate ?? 5;
+    DateTime startDate = existingSip?.startDate ?? DateTime.now();
+    bool autoCreate = (existingSip?.autoCreate ?? 1) == 1;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+          
+          return AlertDialog(
+            title: Text(
+              existingSip == null ? 'Create SIP Plan' : 'Edit SIP Plan',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'SIP Installment Amount',
+                      labelStyle: const TextStyle(color: AppColors.grey500),
+                      prefixText: '$currency ',
+                      prefixStyle: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: frequency,
+                    dropdownColor: AppColors.layer1,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Frequency',
+                      labelStyle: TextStyle(color: AppColors.grey500),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
+                      DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
+                      DropdownMenuItem(value: 'quarterly', child: Text('Quarterly')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setDialogState(() {
+                          frequency = val;
+                          if (frequency == 'weekly') {
+                            sipDate = 1;
+                          } else {
+                            sipDate = 5;
+                          }
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  if (frequency == 'weekly')
+                    DropdownButtonFormField<int>(
+                      value: sipDate,
+                      dropdownColor: AppColors.layer1,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Weekly SIP Day',
+                        labelStyle: TextStyle(color: AppColors.grey500),
+                      ),
+                      items: List.generate(7, (i) => DropdownMenuItem(
+                        value: i + 1,
+                        child: Text(daysOfWeek[i]),
+                      )),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() => sipDate = val);
+                        }
+                      },
+                    )
+                  else
+                    DropdownButtonFormField<int>(
+                      value: sipDate > 31 ? 31 : sipDate,
+                      dropdownColor: AppColors.layer1,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Day of the Month',
+                        labelStyle: TextStyle(color: AppColors.grey500),
+                      ),
+                      items: List.generate(31, (i) => DropdownMenuItem(
+                        value: i + 1,
+                        child: Text('Day ${i + 1}'),
+                      )),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() => sipDate = val);
+                        }
+                      },
+                    ),
+                  const SizedBox(height: 16),
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: startDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2030),
+                      );
+                      if (picked != null) {
+                        setDialogState(() => startDate = picked);
+                      }
+                    },
+                    child: InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Start Date',
+                        labelStyle: TextStyle(color: AppColors.grey500),
+                      ),
+                      child: Text(
+                        DateFormat('dd MMM yyyy').format(startDate),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SwitchListTile(
+                    title: const Text('Auto-Create Transactions', style: TextStyle(color: Colors.white, fontSize: 14)),
+                    subtitle: const Text('Automatically record purchase lot on SIP day', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
+                    value: autoCreate,
+                    activeColor: AppColors.darkPrimary,
+                    contentPadding: EdgeInsets.zero,
+                    onChanged: (val) => setDialogState(() => autoCreate = val),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final amount = double.tryParse(amountController.text.trim()) ?? 0.0;
+                  if (amount > 0) {
+                    if (existingSip == null) {
+                      ref.read(sipServiceProvider).addSip(
+                        investmentId: inv.id,
+                        amount: amount,
+                        frequency: frequency,
+                        sipDate: sipDate,
+                        startDate: startDate,
+                        autoCreate: autoCreate ? 1 : 0,
+                      );
+                    } else {
+                      final updated = existingSip.copyWith(
+                        amount: amount,
+                        frequency: frequency,
+                        sipDate: sipDate,
+                        startDate: startDate,
+                        autoCreate: autoCreate ? 1 : 0,
+                      );
+                      ref.read(sipServiceProvider).editSip(updated);
+                    }
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(existingSip == null ? 'SIP created successfully.' : 'SIP updated successfully.')),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
+                child: const Text('Save Plan', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

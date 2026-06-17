@@ -241,6 +241,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     final interestRateController = TextEditingController();
     bool isMtf = false;
     String type = 'mutual_fund';
+    DateTime openingDate = DateTime.now();
+    DateTime interestStartDate = DateTime.now();
 
     showDialog(
       context: context,
@@ -399,6 +401,52 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        'Position Open Date: ${DateFormat('yyyy-MM-dd').format(openingDate)}',
+                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                      ),
+                      trailing: const Icon(Icons.calendar_today, color: AppColors.darkPrimary, size: 18),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: openingDate,
+                          firstDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                        );
+                        if (picked != null) {
+                          setDialogState(() {
+                            openingDate = picked;
+                            if (interestStartDate.isBefore(openingDate)) {
+                              interestStartDate = picked;
+                            }
+                          });
+                        }
+                      },
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        'Interest Start Date: ${DateFormat('yyyy-MM-dd').format(interestStartDate)}',
+                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                      ),
+                      trailing: const Icon(Icons.calendar_today, color: AppColors.darkPrimary, size: 18),
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: interestStartDate,
+                          firstDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                        );
+                        if (picked != null) {
+                          setDialogState(() {
+                            interestStartDate = picked;
+                          });
+                        }
+                      },
+                    ),
                   ],
                 ],
               ),
@@ -431,7 +479,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         ownCapital: ownCap,
                         borrowedCapital: borrowed,
                         interestRate: intRate,
-                        openingDate: DateTime.now().toUtc(),
+                        openingDate: openingDate,
+                        interestStartDate: interestStartDate,
                       );
                     } else {
                       final inv = notifier.addInvestment(name, type, symbol.isNotEmpty ? symbol : null, 'Manual creation', priceVal);
@@ -1742,6 +1791,9 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
       );
     }
 
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
     // Calculations for dashboard
     double totalBorrowed = 0.0;
     double totalOwn = 0.0;
@@ -1754,9 +1806,11 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
       totalBorrowed += pos.borrowedCapital;
       totalOwn += pos.ownCapital;
       totalValue += pos.units * currentPrice;
-      totalInterestAccrued += state.transactions
-          .where((t) => t.investmentId == pos.investmentId && t.category == 'MTF Interest')
-          .fold(0.0, (sum, t) => sum + t.amount);
+      
+      // Calculate interest accrued using Days Held * Daily Interest
+      final daysHeld = today.difference(DateTime(pos.interestStartDate.year, pos.interestStartDate.month, pos.interestStartDate.day)).inDays;
+      final dailyInterest = pos.borrowedCapital * (pos.interestRate / 100) / 365;
+      totalInterestAccrued += dailyInterest * daysHeld;
     }
 
     final avgLtv = totalValue > 0 ? (totalBorrowed / totalValue * 100) : 0.0;
@@ -1772,6 +1826,22 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
       riskLevel = 'MEDIUM';
       riskColor = AppColors.darkWarning;
     }
+
+    // Reports calculations
+    final mtfInterestThisMonth = state.transactions.where((t) =>
+        t.type == 'expense' &&
+        t.category == 'MTF Interest' &&
+        t.transactionDate.year == now.year &&
+        t.transactionDate.month == now.month).fold<double>(0.0, (sum, t) => sum + t.amount);
+
+    final mtfInterestThisYear = state.transactions.where((t) =>
+        t.type == 'expense' &&
+        t.category == 'MTF Interest' &&
+        t.transactionDate.year == now.year).fold<double>(0.0, (sum, t) => sum + t.amount);
+
+    final totalInterestPaid = state.transactions.where((t) =>
+        t.type == 'expense' &&
+        t.category == 'MTF Interest').fold<double>(0.0, (sum, t) => sum + t.amount);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -1791,9 +1861,9 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: riskColor.withValues(alpha: 0.12),
+                          color: riskColor.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: riskColor.withValues(alpha: 0.3), width: 1),
+                          border: Border.all(color: riskColor.withOpacity(0.3), width: 1),
                         ),
                         child: Text(
                           '$riskLevel RISK',
@@ -1821,7 +1891,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                           children: [
                             Text(format.format(totalInterestAccrued), style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
                             const SizedBox(height: 4),
-                            const Text('Total Interest', style: TextStyle(color: AppColors.grey500, fontSize: 12)),
+                            const Text('Total Interest Accrued', style: TextStyle(color: AppColors.grey500, fontSize: 12)),
                           ],
                         ),
                       ),
@@ -1876,6 +1946,48 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
               ),
             ),
             const SizedBox(height: 20),
+
+            // Interest Reports Card
+            GlassCard(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('INTEREST REPORTS', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.grey500)),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildMtfStat('This Month', format.format(mtfInterestThisMonth)),
+                      _buildMtfStat('This Year', format.format(mtfInterestThisYear)),
+                      _buildMtfStat('Total Paid', format.format(totalInterestPaid)),
+                    ],
+                  ),
+                  const Divider(color: AppColors.grey700, height: 24),
+                  Text('POSITION-WISE INTEREST ACCRUED', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500)),
+                  const SizedBox(height: 8),
+                  if (activePositions.isEmpty && closedPositions.isEmpty)
+                    const Text('No positions', style: TextStyle(color: AppColors.grey500, fontSize: 12))
+                  else
+                    ...[...activePositions, ...closedPositions].map((pos) {
+                      final daysHeld = today.difference(DateTime(pos.interestStartDate.year, pos.interestStartDate.month, pos.interestStartDate.day)).inDays;
+                      final dailyInterest = pos.borrowedCapital * (pos.interestRate / 100) / 365;
+                      final totalInterestTillToday = dailyInterest * daysHeld;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(pos.instrument, style: const TextStyle(color: Colors.white, fontSize: 13)),
+                            Text(formatDec.format(totalInterestTillToday), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                          ],
+                        ),
+                      );
+                    }),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
           ],
 
           // Active Positions Title
@@ -1896,12 +2008,14 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
             final currentPrice = inv?.marketValue ?? pos.averagePrice;
             final currentMarketValue = pos.units * currentPrice;
             final totalCost = pos.units * pos.averagePrice;
-            final totalInterestPaid = state.transactions
-                .where((t) => t.investmentId == pos.investmentId && t.category == 'MTF Interest')
-                .fold(0.0, (sum, t) => sum + t.amount);
-            final netProfit = currentMarketValue - totalCost - totalInterestPaid;
-            final netRoi = pos.ownCapital > 0 ? (netProfit / pos.ownCapital * 100) : 0.0;
+            
+            // Days Held calculation
+            final daysHeld = today.difference(DateTime(pos.interestStartDate.year, pos.interestStartDate.month, pos.interestStartDate.day)).inDays;
             final dailyInterest = pos.borrowedCapital * (pos.interestRate / 100) / 365;
+            final totalInterestTillToday = dailyInterest * daysHeld;
+            
+            final netProfit = currentMarketValue - totalCost - totalInterestTillToday;
+            final netRoi = pos.ownCapital > 0 ? (netProfit / pos.ownCapital * 100) : 0.0;
             final ltv = currentMarketValue > 0 ? (pos.borrowedCapital / currentMarketValue * 100) : 0.0;
 
             Color posRiskColor = AppColors.darkSuccess;
@@ -1927,7 +2041,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                             children: [
                               Text(pos.instrument, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                               const SizedBox(height: 2),
-                              Text('${pos.broker} • ${DateFormat('yyyy-MM-dd').format(pos.openingDate)}', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
+                              Text('${pos.broker} • Open: ${DateFormat('dd MMM yyyy').format(pos.openingDate)}', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
                             ],
                           ),
                         ),
@@ -1967,7 +2081,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _buildMtfStat('Own Capital', format.format(pos.ownCapital)),
-                        _buildMtfStat('Borrowed', format.format(pos.borrowedCapital)),
+                        _buildMtfStat('Borrowed Amount', format.format(pos.borrowedCapital)),
                         _buildMtfStat('LTV Ratio', '${ltv.toStringAsFixed(1)}%', valueColor: posRiskColor),
                       ],
                     ),
@@ -1975,8 +2089,17 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildMtfStat('Daily Int.', '${formatDec.format(dailyInterest)} (${pos.interestRate.toStringAsFixed(1)}%)'),
-                        _buildMtfStat('Total Int. Paid', formatDec.format(totalInterestPaid)),
+                        _buildMtfStat('Interest Rate', '${pos.interestRate.toStringAsFixed(1)}% p.a.'),
+                        _buildMtfStat('Days Held', '$daysHeld Days'),
+                        _buildMtfStat('Daily Interest', formatDec.format(dailyInterest)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildMtfStat('Interest Start Date', DateFormat('dd MMM yyyy').format(pos.interestStartDate)),
+                        _buildMtfStat('Total Interest Till Today', formatDec.format(totalInterestTillToday)),
                         _buildMtfStat(
                           'Net Profit', 
                           '${netProfit >= 0 ? '+' : ''}${format.format(netProfit)}', 
@@ -1998,6 +2121,38 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                           ),
                         ),
                       ],
+                    ),
+                    const Divider(color: AppColors.grey700, height: 24),
+                    // Expandable Interest Timeline
+                    Theme(
+                      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                      child: ExpansionTile(
+                        title: const Text('Interest Timeline', style: TextStyle(color: AppColors.glow, fontSize: 12, fontWeight: FontWeight.bold)),
+                        iconColor: AppColors.glow,
+                        collapsedIconColor: AppColors.glow,
+                        tilePadding: EdgeInsets.zero,
+                        childrenPadding: EdgeInsets.zero,
+                        children: daysHeld == 0
+                            ? [
+                                const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                                  child: Text('No interest accrued yet (0 days held)', style: TextStyle(color: AppColors.grey500, fontSize: 12)),
+                                )
+                              ]
+                            : List.generate(daysHeld, (i) {
+                                final date = DateTime(pos.interestStartDate.year, pos.interestStartDate.month, pos.interestStartDate.day).add(Duration(days: i));
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(DateFormat('dd MMM yyyy').format(date), style: const TextStyle(color: AppColors.grey400, fontSize: 12)),
+                                      Text('Interest $currency${dailyInterest.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontSize: 12)),
+                                    ],
+                                  ),
+                                );
+                              }).reversed.toList(),
+                      ),
                     ),
                   ],
                 ),
@@ -2041,7 +2196,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                       title: Text(pos.instrument, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white70)),
                       subtitle: Text(
                         'Closed ${pos.closedDate != null ? DateFormat('yyyy-MM-dd').format(pos.closedDate!) : 'n/a'} • Net: ${realizedNetProfit >= 0 ? '+' : ''}${format.format(realizedNetProfit)} (${realizedRoi.toStringAsFixed(1)}% ROI)',
-                        style: TextStyle(fontSize: 11, color: realizedNetProfit >= 0 ? AppColors.darkSuccess.withValues(alpha: 0.8) : AppColors.darkDanger.withValues(alpha: 0.8)),
+                        style: TextStyle(fontSize: 11, color: realizedNetProfit >= 0 ? AppColors.darkSuccess.withOpacity(0.8) : AppColors.darkDanger.withOpacity(0.8)),
                       ),
                       children: [
                         const SizedBox(height: 8),

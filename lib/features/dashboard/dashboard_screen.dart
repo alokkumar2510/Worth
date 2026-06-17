@@ -21,6 +21,8 @@ import '../investments/domain/entities/investment.dart';
 import '../goals/domain/entities/goal.dart';
 import '../expected_income/domain/entities/expected_income.dart';
 import '../transactions/presentation/widgets/add_transaction_sheet.dart';
+import '../checkins/presentation/widgets/check_in_dashboard_widget.dart';
+import '../spending/presentation/widgets/spending_dashboard_widget.dart';
 import '../../core/mock_data/mock_constants.dart';
 import '../achievements/presentation/providers/achievements_provider.dart';
 import '../achievements/domain/entities/milestone.dart';
@@ -201,6 +203,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     loading: () => const SizedBox(height: 240, child: Center(child: CircularProgressIndicator())),
                     error: (e, s) => const SizedBox.shrink(),
                   ),
+                  const SizedBox(height: 24),
+
+                  const CheckInDashboardWidget(),
+                  const SizedBox(height: 24),
+
+                  const SpendingDashboardWidget(),
+                  const SizedBox(height: 24),
+
+                  _buildMtfAndSipWidgets(dbState),
                   const SizedBox(height: 24),
 
                   // Milestones & Achievements Card
@@ -753,6 +764,202 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildMtfAndSipWidgets(MockDatabaseState dbState) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final currency = dbState.currency;
+
+    final activeMtfPositions = dbState.mtfPositions.where((p) => p.isClosed == 0).toList();
+    final mtfInterestToday = activeMtfPositions.fold<double>(0.0, (sum, pos) {
+      return sum + (pos.borrowedCapital * (pos.interestRate / 100) / 365);
+    });
+
+    final mtfInterestThisMonth = dbState.transactions.where((t) =>
+        t.type == 'expense' &&
+        t.category == 'MTF Interest' &&
+        t.transactionDate.year == now.year &&
+        t.transactionDate.month == now.month).fold<double>(0.0, (sum, t) => sum + t.amount);
+
+    final activeSips = dbState.sips.where((s) => s.isActive == 1).toList();
+    
+    DateTime? nextSipDate;
+    String nextSipName = '';
+    int nextSipDaysRemaining = 999;
+
+    for (final sip in activeSips) {
+      final nextDate = _calculateNextSipDate(sip);
+      if (sip.endDate != null && nextDate.isAfter(sip.endDate!)) continue;
+
+      final diffDays = nextDate.difference(today).inDays;
+      if (diffDays >= 0 && diffDays < nextSipDaysRemaining) {
+        nextSipDaysRemaining = diffDays;
+        nextSipDate = nextDate;
+        final inv = dbState.investments.firstWhereOrNull((i) => i.id == sip.investmentId);
+        nextSipName = inv?.name ?? 'Investment';
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'MTF & SIP Overview',
+              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            GestureDetector(
+              onTap: () {
+                context.push('/sip');
+              },
+              child: Text(
+                'SIP Dashboard',
+                style: GoogleFonts.inter(
+                  color: AppColors.glow,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: GlassCard(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.purple.withOpacity(0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.percent_rounded, size: 16, color: Colors.purpleAccent),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'MTF INTEREST',
+                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.grey400, letterSpacing: 0.5),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Today: $currency${mtfInterestToday.toStringAsFixed(2)}',
+                      style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'This Month: $currency${mtfInterestThisMonth.toStringAsFixed(2)}',
+                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.grey500),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: GlassCard(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.teal.withOpacity(0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.loop_rounded, size: 16, color: Colors.tealAccent),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'UPCOMING SIPS',
+                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.grey400, letterSpacing: 0.5),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    if (nextSipDate != null) ...[
+                      Text(
+                        nextSipDaysRemaining == 0
+                            ? 'Due Today: $nextSipName'
+                            : 'Next: $nextSipName',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        nextSipDaysRemaining == 0
+                            ? 'Today (${DateFormat('dd MMM').format(nextSipDate)})'
+                            : 'In $nextSipDaysRemaining days (${DateFormat('dd MMM').format(nextSipDate)})',
+                        style: GoogleFonts.inter(fontSize: 12, color: AppColors.grey500),
+                      ),
+                    ] else ...[
+                      Text(
+                        'No Active SIPs',
+                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Setup a recurring SIP',
+                        style: GoogleFonts.inter(fontSize: 12, color: AppColors.grey500),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  DateTime _calculateNextSipDate(Sip sip) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final startDay = DateTime(sip.startDate.year, sip.startDate.month, sip.startDate.day);
+
+    DateTime candidate;
+    if (sip.frequency == 'weekly') {
+      int daysUntil = sip.sipDate - today.weekday;
+      if (daysUntil < 0) daysUntil += 7;
+      candidate = today.add(Duration(days: daysUntil));
+    } else if (sip.frequency == 'monthly') {
+      candidate = DateTime(today.year, today.month, sip.sipDate);
+      if (candidate.isBefore(today)) {
+        candidate = DateTime(today.year, today.month + 1, sip.sipDate);
+      }
+    } else {
+      int monthsToAdd = 0;
+      while (true) {
+        final tempDate = DateTime(sip.startDate.year, sip.startDate.month + monthsToAdd, sip.sipDate);
+        if (tempDate.isAfter(today) || tempDate.isAtSameMomentAs(today)) {
+          candidate = tempDate;
+          break;
+        }
+        monthsToAdd += 3;
+      }
+    }
+
+    if (candidate.isBefore(startDay)) {
+      candidate = startDay;
+    }
+
+    return candidate;
   }
 
   Widget _buildRecentActivityCard(List<Transaction> transactions, String currency) {

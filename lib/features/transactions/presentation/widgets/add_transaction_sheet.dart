@@ -35,6 +35,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     super.initState();
     _segmentedIndex = widget.initialSegmentedIndex ?? 1; // Default to Expense
     _selectedMoreType = widget.initialMoreType ?? 'borrow_money'; // Default
+    _category = _segmentedIndex == 0 ? 'General' : 'Food';
   }
   
   // Field selectors
@@ -54,13 +55,26 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   final _ownCapitalController = TextEditingController();
   final _interestRateController = TextEditingController();
   
-  String _category = 'General';
+  String _category = 'Food';
   bool _showNotes = false;
 
-  final List<String> _categories = [
-    'General', 'Salary', 'Investment Return', 'Food & Drinks', 
-    'Shopping', 'Bills & Utilities', 'Entertainment', 'Travel', 'Medical'
+  final List<String> _incomeCategories = [
+    'General', 'Salary', 'Investment Return', 'Miscellaneous'
   ];
+
+  final List<String> _expenseCategories = [
+    'Food',
+    'Travel',
+    'Shopping',
+    'Education',
+    'Bills',
+    'Subscriptions',
+    'Health',
+    'Entertainment',
+    'Fees',
+    'Miscellaneous'
+  ];
+
 
   final List<Map<String, String>> _moreTypes = [
     {'type': 'borrow_money', 'label': 'Borrow Money'},
@@ -161,6 +175,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
             borrowedCapital: borrowed,
             interestRate: intRate,
             openingDate: DateTime.now().toUtc(),
+            interestStartDate: DateTime.now().toUtc(),
             investmentId: _selectedInvestmentId,
           );
         } else {
@@ -256,6 +271,11 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
               onValueChanged: (index) {
                 setState(() {
                   _segmentedIndex = index;
+                  if (index == 0) {
+                    _category = 'General';
+                  } else if (index == 1) {
+                    _category = 'Food';
+                  }
                 });
               },
             ),
@@ -412,7 +432,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                   title: const Text('MTF Position?', style: TextStyle(color: Colors.white, fontSize: 14)),
                   subtitle: const Text('Margin Trading Facility', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
                   value: _isMtf,
-                  activeThumbColor: AppColors.glow,
+                  activeColor: AppColors.glow,
                   contentPadding: EdgeInsets.zero,
                   onChanged: (val) {
                     setState(() {
@@ -515,7 +535,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                   labelText: 'Category',
                   labelStyle: TextStyle(color: AppColors.grey500),
                 ),
-                items: _categories.map((c) => DropdownMenuItem(
+                items: (isIncome ? _incomeCategories : _expenseCategories).map((c) => DropdownMenuItem(
                   value: c,
                   child: Text(c),
                 )).toList(),

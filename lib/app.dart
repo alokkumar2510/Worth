@@ -8,7 +8,7 @@ import 'core/widgets/worth_background.dart';
 import 'core/widgets/app_lock_guard.dart';
 import 'database/seeder.dart';
 import 'features/achievements/domain/services/gamification_engine.dart';
-import 'features/achievements/presentation/widgets/achievement_dialog.dart';
+
 
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
@@ -46,13 +46,15 @@ class WorthApp extends ConsumerStatefulWidget {
 
 class _WorthAppState extends ConsumerState<WorthApp> {
   StreamSubscription? _notificationSubscription;
-  StreamSubscription? _gamificationSubscription;
 
   @override
   void initState() {
     super.initState();
     _subscribeToNotifications();
-    _subscribeToGamification();
+    
+    // Eagerly initialize the milestone celebration controller to monitor and queue achievements
+    ref.read(milestoneCelebrationControllerProvider);
+    
     _initServices();
   }
 
@@ -141,32 +143,9 @@ class _WorthAppState extends ConsumerState<WorthApp> {
     });
   }
 
-  void _subscribeToGamification() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _gamificationSubscription = ref
-          .read(gamificationEngineProvider)
-          .events
-          .listen((event) {
-        _showAchievementDialog(event);
-      });
-    });
-  }
-
-  void _showAchievementDialog(GamificationEvent event) {
-    final context = rootNavigatorKey.currentContext;
-    if (context == null) return;
-
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withOpacity(0.85),
-      builder: (context) => AchievementDialog(event: event),
-    );
-  }
-
   @override
   void dispose() {
     _notificationSubscription?.cancel();
-    _gamificationSubscription?.cancel();
     super.dispose();
   }
 

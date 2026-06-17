@@ -4,7 +4,7 @@ import 'package:drift/drift.dart';
 import 'package:intl/intl.dart';
 import '../../database/database.dart';
 import '../../database/seeder.dart';
-export '../../database/database.dart' hide Transaction, Snapshot, Account, Investment, Goal, ExpectedIncome, Milestone, Achievement, AchievementProgress;
+export '../../database/database.dart' hide Transaction, Snapshot, Account, Investment, Goal, ExpectedIncome, Milestone, Achievement, AchievementProgress, Sip;
 import 'package:collection/collection.dart';
 import 'dart:convert';
 import 'app_providers.dart';
@@ -19,6 +19,7 @@ import '../mock_data/mock_expected_incomes.dart';
 import '../mock_data/mock_snapshots.dart';
 import '../mock_data/mock_transactions.dart';
 import '../../features/ipo_pool/domain/entities/ipo_pool_models.dart';
+import '../../features/investments/domain/entities/sip.dart' as domain;
 
 class MockDatabaseState {
   final List<Account> accounts;
@@ -33,6 +34,7 @@ class MockDatabaseState {
   final List<Adjustment> adjustments;
   final List<IpoPool> ipoPools;
   final List<MtfPosition> mtfPositions;
+  final List<Sip> sips;
   
   // Settings & Auth State
   final String currency;
@@ -44,6 +46,11 @@ class MockDatabaseState {
   final bool isOnboarded;
   final bool onboardingCompleted;
   final bool firstAccountCreated;
+  final bool checkInEnabled;
+  final String checkInTimes;
+  final String checkInReminderCount;
+  final String checkInCompletedDate;
+  final String lastTriggeredCheckIn;
 
   MockDatabaseState({
     required this.accounts,
@@ -58,6 +65,7 @@ class MockDatabaseState {
     required this.adjustments,
     required this.ipoPools,
     required this.mtfPositions,
+    required this.sips,
     required this.currency,
     required this.themeMode,
     required this.appLockEnabled,
@@ -67,6 +75,11 @@ class MockDatabaseState {
     required this.isOnboarded,
     required this.onboardingCompleted,
     required this.firstAccountCreated,
+    required this.checkInEnabled,
+    required this.checkInTimes,
+    required this.checkInReminderCount,
+    required this.checkInCompletedDate,
+    required this.lastTriggeredCheckIn,
   });
 
   MockDatabaseState copyWith({
@@ -82,6 +95,7 @@ class MockDatabaseState {
     List<Adjustment>? adjustments,
     List<IpoPool>? ipoPools,
     List<MtfPosition>? mtfPositions,
+    List<Sip>? sips,
     String? currency,
     String? themeMode,
     bool? appLockEnabled,
@@ -91,6 +105,11 @@ class MockDatabaseState {
     bool? isOnboarded,
     bool? onboardingCompleted,
     bool? firstAccountCreated,
+    bool? checkInEnabled,
+    String? checkInTimes,
+    String? checkInReminderCount,
+    String? checkInCompletedDate,
+    String? lastTriggeredCheckIn,
   }) {
     return MockDatabaseState(
       accounts: accounts ?? this.accounts,
@@ -105,6 +124,7 @@ class MockDatabaseState {
       adjustments: adjustments ?? this.adjustments,
       ipoPools: ipoPools ?? this.ipoPools,
       mtfPositions: mtfPositions ?? this.mtfPositions,
+      sips: sips ?? this.sips,
       currency: currency ?? this.currency,
       themeMode: themeMode ?? this.themeMode,
       appLockEnabled: appLockEnabled ?? this.appLockEnabled,
@@ -114,6 +134,11 @@ class MockDatabaseState {
       isOnboarded: isOnboarded ?? this.isOnboarded,
       onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
       firstAccountCreated: firstAccountCreated ?? this.firstAccountCreated,
+      checkInEnabled: checkInEnabled ?? this.checkInEnabled,
+      checkInTimes: checkInTimes ?? this.checkInTimes,
+      checkInReminderCount: checkInReminderCount ?? this.checkInReminderCount,
+      checkInCompletedDate: checkInCompletedDate ?? this.checkInCompletedDate,
+      lastTriggeredCheckIn: lastTriggeredCheckIn ?? this.lastTriggeredCheckIn,
     );
   }
 
@@ -385,6 +410,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final adjustments = await db.select(db.adjustments).get();
       final settingsList = await db.select(db.settings).get();
       final mtfPositions = await db.select(db.mtfPositions).get();
+      final sips = await db.select(db.sips).get();
 
       final settingsMap = {for (var s in settingsList) s.key: s.value};
 
@@ -397,6 +423,11 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final isOnboarded = settingsMap['isOnboarded'] == 'true';
       final onboardingCompleted = settingsMap['onboardingCompleted'] == 'true' || isOnboarded;
       final firstAccountCreated = settingsMap['firstAccountCreated'] == 'true' || accounts.isNotEmpty;
+      final checkInEnabled = settingsMap['checkInEnabled'] != 'false';
+      final checkInTimes = settingsMap['checkInTimes'] ?? '10:00,14:00,19:00,22:00';
+      final checkInReminderCount = settingsMap['checkInReminderCount'] ?? '4';
+      final checkInCompletedDate = settingsMap['checkInCompletedDate'] ?? '';
+      final lastTriggeredCheckIn = settingsMap['lastTriggeredCheckIn'] ?? '';
 
       List<IpoPool> ipoPools = [];
       final ipoPoolsData = settingsMap['ipo_pools_data'];
@@ -422,6 +453,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         adjustments: adjustments,
         ipoPools: ipoPools,
         mtfPositions: mtfPositions,
+        sips: sips,
         currency: currency,
         themeMode: themeMode,
         appLockEnabled: appLockEnabled,
@@ -431,12 +463,18 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         isOnboarded: isOnboarded,
         onboardingCompleted: onboardingCompleted,
         firstAccountCreated: firstAccountCreated,
+        checkInEnabled: checkInEnabled,
+        checkInTimes: checkInTimes,
+        checkInReminderCount: checkInReminderCount,
+        checkInCompletedDate: checkInCompletedDate,
+        lastTriggeredCheckIn: lastTriggeredCheckIn,
       );
 
-      // Trigger gamification engine evaluation
+      // Trigger background operations & gamification engine evaluation
       Future.microtask(() async {
         try {
           await runAutoInterestAccrual();
+          await runAutoSipProcessing();
           await _ref.read(gamificationEngineProvider).evaluateAll();
         } catch (e) {
           // ignore
@@ -490,7 +528,6 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
   Future<void> completeOnboarding() async {
     state = state.copyWith(
       isOnboarded: true,
-      isLoggedIn: true,
       onboardingCompleted: true,
       firstAccountCreated: true,
     );
@@ -498,7 +535,6 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
       await db.into(db.settings).insertOnConflictUpdate(Setting(key: 'isOnboarded', value: 'true'));
-      await db.into(db.settings).insertOnConflictUpdate(Setting(key: 'isLoggedIn', value: 'true'));
       await db.into(db.settings).insertOnConflictUpdate(Setting(key: 'onboardingCompleted', value: 'true'));
       await db.into(db.settings).insertOnConflictUpdate(Setting(key: 'firstAccountCreated', value: 'true'));
     }
@@ -1523,6 +1559,35 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     }
   }
 
+  Future<void> updateCheckInSettings({
+    bool? enabled,
+    String? times,
+    String? reminderCount,
+    String? completedDate,
+  }) async {
+    final isMock = _ref.read(mockModeProvider);
+    
+    final newEnabled = enabled ?? state.checkInEnabled;
+    final newTimes = times ?? state.checkInTimes;
+    final newReminderCount = reminderCount ?? state.checkInReminderCount;
+    final newCompletedDate = completedDate ?? state.checkInCompletedDate;
+
+    state = state.copyWith(
+      checkInEnabled: newEnabled,
+      checkInTimes: newTimes,
+      checkInReminderCount: newReminderCount,
+      checkInCompletedDate: newCompletedDate,
+    );
+
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await db.into(db.settings).insertOnConflictUpdate(Setting(key: 'checkInEnabled', value: newEnabled.toString()));
+      await db.into(db.settings).insertOnConflictUpdate(Setting(key: 'checkInTimes', value: newTimes));
+      await db.into(db.settings).insertOnConflictUpdate(Setting(key: 'checkInReminderCount', value: newReminderCount));
+      await db.into(db.settings).insertOnConflictUpdate(Setting(key: 'checkInCompletedDate', value: newCompletedDate));
+    }
+  }
+
   Future<Transaction> addTransaction({
     required String type,
     required double amount,
@@ -1940,6 +2005,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     required double borrowedCapital,
     required double interestRate,
     required DateTime openingDate,
+    required DateTime interestStartDate,
     String? investmentId,
   }) async {
     final id = _uuid.v4();
@@ -1966,10 +2032,11 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       borrowedCapital: borrowedCapital,
       interestRate: interestRate,
       openingDate: openingDate,
+      interestStartDate: interestStartDate,
       isClosed: 0,
       createdAt: now,
       updatedAt: now,
-      lastAccrualDate: openingDate,
+      lastAccrualDate: interestStartDate,
       syncStatus: 'pending',
     );
 
@@ -1987,10 +2054,11 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         borrowedCapital: borrowedCapital,
         interestRate: interestRate,
         openingDate: openingDate,
+        interestStartDate: interestStartDate,
         isClosed: 0,
         createdAt: now,
         updatedAt: now,
-        lastAccrualDate: openingDate,
+        lastAccrualDate: interestStartDate,
         syncStatus: 'pending',
       ));
     }
@@ -2097,7 +2165,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     final activePositions = state.mtfPositions.where((pos) => pos.isClosed == 0).toList();
 
     for (final pos in activePositions) {
-      final lastAccrual = pos.lastAccrualDate ?? pos.openingDate;
+      final lastAccrual = pos.lastAccrualDate ?? pos.interestStartDate;
       final lastAccrualDay = DateTime(lastAccrual.year, lastAccrual.month, lastAccrual.day);
       final days = today.difference(lastAccrualDay).inDays;
 
@@ -2125,6 +2193,204 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     }
   }
 
+  // --- SIP Mutations ---
+
+  Future<void> addSip({
+    required String investmentId,
+    required double amount,
+    required String frequency,
+    required int sipDate,
+    required DateTime startDate,
+    DateTime? endDate,
+    required int autoCreate,
+  }) async {
+    final id = _uuid.v4();
+    final now = DateTime.now().toUtc();
+
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final repo = _ref.read(realSipRepositoryProvider);
+      final domainSip = domain.Sip(
+        id: id,
+        investmentId: investmentId,
+        amount: amount,
+        frequency: frequency,
+        sipDate: sipDate,
+        startDate: startDate,
+        endDate: endDate,
+        autoCreate: autoCreate,
+        isActive: 1,
+        createdAt: now,
+        updatedAt: now,
+        syncStatus: 'pending',
+      );
+      await repo.createSip(domainSip);
+    } else {
+      final newSip = Sip(
+        id: id,
+        investmentId: investmentId,
+        amount: amount,
+        frequency: frequency,
+        sipDate: sipDate,
+        startDate: startDate,
+        endDate: endDate,
+        autoCreate: autoCreate,
+        isActive: 1,
+        createdAt: now,
+        updatedAt: now,
+        syncStatus: 'pending',
+      );
+      state = state.copyWith(sips: [...state.sips, newSip]);
+    }
+
+    // Check if we should process it immediately
+    await runAutoSipProcessing();
+  }
+
+  Future<void> editSip(Sip sip) async {
+    final updatedSip = sip.copyWith(updatedAt: DateTime.now().toUtc());
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final repo = _ref.read(realSipRepositoryProvider);
+      final domainSip = domain.Sip(
+        id: sip.id,
+        investmentId: sip.investmentId,
+        amount: sip.amount,
+        frequency: sip.frequency,
+        sipDate: sip.sipDate,
+        startDate: sip.startDate,
+        endDate: sip.endDate,
+        autoCreate: sip.autoCreate,
+        isActive: sip.isActive,
+        createdAt: sip.createdAt,
+        updatedAt: DateTime.now().toUtc(),
+        syncStatus: sip.syncStatus,
+      );
+      await repo.updateSip(domainSip);
+    } else {
+      state = state.copyWith(
+        sips: state.sips.map((s) => s.id == sip.id ? updatedSip : s).toList(),
+      );
+    }
+  }
+
+  Future<void> deleteSip(String id) async {
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final repo = _ref.read(realSipRepositoryProvider);
+      await repo.deleteSip(id);
+    } else {
+      state = state.copyWith(
+        sips: state.sips.where((s) => s.id != id).toList(),
+      );
+    }
+  }
+
+  Future<void> toggleSipActive(String id) async {
+    final sip = state.sips.firstWhere((s) => s.id == id);
+    final updatedSip = sip.copyWith(
+      isActive: sip.isActive == 1 ? 0 : 1,
+      updatedAt: DateTime.now().toUtc(),
+    );
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final repo = _ref.read(realSipRepositoryProvider);
+      final domainSip = domain.Sip(
+        id: updatedSip.id,
+        investmentId: updatedSip.investmentId,
+        amount: updatedSip.amount,
+        frequency: updatedSip.frequency,
+        sipDate: updatedSip.sipDate,
+        startDate: updatedSip.startDate,
+        endDate: updatedSip.endDate,
+        autoCreate: updatedSip.autoCreate,
+        isActive: updatedSip.isActive,
+        createdAt: updatedSip.createdAt,
+        updatedAt: updatedSip.updatedAt,
+        syncStatus: updatedSip.syncStatus,
+      );
+      await repo.updateSip(domainSip);
+    } else {
+      state = state.copyWith(
+        sips: state.sips.map((s) => s.id == id ? updatedSip : s).toList(),
+      );
+    }
+  }
+
+  Future<void> runAutoSipProcessing() async {
+    final now = DateTime.now().toUtc();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    final activeSips = state.sips.where((s) => s.isActive == 1).toList();
+    for (final sip in activeSips) {
+      if (sip.startDate.isAfter(today)) continue;
+      if (sip.endDate != null && sip.endDate!.isBefore(today)) continue;
+
+      bool matches = false;
+      if (sip.frequency == 'weekly') {
+        if (today.weekday == sip.sipDate) {
+          matches = true;
+        }
+      } else if (sip.frequency == 'monthly') {
+        final daysInMonth = DateTime(today.year, today.month + 1, 0).day;
+        final targetDay = sip.sipDate > daysInMonth ? daysInMonth : sip.sipDate;
+        if (today.day == targetDay) {
+          matches = true;
+        }
+      } else if (sip.frequency == 'quarterly') {
+        final monthDiff = today.month - sip.startDate.month;
+        if (monthDiff % 3 == 0) {
+          final daysInMonth = DateTime(today.year, today.month + 1, 0).day;
+          final targetDay = sip.sipDate > daysInMonth ? daysInMonth : sip.sipDate;
+          if (today.day == targetDay) {
+            matches = true;
+          }
+        }
+      }
+
+      if (matches) {
+        final alreadyProcessed = state.transactions.any((t) =>
+            t.type == 'investment_buy' &&
+            t.investmentId == sip.investmentId &&
+            t.notes != null &&
+            t.notes!.contains('SIP ID: ${sip.id}') &&
+            t.transactionDate.year == today.year &&
+            t.transactionDate.month == today.month &&
+            t.transactionDate.day == today.day);
+
+        if (!alreadyProcessed) {
+          final investment = state.investments.firstWhereOrNull((i) => i.id == sip.investmentId);
+          final invName = investment?.name ?? 'Investment';
+          
+          if (sip.autoCreate == 1) {
+            final fromAcc = state.accounts.firstWhereOrNull((a) => a.id == 'acc_primary_bank_uuid') ?? state.accounts.firstOrNull;
+            if (fromAcc != null) {
+              final marketPrice = investment?.marketValue ?? 1.0;
+              final price = marketPrice > 0 ? marketPrice : 1.0;
+              final units = sip.amount / price;
+              
+              buyInvestment(
+                sip.investmentId,
+                fromAcc.id,
+                units,
+                price,
+                'SIP Auto-Invest: $invName (SIP ID: ${sip.id})',
+                today,
+              );
+            }
+          } else {
+            final notificationService = _ref.read(realNotificationServiceProvider);
+            notificationService.showNotification(
+              title: 'SIP Payment Reminder',
+              body: 'Your SIP of ${state.currency}${sip.amount} for "$invName" is due today.',
+              type: 'sip',
+            );
+          }
+        }
+      }
+    }
+  }
+
   // --- Initial seed data ---
 
   static MockDatabaseState initialState() {
@@ -2141,6 +2407,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       adjustments: const [],
       ipoPools: const [],
       mtfPositions: const [],
+      sips: const [],
       currency: mockCurrency,
       themeMode: 'dark', // Premium Dark Theme by default
       appLockEnabled: false,
@@ -2150,6 +2417,11 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       isOnboarded: false, // Start on Onboarding Screen for presentation!
       onboardingCompleted: false,
       firstAccountCreated: false,
+      checkInEnabled: true,
+      checkInTimes: '10:00,14:00,19:00,22:00',
+      checkInReminderCount: '4',
+      checkInCompletedDate: '',
+      lastTriggeredCheckIn: '',
     );
   }
 }
