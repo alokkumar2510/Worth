@@ -3,7 +3,6 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowLeft, FileText, CheckCircle2, AlertTriangle, HelpCircle } from "lucide-react";
-import Footer from "@/components/Footer";
 
 export default function TermsOfService() {
   return (
@@ -112,7 +111,29 @@ export default function TermsOfService() {
       </main>
 
       {/* Footer */}
-      <Footer />
+      <footer className="bg-[#050507] border-t border-white/5 py-12">
+        <div className="max-w-4xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-3">
+            <img 
+              src="/images/logo_mark.png" 
+              alt="Worth Logo" 
+              className="w-5 h-5 object-contain"
+            />
+            <span className="font-extrabold text-xs tracking-widest text-white">WORTH</span>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-6 text-xs text-foreground/40 font-mono">
+            <Link href="/privacy" className="hover:text-white transition-colors">PRIVACY POLICY</Link>
+            <Link href="/terms" className="hover:text-white transition-colors">TERMS OF SERVICE</Link>
+            <a href="https://github.com/alokkumar2510/Worth" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GITHUB</a>
+          </div>
+
+          <div className="text-[10px] text-foreground/30 font-mono flex items-center gap-1.5">
+            <span>© {new Date().getFullYear()} Worth. Crafted by</span>
+            <a href="https://alokkumarsahu.in" target="_blank" rel="noopener noreferrer" className="text-foreground/50 hover:text-white underline">Alok Kumar Sahu</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
