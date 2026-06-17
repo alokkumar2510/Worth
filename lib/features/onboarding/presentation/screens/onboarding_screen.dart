@@ -1,8 +1,9 @@
 import 'dart:math' as math;
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/glass_card.dart';
@@ -20,7 +21,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
   double _pageOffset = 0.0;
   int _currentPage = 0;
 
-  // Animation controllers for slide visuals
   late AnimationController _pulseController;
   late AnimationController _floatController;
   late AnimationController _chartDrawController;
@@ -35,22 +35,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
       });
     });
 
-    // Pulse animation (for Slide 4/5)
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
 
-    // Float animation (for Slide 2)
     _floatController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 4),
+      duration: const Duration(seconds: 5),
     )..repeat();
 
-    // Chart draw animation (for Slide 3)
     _chartDrawController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 3),
     )..forward();
   }
 
@@ -66,7 +63,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
   void _nextPage() {
     if (_currentPage < 4) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 500),
+        duration: const Duration(milliseconds: 600),
         curve: Curves.easeOutQuart,
       );
     }
@@ -75,7 +72,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
   void _skipToLast() {
     _pageController.animateToPage(
       4,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 700),
       curve: Curves.easeOutQuart,
     );
   }
@@ -94,6 +91,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
 
     // 2. Complete onboarding state transition
     await notifier.completeOnboarding();
+
+    // 3. Transition to Login Screen
+    if (mounted) {
+      context.go('/login');
+    }
   }
 
   @override
@@ -102,206 +104,132 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
       backgroundColor: AppColors.darkBackground,
       body: Stack(
         children: [
-          // Background atmospheric glows (Fintech Obsidian style)
-          Positioned(
-            top: -100,
-            right: -100,
-            child: Container(
-              width: 350,
-              height: 350,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.darkPrimary.withOpacity(0.08),
-                    blurRadius: 120,
-                    spreadRadius: 20,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -80,
-            left: -80,
-            child: Container(
-              width: 320,
-              height: 320,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.glow.withOpacity(0.06),
-                    blurRadius: 100,
-                    spreadRadius: 10,
-                  ),
-                ],
-              ),
-            ),
+          // Background PageView
+          PageView(
+            controller: _pageController,
+            onPageChanged: (page) {
+              setState(() {
+                _currentPage = page;
+              });
+              if (page == 2) {
+                _chartDrawController.reset();
+                _chartDrawController.forward();
+              }
+            },
+            children: [
+              _buildSlide1(),
+              _buildSlide2(),
+              _buildSlide3(),
+              _buildSlide4(),
+              _buildSlide5(),
+            ],
           ),
 
+          // Action Overlay Bar (Skip)
           SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Top Skip Action Bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Mini logo mark
-                      Row(
-                        children: [
-                          const Icon(Icons.radar_rounded, color: AppColors.darkPrimary, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            'WORTH',
-                            style: GoogleFonts.outfit(
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              fontSize: 14,
-                              letterSpacing: 1.0,
-                            ),
-                          ),
-                        ],
-                      ),
-                      // Skip button (fade out on last page)
-                      AnimatedOpacity(
-                        opacity: _currentPage == 4 ? 0.0 : 1.0,
-                        duration: const Duration(milliseconds: 200),
-                        child: IgnorePointer(
-                          ignoring: _currentPage == 4,
-                          child: TextButton(
-                            onPressed: _skipToLast,
-                            child: Text(
-                              'Skip',
-                              style: GoogleFonts.inter(
-                                color: AppColors.grey500,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
+            child: Align(
+              alignment: Alignment.topRight,
+              child: AnimatedOpacity(
+                opacity: _currentPage == 4 ? 0.0 : 1.0,
+                duration: const Duration(milliseconds: 250),
+                child: IgnorePointer(
+                  ignoring: _currentPage == 4,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 16.0, top: 8.0),
+                    child: TextButton(
+                      onPressed: _skipToLast,
+                      child: Text(
+                        'Skip',
+                        style: GoogleFonts.inter(
+                          color: AppColors.grey500,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
+              ),
+            ),
+          ),
 
-                // Main PageView for Slides
-                Expanded(
-                  child: PageView(
-                    controller: _pageController,
-                    onPageChanged: (page) {
-                      setState(() {
-                        _currentPage = page;
-                      });
-                      if (page == 2) {
-                        _chartDrawController.reset();
-                        _chartDrawController.forward();
-                      }
-                    },
-                    children: [
-                      _buildSlide(
-                        index: 0,
-                        title: "Know What You're Worth.",
-                        description: "Track your complete financial life in one place.",
-                        visual: _buildSlide1Visual(),
-                      ),
-                      _buildSlide(
-                        index: 1,
-                        title: "Everything In One Place.",
-                        description: "Manage Assets, Investments, Receivables, Liabilities, and Goals effortlessly.",
-                        visual: _buildSlide2Visual(),
-                      ),
-                      _buildSlide(
-                        index: 2,
-                        title: "Built For Wealth Growth.",
-                        description: "Understand how your net worth evolves over time with powerful analytics and reports.",
-                        visual: _buildSlide3Visual(),
-                      ),
-                      _buildSlide(
-                        index: 3,
-                        title: "Secure & Offline First.",
-                        description: "Your data stays on your device and works even without internet.",
-                        visual: _buildSlide4Visual(),
-                      ),
-                      _buildSlide(
-                        index: 4,
-                        title: "Start Building Your Wealth Journey.",
-                        description: "Take control of your financial future with Worth.",
-                        visual: _buildSlide5Visual(),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Bottom Controls (Dots & Buttons)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Progress Indicators
-                      Row(
-                        children: List.generate(5, (index) {
-                          final isSelected = _currentPage == index;
-                          return GestureDetector(
-                            onTap: () => _pageController.animateToPage(
-                              index,
-                              duration: const Duration(milliseconds: 400),
-                              curve: Curves.easeInOutCubic,
+          // Bottom Navigation Controls
+          SafeArea(
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Dot indicators
+                    Row(
+                      children: List.generate(5, (index) {
+                        final isSelected = _currentPage == index;
+                        return GestureDetector(
+                          onTap: () => _pageController.animateToPage(
+                            index,
+                            duration: const Duration(milliseconds: 500),
+                            curve: Curves.easeInOutCubic,
+                          ),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            height: 6,
+                            width: isSelected ? 28 : 6,
+                            margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                            decoration: BoxDecoration(
+                              color: isSelected ? AppColors.darkPrimary : AppColors.glassBorder,
+                              borderRadius: BorderRadius.circular(3),
+                              boxShadow: isSelected
+                                  ? [
+                                      BoxShadow(
+                                        color: AppColors.darkPrimary.withOpacity(0.4),
+                                        blurRadius: 6,
+                                        spreadRadius: 1,
+                                      )
+                                    ]
+                                  : null,
                             ),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              height: 6,
-                              width: isSelected ? 24 : 6,
-                              margin: const EdgeInsets.symmetric(horizontal: 3),
-                              decoration: BoxDecoration(
-                                color: isSelected ? AppColors.darkPrimary : AppColors.glassBorder,
-                                borderRadius: BorderRadius.circular(3),
-                              ),
-                            ),
-                          );
-                        }),
-                      ),
+                          ),
+                        );
+                      }),
+                    ),
 
-                      // Action Button (Next / Get Started transition)
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 350),
-                        child: _currentPage == 4
-                            ? TactileButton(
-                                key: const ValueKey('get_started_btn'),
-                                onTap: _finishSetup,
-                                gradient: const LinearGradient(
-                                  colors: [AppColors.darkPrimary, AppColors.glow],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
-                                width: 140,
-                                child: Text(
-                                  'GET STARTED',
-                                  style: GoogleFonts.inter(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                    letterSpacing: 0.8,
-                                  ),
-                                ),
-                              )
-                            : TactileButton(
-                                key: const ValueKey('next_btn'),
-                                onTap: _nextPage,
-                                border: const BorderSide(color: AppColors.glassBorder),
-                                width: 60,
-                                child: const Icon(Icons.arrow_forward, color: Colors.white, size: 18),
+                    // Next / Get Started Action Button
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: _currentPage == 4
+                          ? _OnboardingTactileButton(
+                              key: const ValueKey('get_started_btn'),
+                              onTap: _finishSetup,
+                              gradient: const LinearGradient(
+                                colors: [AppColors.darkPrimary, AppColors.glow],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
-                      ),
-                    ],
-                  ),
+                              width: 150,
+                              child: Text(
+                                'GET STARTED',
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                            )
+                          : _OnboardingTactileButton(
+                              key: const ValueKey('next_btn'),
+                              onTap: _nextPage,
+                              color: AppColors.layer2.withOpacity(0.5),
+                              border: const BorderSide(color: AppColors.glassBorder),
+                              width: 60,
+                              child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 20),
+                            ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -309,154 +237,259 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
     );
   }
 
-  // Generic Slide Builder
-  Widget _buildSlide({
-    required int index,
-    required String title,
-    required String description,
-    required Widget visual,
-  }) {
-    // Parallax scrolling translation factor
-    final offsetMultiplier = (index - _pageOffset);
-    final textParallax = offsetMultiplier * 50;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Visual Illustration Area
-          Expanded(
-            flex: 5,
-            child: Center(
-              child: ClipRect(
-                child: Transform.translate(
-                  offset: Offset(offsetMultiplier * 150, 0),
-                  child: visual,
+  // --- SLIDE 1: Premium Brand Reveal & Concentric Pulse ---
+  Widget _buildSlide1() {
+    final offsetMultiplier = (0 - _pageOffset);
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment.center,
+          radius: 1.2,
+          colors: [
+            Color(0xFF1E1E2C),
+            Color(0xFF0F0F16),
+            Color(0xFF09090D),
+          ],
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const SizedBox(height: 12),
+              // Concentric pulse visual
+              Expanded(
+                child: Center(
+                  child: Transform.translate(
+                    offset: Offset(offsetMultiplier * 150, 0),
+                    child: AnimatedBuilder(
+                      animation: _pulseController,
+                      builder: (context, child) {
+                        final value = _pulseController.value;
+                        return Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // 3 concentric animated glowing rings
+                            Container(
+                              width: 140 + (value * 80),
+                              height: 140 + (value * 80),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.darkPrimary.withOpacity(0.12 * (1.0 - value)),
+                                  width: 1.5,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              width: 100 + (value * 40),
+                              height: 100 + (value * 40),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.glow.withOpacity(0.20 * (1.0 - value)),
+                                  width: 1.0,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.layer1.withOpacity(0.4),
+                                border: Border.all(color: AppColors.glassBorder),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.darkPrimary.withOpacity(0.12),
+                                    blurRadius: 24,
+                                    spreadRadius: 2,
+                                  ),
+                                ],
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.radar_rounded,
+                                  size: 40,
+                                  color: AppColors.darkPrimary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Text Content Area
-          Expanded(
-            flex: 3,
-            child: Transform.translate(
-              offset: Offset(textParallax, 0),
-              child: Column(
+              // Message Column
+              Column(
                 children: [
                   Text(
-                    title,
+                    "Know What You're Worth.",
                     textAlign: TextAlign.center,
                     style: GoogleFonts.outfit(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 34,
+                      fontWeight: FontWeight.w900,
                       color: Colors.white,
-                      letterSpacing: -0.5,
-                      height: 1.25,
+                      letterSpacing: -1.0,
+                      height: 1.15,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Text(
-                      description,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppColors.grey400,
-                        height: 1.5,
-                      ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Track your complete financial life in one place.",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      color: AppColors.grey400,
+                      height: 1.45,
                     ),
                   ),
+                  const SizedBox(height: 64),
                 ],
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  // --- Visual Component Builders ---
-
-  // Slide 1: Net Worth Card with Assets vs Liabilities Ratio
-  Widget _buildSlide1Visual() {
+  // --- SLIDE 2: Stacked Ledger (Apple Wallet Style) ---
+  Widget _buildSlide2() {
+    final offsetMultiplier = (1 - _pageOffset);
     return Container(
-      width: 280,
-      height: 200,
-      alignment: Alignment.center,
+      width: double.infinity,
+      height: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF161623),
+            Color(0xFF0C0C14),
+          ],
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const SizedBox(height: 12),
+              // Stacked cards visual
+              Expanded(
+                child: Center(
+                  child: Transform.translate(
+                    offset: Offset(offsetMultiplier * 150, 0),
+                    child: AnimatedBuilder(
+                      animation: _floatController,
+                      builder: (context, child) {
+                        final val = _floatController.value * 2 * math.pi;
+                        final shift = math.sin(val) * 6;
+                        return Container(
+                          width: 280,
+                          height: 240,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            alignment: Alignment.center,
+                            children: [
+                              // Liabilities Card (Back)
+                              Positioned(
+                                top: 10 - shift,
+                                child: Transform.rotate(
+                                  angle: -0.06,
+                                  child: _buildWalletCard('Liabilities Due', '₹1,40,000', AppColors.darkDanger),
+                                ),
+                              ),
+                              // Investments Card (Middle)
+                              Positioned(
+                                top: 55 + shift,
+                                child: Transform.rotate(
+                                  angle: 0.04,
+                                  child: _buildWalletCard('Investments', '₹3,50,000', AppColors.darkPrimary),
+                                ),
+                              ),
+                              // Assets Card (Front)
+                              Positioned(
+                                top: 100 - (shift * 0.5),
+                                child: Transform.rotate(
+                                  angle: -0.02,
+                                  child: _buildWalletCard('Cash Assets', '₹8,20,000', AppColors.darkSuccess, isGlow: true),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              // Message Column
+              Column(
+                children: [
+                  Text(
+                    "Everything In One Place.",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: -1.0,
+                      height: 1.15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Manage Assets, Investments, Liabilities, and Goals effortlessly.",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      color: AppColors.grey400,
+                      height: 1.45,
+                    ),
+                  ),
+                  const SizedBox(height: 64),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWalletCard(String label, String value, Color color, {bool isGlow = false}) {
+    return Container(
+      width: 230,
+      height: 100,
       child: GlassCard(
-        padding: const EdgeInsets.all(20),
-        borderColor: AppColors.darkPrimary.withOpacity(0.2),
+        padding: const EdgeInsets.all(16.0),
+        borderColor: isGlow ? AppColors.darkPrimary.withOpacity(0.35) : AppColors.glassBorder,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.grey500, letterSpacing: 0.5),
+                ),
+                Icon(Icons.circle_outlined, size: 10, color: color),
+              ],
+            ),
             Text(
-              'NET WORTH',
-              style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 1.0),
-            ),
-            const SizedBox(height: 8),
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 250000),
-              duration: const Duration(seconds: 2),
-              curve: Curves.easeOutQuart,
-              builder: (context, val, child) {
-                return Text(
-                  '₹${NumberFormat.decimalPattern().format(val.toInt())}',
-                  style: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.white),
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-            // Progress Bar split
-            Row(
-              children: [
-                Expanded(
-                  flex: 7,
-                  child: Container(
-                    height: 5,
-                    decoration: const BoxDecoration(
-                      color: AppColors.darkSuccess,
-                      borderRadius: BorderRadius.only(topLeft: Radius.circular(3), bottomLeft: Radius.circular(3)),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 3,
-                  child: Container(
-                    height: 5,
-                    decoration: const BoxDecoration(
-                      color: AppColors.darkDanger,
-                      borderRadius: BorderRadius.only(topRight: Radius.circular(3), bottomRight: Radius.circular(3)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Assets', style: GoogleFonts.inter(fontSize: 9, color: AppColors.grey500, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 2),
-                    const Text('₹3,50,000', style: TextStyle(color: AppColors.darkSuccess, fontWeight: FontWeight.bold, fontSize: 11)),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text('Liabilities', style: GoogleFonts.inter(fontSize: 9, color: AppColors.grey500, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 2),
-                    const Text('₹1,00,000', style: TextStyle(color: AppColors.darkDanger, fontWeight: FontWeight.bold, fontSize: 11)),
-                  ],
-                ),
-              ],
+              value,
+              style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.5),
             ),
           ],
         ),
@@ -464,322 +497,437 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
     );
   }
 
-  // Slide 2: Floating 3D Portfolio Cards
-  Widget _buildSlide2Visual() {
-    return SizedBox(
-      width: 300,
-      height: 220,
-      child: AnimatedBuilder(
-        animation: _floatController,
-        builder: (context, child) {
-          final time = _floatController.value * 2 * math.pi;
-          
-          return Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: [
-              // Bottom Card (Liabilities)
-              Positioned(
-                bottom: 10 + math.sin(time) * 8,
-                left: 10,
-                child: Transform.rotate(
-                  angle: -0.05,
-                  child: _buildMiniCard('Liabilities', '-₹1,00,000', AppColors.darkDanger, 200),
-                ),
-              ),
-              // Middle Card (Investments)
-              Positioned(
-                top: 40 + math.sin(time + math.pi / 2) * 10,
-                right: 15,
-                child: Transform.rotate(
-                  angle: 0.04,
-                  child: _buildMiniCard('Investments', '₹1,80,000', AppColors.darkPrimary, 210),
-                ),
-              ),
-              // Top Card (Assets Summary)
-              Positioned(
-                top: 90 + math.sin(time + math.pi) * 12,
-                left: 30,
-                child: Transform.rotate(
-                  angle: -0.02,
-                  child: _buildMiniCard('Goals Owed', '₹1,20,000', AppColors.darkSuccess, 210, isHighlighted: true),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildMiniCard(String label, String value, Color color, double width, {bool isHighlighted = false}) {
-    return SizedBox(
-      width: width,
-      child: GlassCard(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        borderColor: isHighlighted ? AppColors.darkPrimary.withOpacity(0.3) : AppColors.glassBorder,
-        child: Row(
-          children: [
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: color.withOpacity(0.12),
-              ),
-              child: Icon(Icons.circle_outlined, size: 12, color: color),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: GoogleFonts.inter(fontSize: 10, color: AppColors.grey500, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 2),
-                Text(value, style: GoogleFonts.inter(fontSize: 13, color: Colors.white, fontWeight: FontWeight.w800)),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Slide 3: Wealth growth custom-drawn path
-  Widget _buildSlide3Visual() {
-    return SizedBox(
-      width: 280,
-      height: 200,
-      child: GlassCard(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'WEALTH ACCELERATION',
-                  style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.8),
-                ),
-                Text(
-                  '+45.2% YTD',
-                  style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.darkSuccess),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: AnimatedBuilder(
-                animation: _chartDrawController,
-                builder: (context, child) {
-                  return CustomPaint(
-                    painter: OnboardingChartPainter(
-                      progress: _chartDrawController.value,
-                      lineColor: AppColors.glow,
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Slide 4: Security Pulse with Fingerprint and DB check status
-  Widget _buildSlide4Visual() {
-    return SizedBox(
-      width: 280,
-      height: 200,
-      child: AnimatedBuilder(
-        animation: _pulseController,
-        builder: (context, child) {
-          final scale = 1.0 + (_pulseController.value * 0.08);
-          final opacity = 0.4 - (_pulseController.value * 0.3);
-
-          return Stack(
-            alignment: Alignment.center,
-            children: [
-              // Glowing pulse rings
-              Container(
-                width: 110 * scale,
-                height: 110 * scale,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.darkPrimary.withOpacity(opacity), width: 2.0),
-                ),
-              ),
-              Container(
-                width: 140 * scale,
-                height: 140 * scale,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.glow.withOpacity(opacity * 0.5), width: 1.0),
-                ),
-              ),
-
-              // Central Fingerprint/Shield Glass Container
-              GlassCard(
-                borderRadius: 50,
-                padding: const EdgeInsets.all(24),
-                borderColor: AppColors.darkPrimary.withOpacity(0.2),
-                child: const Icon(
-                  Icons.fingerprint_rounded,
-                  size: 48,
-                  color: AppColors.darkPrimary,
-                ),
-              ),
-
-              // Floating secure storage indicator
-              Positioned(
-                bottom: 8,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black45,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.glassBorder),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: const BoxDecoration(color: AppColors.darkSuccess, shape: BoxShape.circle),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'SECURE LOCAL SQL DB',
-                        style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  // Slide 5: Concentric Worth logo & Floating stars animation
-  Widget _buildSlide5Visual() {
-    return SizedBox(
-      width: 280,
-      height: 200,
-      child: AnimatedBuilder(
-        animation: _pulseController,
-        builder: (context, child) {
-          final glowFactor = _pulseController.value;
-
-          return Stack(
-            alignment: Alignment.center,
-            children: [
-              // Multi-layered concentric ambient glows
-              Container(
-                width: 150,
-                height: 150,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.darkPrimary.withOpacity(0.08 + (glowFactor * 0.05)),
-                      blurRadius: 50 + (glowFactor * 20),
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Logo mark
-              Container(
-                width: 96,
-                height: 96,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.layer1,
-                  border: Border.all(
-                    color: AppColors.darkPrimary.withOpacity(0.3),
-                    width: 1.5,
-                  ),
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.radar_rounded,
-                    color: AppColors.darkPrimary,
-                    size: 54,
-                  ),
-                ),
-              ),
-
-              // Orbiting elements
-              Positioned(
-                top: 30,
-                left: 40,
-                child: _buildSparkleDot(glowFactor, 6),
-              ),
-              Positioned(
-                bottom: 40,
-                right: 35,
-                child: _buildSparkleDot(1.0 - glowFactor, 8),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildSparkleDot(double pulseVal, double size) {
+  // --- SLIDE 3: Wealth Acceleration Bezier Curve (CRED style) ---
+  Widget _buildSlide3() {
+    final offsetMultiplier = (2 - _pageOffset);
     return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppColors.glow.withOpacity(0.2 + (pulseVal * 0.8)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.glow.withOpacity(pulseVal),
-            blurRadius: 4,
-            spreadRadius: 1,
+      width: double.infinity,
+      height: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [
+            Color(0xFF131A18),
+            Color(0xFF080D0C),
+          ],
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const SizedBox(height: 12),
+              // Chart Animation Visual
+              Expanded(
+                child: Center(
+                  child: Transform.translate(
+                    offset: Offset(offsetMultiplier * 150, 0),
+                    child: Container(
+                      width: 290,
+                      height: 200,
+                      child: GlassCard(
+                        padding: const EdgeInsets.all(18.0),
+                        borderColor: AppColors.glow.withOpacity(0.25),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'WEALTH PROJECTION',
+                                  style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.8),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(color: AppColors.darkSuccess.withOpacity(0.12), borderRadius: BorderRadius.circular(4)),
+                                  child: Text('+124.5% ACCEL.', style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.darkSuccess)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Expanded(
+                              child: AnimatedBuilder(
+                                animation: _chartDrawController,
+                                builder: (context, child) {
+                                  return CustomPaint(
+                                    painter: _PremiumOnboardingChartPainter(
+                                      progress: _chartDrawController.value,
+                                      lineColor: AppColors.glow,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // Message Column
+              Column(
+                children: [
+                  Text(
+                    "Built For Wealth Growth.",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: -1.0,
+                      height: 1.15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Understand how your net worth grows over time with powerful analytics.",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      color: AppColors.grey400,
+                      height: 1.45,
+                    ),
+                  ),
+                  const SizedBox(height: 64),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
+      ),
+    );
+  }
+
+  // --- SLIDE 4: Secure Vault handle ---
+  Widget _buildSlide4() {
+    final offsetMultiplier = (3 - _pageOffset);
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.bottomRight,
+          end: Alignment.topLeft,
+          colors: [
+            Color(0xFF191016),
+            Color(0xFF0F0B0E),
+          ],
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const SizedBox(height: 12),
+              // Vault Handler Visual
+              Expanded(
+                child: Center(
+                  child: Transform.translate(
+                    offset: Offset(offsetMultiplier * 150, 0),
+                    child: AnimatedBuilder(
+                      animation: _pulseController,
+                      builder: (context, child) {
+                        final scale = 1.0 + (_pulseController.value * 0.05);
+                        final val = _pulseController.value * 2 * math.pi;
+                        return Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // Outer pulsing grid ring
+                            Container(
+                              width: 150 * scale,
+                              height: 150 * scale,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppColors.darkSuccess.withOpacity(0.08 * (1.0 - _pulseController.value)), width: 2),
+                              ),
+                            ),
+                            // Safe wheel handle
+                            Transform.rotate(
+                              angle: val * 0.1,
+                              child: Container(
+                                width: 110,
+                                height: 110,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: AppColors.layer1,
+                                  border: Border.all(color: AppColors.glassBorder, width: 2),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.darkSuccess.withOpacity(0.08),
+                                      blurRadius: 20,
+                                      spreadRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    // Vault Spokes
+                                    ...List.generate(3, (idx) {
+                                      return Transform.rotate(
+                                        angle: (idx * 2 * math.pi) / 3,
+                                        child: Container(
+                                          width: 8,
+                                          height: 90,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.layer2.withOpacity(0.6),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                        ),
+                                      );
+                                    }),
+                                    Container(
+                                      width: 44,
+                                      height: 44,
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: AppColors.layer2,
+                                      ),
+                                      child: const Center(
+                                        child: Icon(Icons.lock_person_rounded, size: 20, color: AppColors.darkSuccess),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            // Vault Shield status
+                            Positioned(
+                              bottom: -20,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.black45,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppColors.darkSuccess.withOpacity(0.25)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: const BoxDecoration(color: AppColors.darkSuccess, shape: BoxShape.circle),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'SQLITE SECURE AES-256',
+                                      style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              // Message Column
+              Column(
+                children: [
+                  Text(
+                    "Secure & Offline First.",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: -1.0,
+                      height: 1.15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Your financial records never leave your device and work completely offline.",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      color: AppColors.grey400,
+                      height: 1.45,
+                    ),
+                  ),
+                  const SizedBox(height: 64),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- SLIDE 5: Premium Logo Launch ---
+  Widget _buildSlide5() {
+    final offsetMultiplier = (4 - _pageOffset);
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment.center,
+          radius: 1.3,
+          colors: [
+            Color(0xFF22161A),
+            Color(0xFF0F0B0C),
+            Color(0xFF070506),
+          ],
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const SizedBox(height: 12),
+              // Concentric orbital elements
+              Expanded(
+                child: Center(
+                  child: Transform.translate(
+                    offset: Offset(offsetMultiplier * 150, 0),
+                    child: AnimatedBuilder(
+                      animation: _pulseController,
+                      builder: (context, child) {
+                        final val = _pulseController.value;
+                        return Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Container(
+                              width: 180,
+                              height: 180,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.darkPrimary.withOpacity(0.08 + (val * 0.04)),
+                                    blurRadius: 40 + (val * 20),
+                                    spreadRadius: 2,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              width: 104,
+                              height: 104,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.layer1,
+                                border: Border.all(
+                                  color: AppColors.darkPrimary.withOpacity(0.35),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.radar_rounded,
+                                  color: AppColors.darkPrimary,
+                                  size: 60,
+                                ),
+                              ),
+                            ),
+                            // Floating stars / orbiters
+                            Positioned(
+                              top: 25,
+                              left: 35,
+                              child: Container(
+                                width: 5,
+                                height: 5,
+                                decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.glow.withOpacity(0.3 + (val * 0.7))),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 30,
+                              right: 25,
+                              child: Container(
+                                width: 7,
+                                height: 7,
+                                decoration: BoxDecoration(shape: BoxShape.circle, color: AppColors.glow.withOpacity(1.0 - val)),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              // Message Column
+              Column(
+                children: [
+                  Text(
+                    "Start Your Journey.",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.outfit(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: -1.0,
+                      height: 1.15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Take control of your financial future and master your wealth portfolio.",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      color: AppColors.grey400,
+                      height: 1.45,
+                    ),
+                  ),
+                  const SizedBox(height: 64),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
-// Custom Painter for Onboarding line chart
-class OnboardingChartPainter extends CustomPainter {
+// Custom Painter for wealth curve progress
+class _PremiumOnboardingChartPainter extends CustomPainter {
   final double progress;
   final Color lineColor;
 
-  OnboardingChartPainter({required this.progress, required this.lineColor});
+  _PremiumOnboardingChartPainter({required this.progress, required this.lineColor});
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = lineColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
+      ..strokeWidth = 3.0
       ..strokeCap = StrokeCap.round;
 
-    final fillPaint = Paint()
-      ..style = PaintingStyle.fill;
+    final gridPaint = Paint()
+      ..color = AppColors.glassBorder
+      ..strokeWidth = 1.0;
+
+    // Grid lines
+    for (double y = size.height * 0.25; y < size.height; y += size.height * 0.25) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
 
     final path = Path();
-    
-    // Wave points
     final points = [
-      Offset(0, size.height * 0.8),
-      Offset(size.width * 0.2, size.height * 0.72),
-      Offset(size.width * 0.4, size.height * 0.75),
-      Offset(size.width * 0.6, size.height * 0.5),
-      Offset(size.width * 0.8, size.height * 0.58),
-      Offset(size.width, size.height * 0.2),
+      Offset(0, size.height * 0.85),
+      Offset(size.width * 0.2, size.height * 0.78),
+      Offset(size.width * 0.4, size.height * 0.72),
+      Offset(size.width * 0.6, size.height * 0.44),
+      Offset(size.width * 0.8, size.height * 0.50),
+      Offset(size.width, size.height * 0.15),
     ];
 
     path.moveTo(points[0].dx, points[0].dy);
@@ -797,7 +945,6 @@ class OnboardingChartPainter extends CustomPainter {
       );
     }
 
-    // Slice path based on progress
     final pathMetrics = path.computeMetrics();
     final drawingPath = Path();
     
@@ -806,10 +953,8 @@ class OnboardingChartPainter extends CustomPainter {
       drawingPath.addPath(metric.extractPath(0, length), Offset.zero);
     }
 
-    // Draw the gradient area fill below the line
     if (progress > 0) {
       final fillPath = Path.from(drawingPath);
-      // Find the last coordinates of the drawingPath to close it properly
       final metricList = drawingPath.computeMetrics().toList();
       if (metricList.isNotEmpty) {
         final lastPoint = metricList.last.getTangentForOffset(metricList.last.length)?.position ?? Offset(size.width * progress, size.height);
@@ -817,45 +962,32 @@ class OnboardingChartPainter extends CustomPainter {
         fillPath.lineTo(0, size.height);
         fillPath.close();
 
-        fillPaint.shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            lineColor.withOpacity(0.18),
-            lineColor.withOpacity(0.0),
-          ],
-        ).createShader(Rect.fromLTRB(0, 0, size.width, size.height));
-        
+        final fillPaint = Paint()
+          ..style = PaintingStyle.fill
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              lineColor.withOpacity(0.18),
+              lineColor.withOpacity(0.0),
+            ],
+          ).createShader(Rect.fromLTRB(0, 0, size.width, size.height));
+          
         canvas.drawPath(fillPath, fillPaint);
       }
     }
 
-    // Draw grid helper lines
-    final gridPaint = Paint()
-      ..color = AppColors.glassBorder
-      ..strokeWidth = 1.0;
-    
-    for (double y = size.height * 0.25; y < size.height; y += size.height * 0.25) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
-    }
-
-    // Draw line
     canvas.drawPath(drawingPath, paint);
 
-    // Draw endpoint dot
     if (progress > 0.1) {
       final metricList = drawingPath.computeMetrics().toList();
       if (metricList.isNotEmpty) {
         final tangent = metricList.last.getTangentForOffset(metricList.last.length);
         if (tangent != null) {
-          final dotPaint = Paint()
-            ..color = Colors.white
-            ..style = PaintingStyle.fill;
-          final shadowPaint = Paint()
-            ..color = lineColor.withOpacity(0.5)
-            ..style = PaintingStyle.fill;
+          final dotPaint = Paint()..color = Colors.white..style = PaintingStyle.fill;
+          final shadowPaint = Paint()..color = lineColor.withOpacity(0.6)..style = PaintingStyle.fill;
 
-          canvas.drawCircle(tangent.position, 7.0, shadowPaint);
+          canvas.drawCircle(tangent.position, 8.0, shadowPaint);
           canvas.drawCircle(tangent.position, 4.0, dotPaint);
         }
       }
@@ -863,13 +995,13 @@ class OnboardingChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant OnboardingChartPainter oldDelegate) {
-    return oldDelegate.progress != progress || oldDelegate.lineColor != lineColor;
+  bool shouldRepaint(covariant _PremiumOnboardingChartPainter oldDelegate) {
+    return oldDelegate.progress != progress;
   }
 }
 
-// Tactile press-scaling Button
-class TactileButton extends StatefulWidget {
+// Custom Onboarding Button with Press scaling
+class _OnboardingTactileButton extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
   final Color? color;
@@ -879,7 +1011,7 @@ class TactileButton extends StatefulWidget {
   final double? width;
   final double height;
 
-  const TactileButton({
+  const _OnboardingTactileButton({
     required this.child,
     this.onTap,
     this.color,
@@ -892,10 +1024,10 @@ class TactileButton extends StatefulWidget {
   });
 
   @override
-  State<TactileButton> createState() => _TactileButtonState();
+  State<_OnboardingTactileButton> createState() => _OnboardingTactileButtonState();
 }
 
-class _TactileButtonState extends State<TactileButton> with SingleTickerProviderStateMixin {
+class _OnboardingTactileButtonState extends State<_OnboardingTactileButton> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
 

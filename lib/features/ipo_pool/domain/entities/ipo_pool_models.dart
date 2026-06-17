@@ -293,6 +293,7 @@ class IpoPool {
   final List<IpoContributor> contributors;
   final List<IpoAllotment> allotments;
   final DateTime createdAt;
+  final DateTime? deletedAt;
 
   // New ledger/archive fields
   final String companyName;
@@ -326,6 +327,7 @@ class IpoPool {
     this.activities = const [],
     this.verifications = const [],
     this.settlements = const [],
+    this.deletedAt,
   });
 
   // Verification Helpers
@@ -366,13 +368,18 @@ class IpoPool {
     return totalPoolAmount ~/ applicationCost;
   }
 
+  double get totalApplications {
+    if (applicationCost <= 0) return 0.0;
+    return totalPoolAmount / applicationCost;
+  }
+
   double get remainingAmount {
-    if (applicationCost <= 0) return 0;
+    if (applicationCost <= 0) return 0.0;
     return totalPoolAmount % applicationCost;
   }
 
-  int get groupApplications {
-    return max(0, fullApplications - soloApplications);
+  double get groupApplications {
+    return max(0.0, totalApplications - soloApplications);
   }
 
   double get totalGroupContribution {
@@ -454,6 +461,7 @@ class IpoPool {
     List<PoolActivity>? activities,
     List<PaymentVerification>? verifications,
     List<SettlementRecord>? settlements,
+    DateTime? Function()? deletedAt,
   }) {
     return IpoPool(
       id: id ?? this.id,
@@ -474,6 +482,7 @@ class IpoPool {
       activities: activities ?? this.activities,
       verifications: verifications ?? this.verifications,
       settlements: settlements ?? this.settlements,
+      deletedAt: deletedAt != null ? deletedAt() : this.deletedAt,
     );
   }
 
@@ -497,6 +506,7 @@ class IpoPool {
       'activities': activities.map((a) => a.toJson()).toList(),
       'verifications': verifications.map((v) => v.toJson()).toList(),
       'settlements': settlements.map((s) => s.toJson()).toList(),
+      'deletedAt': deletedAt?.toIso8601String(),
     };
   }
 
@@ -538,6 +548,7 @@ class IpoPool {
               ?.map((s) => SettlementRecord.fromJson(s as Map<String, dynamic>))
               .toList() ??
           [],
+      deletedAt: json['deletedAt'] != null ? DateTime.parse(json['deletedAt'] as String) : null,
     );
   }
 }

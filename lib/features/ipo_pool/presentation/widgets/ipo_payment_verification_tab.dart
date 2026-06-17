@@ -7,6 +7,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/providers/mock_database.dart';
 import '../../domain/entities/ipo_pool_models.dart';
+import 'calculation_audit_panel.dart';
 
 class IpoPaymentVerificationTab extends ConsumerStatefulWidget {
   final IpoPool pool;
@@ -395,18 +396,44 @@ class _IpoPaymentVerificationTabState extends ConsumerState<IpoPaymentVerificati
         // 1. Stats Cards
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 2.2,
+          child: Column(
             children: [
-              _buildStatTile('Expected Contributions', '${widget.currency}${totalExpected.toStringAsFixed(0)}', AppColors.darkPrimary),
-              _buildStatTile('Verified Received', '${widget.currency}${totalVerified.toStringAsFixed(0)}', AppColors.darkSuccess),
-              _buildStatTile('Pending Verification', '${widget.currency}${totalPending.toStringAsFixed(0)}', AppColors.darkWarning),
-              _buildStatTile('Rejected Amount', '${widget.currency}${totalRejected.toStringAsFixed(0)}', AppColors.darkDanger),
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 2.2,
+                children: [
+                  _buildStatTile('Expected Contributions', '${widget.currency}${totalExpected.toStringAsFixed(0)}', AppColors.darkPrimary),
+                  _buildStatTile('Verified Received', '${widget.currency}${totalVerified.toStringAsFixed(0)}', AppColors.darkSuccess),
+                  _buildStatTile('Pending Verification', '${widget.currency}${totalPending.toStringAsFixed(0)}', AppColors.darkWarning),
+                  _buildStatTile('Rejected Amount', '${widget.currency}${totalRejected.toStringAsFixed(0)}', AppColors.darkDanger),
+                ],
+              ),
+              const SizedBox(height: 10),
+              CalculationAuditPanel(
+                title: 'Verify Payment Verification Stats',
+                formula: 'Expected = sum(Verification.expectedAmount)\n'
+                    'Verified Received = sum(Verified.expectedAmount) + sum(Partial.receivedAmount)\n'
+                    'Pending = sum(Pending.expectedAmount) + sum(Partial.expectedAmount - Partial.receivedAmount)\n'
+                    'Rejected = sum(Rejected.expectedAmount)',
+                inputs: {
+                  'Total Verifications Count': '${verifications.length}',
+                  'Expected Sum': '${widget.currency}${totalExpected.toStringAsFixed(2)}',
+                  'Verified Received Sum': '${widget.currency}${totalVerified.toStringAsFixed(2)}',
+                  'Pending Sum': '${widget.currency}${totalPending.toStringAsFixed(2)}',
+                  'Rejected Sum': '${widget.currency}${totalRejected.toStringAsFixed(2)}',
+                },
+                output: 'Verified Contribution: ${widget.currency}${totalVerified.toStringAsFixed(2)}',
+                steps: [
+                  'Expected Contribution represents the initial pledge amount made by all contributors.',
+                  'Verified Received counts all fully verified contributions plus the received portion of partial contributions.',
+                  'Pending represents pledged money not yet processed or the unpaid balance of partial payments.',
+                  'Rejected represents verified failures which must be re-submitted by the contributor.',
+                ],
+              ),
             ],
           ),
         ),

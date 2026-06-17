@@ -21,7 +21,7 @@ class ProfileScreen extends ConsumerWidget {
     final userName = user?.displayName ?? user?.email?.split('@').first ?? 'User';
     final userEmail = user?.email ?? '';
 
-    final joinDate = DateFormat('MMMM yyyy').format(DateTime.now().subtract(const Duration(days: 90)));
+    final joinDate = DateFormat('MMMM yyyy').format(dbState.userCreatedAt ?? DateTime.now());
     final numTxs = dbState.transactions.length;
     final numAccounts = dbState.accounts.where((a) => a.isArchived == 0).length;
     

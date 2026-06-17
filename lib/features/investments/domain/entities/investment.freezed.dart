@@ -29,6 +29,8 @@ mixin _$Investment {
   DateTime? get marketValueUpdatedAt => throw _privateConstructorUsedError;
   int get isArchived => throw _privateConstructorUsedError;
   String? get notes => throw _privateConstructorUsedError;
+  DateTime? get purchaseDate => throw _privateConstructorUsedError;
+  String? get purchaseTime => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
   String get syncStatus => throw _privateConstructorUsedError;
@@ -58,6 +60,8 @@ abstract class $InvestmentCopyWith<$Res> {
       DateTime? marketValueUpdatedAt,
       int isArchived,
       String? notes,
+      DateTime? purchaseDate,
+      String? purchaseTime,
       DateTime createdAt,
       DateTime updatedAt,
       String syncStatus});
@@ -86,6 +90,8 @@ class _$InvestmentCopyWithImpl<$Res, $Val extends Investment>
     Object? marketValueUpdatedAt = freezed,
     Object? isArchived = null,
     Object? notes = freezed,
+    Object? purchaseDate = freezed,
+    Object? purchaseTime = freezed,
     Object? createdAt = null,
     Object? updatedAt = null,
     Object? syncStatus = null,
@@ -123,6 +129,14 @@ class _$InvestmentCopyWithImpl<$Res, $Val extends Investment>
           ? _value.notes
           : notes // ignore: cast_nullable_to_non_nullable
               as String?,
+      purchaseDate: freezed == purchaseDate
+          ? _value.purchaseDate
+          : purchaseDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      purchaseTime: freezed == purchaseTime
+          ? _value.purchaseTime
+          : purchaseTime // ignore: cast_nullable_to_non_nullable
+              as String?,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -156,6 +170,8 @@ abstract class _$$InvestmentImplCopyWith<$Res>
       DateTime? marketValueUpdatedAt,
       int isArchived,
       String? notes,
+      DateTime? purchaseDate,
+      String? purchaseTime,
       DateTime createdAt,
       DateTime updatedAt,
       String syncStatus});
@@ -182,6 +198,8 @@ class __$$InvestmentImplCopyWithImpl<$Res>
     Object? marketValueUpdatedAt = freezed,
     Object? isArchived = null,
     Object? notes = freezed,
+    Object? purchaseDate = freezed,
+    Object? purchaseTime = freezed,
     Object? createdAt = null,
     Object? updatedAt = null,
     Object? syncStatus = null,
@@ -219,6 +237,14 @@ class __$$InvestmentImplCopyWithImpl<$Res>
           ? _value.notes
           : notes // ignore: cast_nullable_to_non_nullable
               as String?,
+      purchaseDate: freezed == purchaseDate
+          ? _value.purchaseDate
+          : purchaseDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      purchaseTime: freezed == purchaseTime
+          ? _value.purchaseTime
+          : purchaseTime // ignore: cast_nullable_to_non_nullable
+              as String?,
       createdAt: null == createdAt
           ? _value.createdAt
           : createdAt // ignore: cast_nullable_to_non_nullable
@@ -247,6 +273,8 @@ class _$InvestmentImpl implements _Investment {
       this.marketValueUpdatedAt,
       required this.isArchived,
       this.notes,
+      this.purchaseDate,
+      this.purchaseTime,
       required this.createdAt,
       required this.updatedAt,
       this.syncStatus = 'pending'});
@@ -272,6 +300,10 @@ class _$InvestmentImpl implements _Investment {
   @override
   final String? notes;
   @override
+  final DateTime? purchaseDate;
+  @override
+  final String? purchaseTime;
+  @override
   final DateTime createdAt;
   @override
   final DateTime updatedAt;
@@ -281,7 +313,7 @@ class _$InvestmentImpl implements _Investment {
 
   @override
   String toString() {
-    return 'Investment(id: $id, name: $name, type: $type, symbol: $symbol, marketValue: $marketValue, marketValueUpdatedAt: $marketValueUpdatedAt, isArchived: $isArchived, notes: $notes, createdAt: $createdAt, updatedAt: $updatedAt, syncStatus: $syncStatus)';
+    return 'Investment(id: $id, name: $name, type: $type, symbol: $symbol, marketValue: $marketValue, marketValueUpdatedAt: $marketValueUpdatedAt, isArchived: $isArchived, notes: $notes, purchaseDate: $purchaseDate, purchaseTime: $purchaseTime, createdAt: $createdAt, updatedAt: $updatedAt, syncStatus: $syncStatus)';
   }
 
   @override
@@ -300,6 +332,10 @@ class _$InvestmentImpl implements _Investment {
             (identical(other.isArchived, isArchived) ||
                 other.isArchived == isArchived) &&
             (identical(other.notes, notes) || other.notes == notes) &&
+            (identical(other.purchaseDate, purchaseDate) ||
+                other.purchaseDate == purchaseDate) &&
+            (identical(other.purchaseTime, purchaseTime) ||
+                other.purchaseTime == purchaseTime) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
@@ -320,6 +356,8 @@ class _$InvestmentImpl implements _Investment {
       marketValueUpdatedAt,
       isArchived,
       notes,
+      purchaseDate,
+      purchaseTime,
       createdAt,
       updatedAt,
       syncStatus);
@@ -350,6 +388,8 @@ abstract class _Investment implements Investment {
       final DateTime? marketValueUpdatedAt,
       required final int isArchived,
       final String? notes,
+      final DateTime? purchaseDate,
+      final String? purchaseTime,
       required final DateTime createdAt,
       required final DateTime updatedAt,
       final String syncStatus}) = _$InvestmentImpl;
@@ -374,6 +414,10 @@ abstract class _Investment implements Investment {
   int get isArchived;
   @override
   String? get notes;
+  @override
+  DateTime? get purchaseDate;
+  @override
+  String? get purchaseTime;
   @override
   DateTime get createdAt;
   @override

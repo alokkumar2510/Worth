@@ -27,6 +27,7 @@ import '../../core/mock_data/mock_constants.dart';
 import '../achievements/presentation/providers/achievements_provider.dart';
 import '../achievements/domain/entities/milestone.dart';
 import '../achievements/domain/entities/achievement.dart';
+import '../sync/presentation/widgets/sync_status_widget.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -170,7 +171,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 12),
+
+                  // Cloud Sync Status Indicator
+                  const Align(
+                    alignment: Alignment.centerRight,
+                    child: SyncStatusWidget(),
+                  ),
+                  const SizedBox(height: 16),
 
                   // 1. Flagship Net Worth Card
                   netWorthAsync.when(
@@ -766,6 +774,38 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
+  List<DateTime> _getScheduledDates(Sip sip, DateTime start, DateTime endLimit) {
+    final List<DateTime> dates = [];
+    final startDay = DateTime(sip.startDate.year, sip.startDate.month, sip.startDate.day);
+    DateTime current = DateTime(start.year, start.month, start.day);
+    if (current.isBefore(startDay)) {
+      current = startDay;
+    }
+    
+    while (current.isBefore(endLimit) || current.isAtSameMomentAs(endLimit)) {
+      if (sip.endDate != null && current.isAfter(sip.endDate!)) {
+        break;
+      }
+      
+      bool isScheduled = false;
+      if (sip.frequency == 'weekly') {
+        isScheduled = current.weekday == sip.sipDate;
+      } else if (sip.frequency == 'monthly') {
+        isScheduled = current.day == sip.sipDate;
+      } else if (sip.frequency == 'quarterly') {
+        final monthDiff = (current.year - sip.startDate.year) * 12 + (current.month - sip.startDate.month);
+        isScheduled = monthDiff % 3 == 0 && current.day == sip.sipDate;
+      }
+      
+      if (isScheduled && (current.isAfter(startDay) || current.isAtSameMomentAs(startDay))) {
+        dates.add(current);
+      }
+      
+      current = current.add(const Duration(days: 1));
+    }
+    return dates;
+  }
+
   Widget _buildMtfAndSipWidgets(MockDatabaseState dbState) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -783,23 +823,45 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         t.transactionDate.month == now.month).fold<double>(0.0, (sum, t) => sum + t.amount);
 
     final activeSips = dbState.sips.where((s) => s.isActive == 1).toList();
-    
-    DateTime? nextSipDate;
-    String nextSipName = '';
-    int nextSipDaysRemaining = 999;
 
+    // 1. Upcoming SIPs
+    final List<Map<String, dynamic>> upcomingSipsList = [];
     for (final sip in activeSips) {
       final nextDate = _calculateNextSipDate(sip);
-      if (sip.endDate != null && nextDate.isAfter(sip.endDate!)) continue;
-
-      final diffDays = nextDate.difference(today).inDays;
-      if (diffDays >= 0 && diffDays < nextSipDaysRemaining) {
-        nextSipDaysRemaining = diffDays;
-        nextSipDate = nextDate;
+      if (sip.endDate == null || !nextDate.isAfter(sip.endDate!)) {
         final inv = dbState.investments.firstWhereOrNull((i) => i.id == sip.investmentId);
-        nextSipName = inv?.name ?? 'Investment';
+        upcomingSipsList.add({
+          'sip': sip,
+          'date': nextDate,
+          'investmentName': inv?.name ?? 'Investment',
+          'amount': sip.amount,
+        });
       }
     }
+    upcomingSipsList.sort((a, b) => (a['date'] as DateTime).compareTo(b['date'] as DateTime));
+
+    // 2. Missed SIPs
+    final List<Map<String, dynamic>> missedSipsList = [];
+    for (final sip in activeSips) {
+      final pastOccurrences = _getScheduledDates(sip, sip.startDate, today.subtract(const Duration(days: 1)));
+      for (final occ in pastOccurrences) {
+        final hasTx = dbState.transactions.any((t) {
+          final isSameInv = t.investmentId == sip.investmentId;
+          final diffDays = t.transactionDate.difference(occ).inDays.abs();
+          return isSameInv && diffDays <= 2;
+        });
+        if (!hasTx) {
+          final inv = dbState.investments.firstWhereOrNull((i) => i.id == sip.investmentId);
+          missedSipsList.add({
+            'sip': sip,
+            'date': occ,
+            'investmentName': inv?.name ?? 'Investment',
+            'amount': sip.amount,
+          });
+        }
+      }
+    }
+    missedSipsList.sort((a, b) => (b['date'] as DateTime).compareTo(a['date'] as DateTime));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -827,103 +889,188 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        Row(
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: 1.8,
           children: [
-            Expanded(
-              child: GlassCard(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.purple.withOpacity(0.12),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.percent_rounded, size: 16, color: Colors.purpleAccent),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'MTF INTEREST',
-                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.grey400, letterSpacing: 0.5),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Today: $currency${mtfInterestToday.toStringAsFixed(2)}',
-                      style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'This Month: $currency${mtfInterestThisMonth.toStringAsFixed(2)}',
-                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.grey500),
-                    ),
-                  ],
-                ),
+            // MTF Card
+            GlassCard(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.percent_rounded, size: 14, color: Colors.purpleAccent),
+                      const SizedBox(width: 4),
+                      Text('MTF INTEREST TODAY', style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.grey500)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text('$currency${mtfInterestToday.toStringAsFixed(2)}', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                  Text('This Month: $currency${mtfInterestThisMonth.toStringAsFixed(0)}', style: GoogleFonts.inter(fontSize: 9, color: AppColors.grey500)),
+                ],
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: GlassCard(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.teal.withOpacity(0.12),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.loop_rounded, size: 16, color: Colors.tealAccent),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'UPCOMING SIPS',
-                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w800, color: AppColors.grey400, letterSpacing: 0.5),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    if (nextSipDate != null) ...[
-                      Text(
-                        nextSipDaysRemaining == 0
-                            ? 'Due Today: $nextSipName'
-                            : 'Next: $nextSipName',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        nextSipDaysRemaining == 0
-                            ? 'Today (${DateFormat('dd MMM').format(nextSipDate)})'
-                            : 'In $nextSipDaysRemaining days (${DateFormat('dd MMM').format(nextSipDate)})',
-                        style: GoogleFonts.inter(fontSize: 12, color: AppColors.grey500),
-                      ),
-                    ] else ...[
-                      Text(
-                        'No Active SIPs',
-                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Setup a recurring SIP',
-                        style: GoogleFonts.inter(fontSize: 12, color: AppColors.grey500),
-                      ),
+            // Active SIPs Card
+            GlassCard(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.loop, size: 14, color: Colors.tealAccent),
+                      const SizedBox(width: 4),
+                      Text('ACTIVE SIPS', style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.grey500)),
                     ],
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text('${activeSips.length} Active', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                  Text(activeSips.isEmpty ? 'Setup recurring' : activeSips.map((s) => dbState.investments.firstWhereOrNull((i) => i.id == s.investmentId)?.name ?? 'Plan').take(2).join(', '), style: GoogleFonts.inter(fontSize: 9, color: AppColors.grey500), maxLines: 1, overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+            // Upcoming SIPs Card
+            GlassCard(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.upcoming, size: 14, color: Color(0xFF00F2FE)),
+                      const SizedBox(width: 4),
+                      Text('UPCOMING SIPS', style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.grey500)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text('${upcomingSipsList.length} Pending', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                  Text(upcomingSipsList.isEmpty ? 'No upcoming' : 'Next: ${upcomingSipsList.first['investmentName']}', style: GoogleFonts.inter(fontSize: 9, color: AppColors.grey500), maxLines: 1, overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+            // Missed SIPs Card
+            GlassCard(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded, size: 14, color: AppColors.darkDanger),
+                      const SizedBox(width: 4),
+                      Text('MISSED SIPS', style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.bold, color: AppColors.grey500)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text('${missedSipsList.length} Missed', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.bold, color: missedSipsList.isNotEmpty ? AppColors.darkDanger : AppColors.darkSuccess)),
+                  Text(missedSipsList.isEmpty ? 'All paid' : 'Requires action!', style: GoogleFonts.inter(fontSize: 9, color: AppColors.grey500)),
+                ],
               ),
             ),
           ],
         ),
+        if (missedSipsList.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Text(
+            'ACTION REQUIRED: MISSED SIPS',
+            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.darkDanger, letterSpacing: 0.5),
+          ),
+          const SizedBox(height: 8),
+          ...missedSipsList.take(3).map((item) {
+            final date = item['date'] as DateTime;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: GlassCard(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.darkDanger.withOpacity(0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.error_outline, size: 18, color: AppColors.darkDanger),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(item['investmentName'] as String, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                          const SizedBox(height: 2),
+                          Text('Scheduled: ${DateFormat('dd MMM yyyy').format(date)}', style: const TextStyle(color: AppColors.grey500, fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      '$currency${(item['amount'] as double).toStringAsFixed(0)}',
+                      style: GoogleFonts.outfit(color: AppColors.darkDanger, fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+        if (upcomingSipsList.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Text(
+            'UPCOMING OCCURRENCES',
+            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+          ),
+          const SizedBox(height: 8),
+          ...upcomingSipsList.take(3).map((item) {
+            final date = item['date'] as DateTime;
+            final days = date.difference(today).inDays;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: GlassCard(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.darkPrimary.withOpacity(0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.darkPrimary),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(item['investmentName'] as String, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                          const SizedBox(height: 2),
+                          Text(
+                            days == 0 ? 'Due Today' : 'Due in $days days (${DateFormat('dd MMM').format(date)})',
+                            style: const TextStyle(color: AppColors.grey500, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      '$currency${(item['amount'] as double).toStringAsFixed(0)}',
+                      style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
       ],
     );
   }

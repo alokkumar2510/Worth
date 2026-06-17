@@ -25,6 +25,7 @@ import 'tables/achievement_progress.dart';
 import 'tables/mtf_positions.dart';
 import 'tables/sips.dart';
 import 'tables/daily_check_ins.dart';
+import 'tables/sync_queue.dart';
 
 part 'database.g.dart';
 
@@ -52,13 +53,14 @@ part 'database.g.dart';
   MtfPositions,
   Sips,
   DailyCheckIns,
+  SyncQueues,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 8; // Bumping version for Daily Check-ins
- 
+  int get schemaVersion => 11; // Bumping version for MTF Date fixes
+
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
@@ -105,6 +107,57 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 8) {
             await m.createTable(dailyCheckIns);
+          }
+          if (from < 9) {
+            await m.addColumn(investments, investments.purchaseDate);
+            await m.addColumn(investments, investments.purchaseTime);
+          }
+          if (from < 10) {
+            await m.createTable(syncQueues);
+            // Accounts
+            await m.addColumn(accounts, accounts.lastSyncedAt);
+            await m.addColumn(accounts, accounts.deviceId);
+            // People
+            await m.addColumn(people, people.lastSyncedAt);
+            await m.addColumn(people, people.deviceId);
+            // Investments
+            await m.addColumn(investments, investments.lastSyncedAt);
+            await m.addColumn(investments, investments.deviceId);
+            // InvestmentLots
+            await m.addColumn(investmentLots, investmentLots.lastSyncedAt);
+            await m.addColumn(investmentLots, investmentLots.deviceId);
+            // Transactions
+            await m.addColumn(transactions, transactions.lastSyncedAt);
+            await m.addColumn(transactions, transactions.deviceId);
+            // ExpectedIncomes
+            await m.addColumn(expectedIncomes, expectedIncomes.lastSyncedAt);
+            await m.addColumn(expectedIncomes, expectedIncomes.deviceId);
+            // Goals
+            await m.addColumn(goals, goals.lastSyncedAt);
+            await m.addColumn(goals, goals.deviceId);
+            // Snapshots
+            await m.addColumn(snapshots, snapshots.lastSyncedAt);
+            await m.addColumn(snapshots, snapshots.deviceId);
+            // Adjustments
+            await m.addColumn(adjustments, adjustments.updatedAt);
+            await m.addColumn(adjustments, adjustments.lastSyncedAt);
+            await m.addColumn(adjustments, adjustments.deviceId);
+            // MtfPositions
+            await m.addColumn(mtfPositions, mtfPositions.lastSyncedAt);
+            await m.addColumn(mtfPositions, mtfPositions.deviceId);
+            // Sips
+            await m.addColumn(sips, sips.lastSyncedAt);
+            await m.addColumn(sips, sips.deviceId);
+            // Settings
+            await m.addColumn(settings, settings.createdAt);
+            await m.addColumn(settings, settings.updatedAt);
+            await m.addColumn(settings, settings.syncStatus);
+            await m.addColumn(settings, settings.lastSyncedAt);
+            await m.addColumn(settings, settings.deviceId);
+          }
+          if (from < 11) {
+            await m.addColumn(mtfPositions, mtfPositions.purchaseDate);
+            await m.addColumn(mtfPositions, mtfPositions.purchaseTime);
           }
         },
       );

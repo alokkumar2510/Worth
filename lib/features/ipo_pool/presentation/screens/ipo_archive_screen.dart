@@ -27,7 +27,7 @@ class _IpoArchiveScreenState extends ConsumerState<IpoArchiveScreen> {
   @override
   Widget build(BuildContext context) {
     final dbState = ref.watch(mockDatabaseProvider);
-    final pools = dbState.ipoPools;
+    final pools = dbState.ipoPools.where((p) => p.deletedAt == null).toList();
     final currency = dbState.currency;
 
     // Filtered lists

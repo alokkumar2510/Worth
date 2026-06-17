@@ -14,6 +14,7 @@ import '../widgets/ipo_what_if_simulator.dart';
 import '../widgets/ipo_notes_activity_center.dart';
 import '../widgets/ipo_payment_verification_tab.dart';
 import '../widgets/ipo_settlement_center_tab.dart';
+import '../widgets/calculation_audit_panel.dart';
 
 class IpoDetailScreen extends ConsumerStatefulWidget {
   final String ipoId;
@@ -511,12 +512,32 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
     );
   }
 
+  void _archivePool(IpoPool pool) {
+    final updatedPool = pool.copyWith(
+      status: 'Archived',
+      activities: [
+        ...pool.activities,
+        PoolActivity(
+          id: const Uuid().v4(),
+          type: 'Update',
+          description: 'Archived pool',
+          timestamp: DateTime.now(),
+          userId: 'User',
+        ),
+      ],
+    );
+    ref.read(mockDatabaseProvider.notifier).updateIpoPool(updatedPool);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Pool archived successfully')),
+    );
+  }
+
   void _handleDeletePool(IpoPool pool) {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete IPO Pool', style: TextStyle(color: Colors.white)),
-        content: Text('Are you sure you want to permanently delete "${pool.name}" pool and all its contributor listings?'),
+        title: const Text('Delete IPO Pool?', style: TextStyle(color: Colors.white)),
+        content: const Text('This action cannot be undone.', style: TextStyle(color: AppColors.grey400)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -721,13 +742,50 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_outlined, color: AppColors.darkPrimary),
-            onPressed: () => _showEditPoolSheet(pool),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: AppColors.darkDanger),
-            onPressed: () => _handleDeletePool(pool),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            color: AppColors.layer2,
+            onSelected: (value) {
+              if (value == 'edit') {
+                _showEditPoolSheet(pool);
+              } else if (value == 'archive') {
+                _archivePool(pool);
+              } else if (value == 'delete') {
+                _handleDeletePool(pool);
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_outlined, color: AppColors.darkPrimary, size: 18),
+                    SizedBox(width: 8),
+                    Text('Edit Pool', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'archive',
+                child: Row(
+                  children: [
+                    Icon(Icons.archive_outlined, color: Color(0xFF00F2FE), size: 18),
+                    SizedBox(width: 8),
+                    Text('Archive Pool', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_outline, color: AppColors.darkDanger, size: 18),
+                    SizedBox(width: 8),
+                    Text('Delete Pool', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -743,8 +801,8 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     _buildTopBarItem('Pool Cash', '$currency${pool.totalPoolAmount.toStringAsFixed(0)}'),
-                    _buildTopBarItem('Applications', '${pool.fullApplications}'),
-                    _buildTopBarItem('Solo / Group', '${pool.soloApplications} / ${pool.groupApplications}'),
+                    _buildTopBarItem('Applications', pool.totalApplications.toStringAsFixed(2)),
+                    _buildTopBarItem('Solo / Group', '${pool.soloApplications} / ${pool.groupApplications.toStringAsFixed(2)}'),
                     _buildTopBarItem('Remaining Cash', '$currency${pool.remainingAmount.toStringAsFixed(0)}'),
                   ],
                 ),
@@ -991,9 +1049,9 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildPreviewRow('Total Pool Applications:', '${pool.fullApplications}'),
+                _buildPreviewRow('Total Pool Applications:', pool.totalApplications.toStringAsFixed(2)),
                 _buildPreviewRow('Solo Applications:', '${pool.soloApplications}'),
-                _buildPreviewRow('Group Applications:', '${pool.groupApplications}'),
+                _buildPreviewRow('Group Applications:', pool.groupApplications.toStringAsFixed(2)),
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 8.0),
                   child: Divider(color: AppColors.glassBorder),
@@ -1007,7 +1065,8 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
                   )
                 else
                   ...pool.contributors.map((c) {
-                    final ownership = pool.totalGroupContribution > 0 ? (c.contribution / pool.totalGroupContribution) : 0.0;
+                    final verifiedContrib = pool.getContributorVerifiedContribution(c.id);
+                    final ownership = pool.totalGroupContribution > 0 ? (verifiedContrib / pool.totalGroupContribution) : 0.0;
                     final appsOwned = pool.groupApplications * ownership;
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -1025,6 +1084,34 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
                   }),
               ],
             ),
+          ),
+          const SizedBox(height: 16),
+          CalculationAuditPanel(
+            title: 'Verify Solo Reservation Calculations',
+            formula: 'Total Applications = Pool Cash / Application Cost\n'
+                'Remaining Group Applications = Total Applications - Solo Applications\n'
+                'Contributor Ownership % = Verified Contributor Contribution / Total Verified Group Contribution\n'
+                'Apps Owned = Remaining Group Applications * Contributor Ownership %',
+            inputs: {
+              'Pool Cash': '$currency${pool.totalPoolAmount.toStringAsFixed(2)}',
+              'Application Cost': '$currency${pool.applicationCost.toStringAsFixed(2)}',
+              'Total Applications': pool.totalApplications.toStringAsFixed(2),
+              'Solo Applications': '${pool.soloApplications}',
+              'Remaining Group Applications': pool.groupApplications.toStringAsFixed(2),
+              'Total Verified Group Contribution': '$currency${pool.totalGroupContribution.toStringAsFixed(2)}',
+            },
+            output: 'Group Applications Split Calculated',
+            steps: [
+              'Total Applications is calculated by dividing total pool cash by application cost: $currency${pool.totalPoolAmount.toStringAsFixed(0)} / $currency${pool.applicationCost.toStringAsFixed(0)} = ${pool.totalApplications.toStringAsFixed(2)}.',
+              'Solo Reserved Applications is deducted from Total Applications to yield Remaining Group Applications: ${pool.totalApplications.toStringAsFixed(2)} - ${pool.soloApplications} = ${pool.groupApplications.toStringAsFixed(2)}.',
+              'Contributor ownership percent is calculated only on verified group contributions.',
+              ...pool.contributors.map((c) {
+                final verified = pool.getContributorVerifiedContribution(c.id);
+                final ownership = pool.totalGroupContribution > 0 ? (verified / pool.totalGroupContribution) : 0.0;
+                final apps = pool.groupApplications * ownership;
+                return '${c.name}: Verified Contrib = $currency${verified.toStringAsFixed(0)}, Ownership % = ${(ownership * 100).toStringAsFixed(2)}%, Apps = ${apps.toStringAsFixed(2)}.';
+              }),
+            ],
           ),
         ],
       ),
@@ -1232,6 +1319,29 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 16),
+          CalculationAuditPanel(
+            title: 'Verify Listing Gains Calculations',
+            formula: 'Gain Per Share = listingPrice - issuePrice\n'
+                'Solo Shares Received = sum(SoloAllottedApplication.sharesReceived)\n'
+                'Group Shares Received = sum(GroupAllottedApplication.sharesReceived)\n'
+                'Solo Profit = Solo Shares Received * Gain Per Share\n'
+                'Group Profit = Group Shares Received * Gain Per Share\n'
+                'Total Pool Profit = Solo Profit + Group Profit',
+            inputs: {
+              'Listing Price': '${pool.listingPrice != null ? "$currency${pool.listingPrice!.toStringAsFixed(2)}" : "Not Set"}',
+              'Issue Price': '$currency${pool.issuePrice.toStringAsFixed(2)}',
+              'Solo Shares Received': '${pool.soloSharesReceived} Shares',
+              'Group Shares Received': '${pool.groupSharesReceived} Shares',
+            },
+            output: 'Total Profit: $currency${pool.totalProfit.toStringAsFixed(2)}',
+            steps: [
+              'Gain Per Share = $currency${pool.listingPrice?.toStringAsFixed(2) ?? "0.00"} (Listing) - $currency${pool.issuePrice.toStringAsFixed(2)} (Issue) = $currency${pool.gainPerShare.toStringAsFixed(2)}.',
+              'Solo Profit = ${pool.soloSharesReceived} (Solo Shares) * $currency${pool.gainPerShare.toStringAsFixed(2)} = $currency${pool.soloProfit.toStringAsFixed(2)}.',
+              'Group Profit = ${pool.groupSharesReceived} (Group Shares) * $currency${pool.gainPerShare.toStringAsFixed(2)} = $currency${pool.groupProfit.toStringAsFixed(2)}.',
+              'Total Pool Profit = $currency${pool.soloProfit.toStringAsFixed(2)} + $currency${pool.groupProfit.toStringAsFixed(2)} = $currency${pool.totalProfit.toStringAsFixed(2)}.',
+            ],
           ),
         ],
       ),

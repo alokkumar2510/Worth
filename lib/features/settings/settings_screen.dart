@@ -334,6 +334,50 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     ),
                   ],
+                  const Divider(color: AppColors.glassBorder, height: 1),
+                  SwitchListTile(
+                    title: const Text('Enable Notifications', style: TextStyle(color: Colors.white, fontSize: 14)),
+                    secondary: const Icon(Icons.notifications_none_outlined, color: AppColors.darkPrimary),
+                    activeColor: AppColors.darkPrimary,
+                    value: dbState.notificationsEnabled,
+                    onChanged: (val) {
+                      ref.read(mockDatabaseProvider.notifier).updateNotificationsEnabled(val);
+                    },
+                  ),
+                  if (dbState.notificationsEnabled) ...[
+                    const Divider(color: AppColors.glassBorder, height: 1),
+                    _buildNotificationPrefTile(
+                      title: 'Transaction Reminders',
+                      value: dbState.notificationPrefTransactions,
+                      onChanged: (val) {
+                        ref.read(mockDatabaseProvider.notifier).updateNotificationPref('transactions', val);
+                      },
+                    ),
+                    const Divider(color: AppColors.glassBorder, height: 1),
+                    _buildNotificationPrefTile(
+                      title: 'Daily Check-ins',
+                      value: dbState.notificationPrefCheckIns,
+                      onChanged: (val) {
+                        ref.read(mockDatabaseProvider.notifier).updateNotificationPref('checkins', val);
+                      },
+                    ),
+                    const Divider(color: AppColors.glassBorder, height: 1),
+                    _buildNotificationPrefTile(
+                      title: 'SIP Reminders',
+                      value: dbState.notificationPrefSip,
+                      onChanged: (val) {
+                        ref.read(mockDatabaseProvider.notifier).updateNotificationPref('sip', val);
+                      },
+                    ),
+                    const Divider(color: AppColors.glassBorder, height: 1),
+                    _buildNotificationPrefTile(
+                      title: 'Goal Reminders',
+                      value: dbState.notificationPrefGoals,
+                      onChanged: (val) {
+                        ref.read(mockDatabaseProvider.notifier).updateNotificationPref('goals', val);
+                      },
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -467,6 +511,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         Text(label, style: const TextStyle(color: AppColors.grey500, fontSize: 12)),
         Text(val, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
       ],
+    );
+  }
+
+  Widget _buildNotificationPrefTile({
+    required String title,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 32.0),
+      child: SwitchListTile(
+        title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 13)),
+        activeColor: AppColors.darkPrimary,
+        dense: true,
+        value: value,
+        onChanged: onChanged,
+      ),
     );
   }
 }

@@ -9,9 +9,13 @@ class Investments extends Table {
   DateTimeColumn get marketValueUpdatedAt => dateTime().nullable()();
   IntColumn get isArchived => integer().withDefault(const Constant(0))();
   TextColumn get notes => text().nullable()();
+  DateTimeColumn get purchaseDate => dateTime().nullable()();
+  TextColumn get purchaseTime => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
+  DateTimeColumn get lastSyncedAt => dateTime().nullable()();
+  TextColumn get deviceId => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

@@ -3,17 +3,18 @@ import 'mock_database.dart';
 
 enum LockState {
   locked,
-  unlocking,
   unlocked,
 }
 
 class AppLockState {
   final LockState lockState;
   final DateTime? lastActiveTime;
+  final bool isAuthenticating;
 
   AppLockState({
     required this.lockState,
     this.lastActiveTime,
+    this.isAuthenticating = false,
   });
 
   bool get isLocked => lockState == LockState.locked;
@@ -21,36 +22,65 @@ class AppLockState {
   AppLockState copyWith({
     LockState? lockState,
     DateTime? lastActiveTime,
+    bool? isAuthenticating,
   }) {
     return AppLockState(
       lockState: lockState ?? this.lockState,
       lastActiveTime: lastActiveTime ?? this.lastActiveTime,
+      isAuthenticating: isAuthenticating ?? this.isAuthenticating,
     );
   }
 }
 
 class AppLockNotifier extends StateNotifier<AppLockState> {
   final Ref _ref;
+  bool _hasAttemptedStartupLock = false;
 
   AppLockNotifier(this._ref)
-      : super(AppLockState(lockState: LockState.unlocked));
+      : super(AppLockState(lockState: LockState.unlocked)) {
+    // Listen to mockDatabaseProvider to check if app lock is enabled on startup (cold start)
+    _ref.listen<MockDatabaseState>(
+      mockDatabaseProvider,
+      (previous, next) {
+        if (!_hasAttemptedStartupLock) {
+          if (next.appLockEnabled) {
+            state = state.copyWith(lockState: LockState.locked);
+            _hasAttemptedStartupLock = true;
+          } else if (previous != null) {
+            // Database loaded and appLockEnabled is false
+            _hasAttemptedStartupLock = true;
+          }
+        }
+      },
+      fireImmediately: true,
+    );
+  }
 
   void lockImmediately() {
     final dbState = _ref.read(mockDatabaseProvider);
     if (dbState.appLockEnabled) {
-      state = state.copyWith(lockState: LockState.locked, lastActiveTime: null);
+      state = state.copyWith(
+        lockState: LockState.locked,
+        lastActiveTime: null,
+        isAuthenticating: false,
+      );
     }
   }
 
-  void unlock({bool fromBiometrics = false}) {
-    if (fromBiometrics) {
-      state = state.copyWith(lockState: LockState.unlocking);
-    } else {
-      state = state.copyWith(lockState: LockState.unlocked, lastActiveTime: null);
-    }
+  void setAuthenticating(bool authenticating) {
+    state = state.copyWith(isAuthenticating: authenticating);
+  }
+
+  void unlock() {
+    state = state.copyWith(
+      lockState: LockState.unlocked,
+      lastActiveTime: null,
+      isAuthenticating: false,
+    );
   }
 
   void recordBackgroundTime() {
+    if (state.isAuthenticating) return;
     final dbState = _ref.read(mockDatabaseProvider);
     if (dbState.appLockEnabled) {
       state = state.copyWith(lastActiveTime: DateTime.now());
@@ -58,19 +88,13 @@ class AppLockNotifier extends StateNotifier<AppLockState> {
   }
 
   void handleAppResumed() {
+    if (state.isAuthenticating) return;
     final dbState = _ref.read(mockDatabaseProvider);
     if (!dbState.appLockEnabled) {
       state = state.copyWith(lockState: LockState.unlocked);
       return;
     }
 
-    // If we are currently unlocking from biometrics, complete the unlock on resume
-    if (state.lockState == LockState.unlocking) {
-      state = state.copyWith(lockState: LockState.unlocked, lastActiveTime: null);
-      return;
-    }
-
-    // If cold start or state reset, force lock immediately
     final lastTime = state.lastActiveTime;
     if (lastTime == null) {
       state = state.copyWith(lockState: LockState.locked);

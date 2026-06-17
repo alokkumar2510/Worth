@@ -53,6 +53,18 @@ class _AppLockGuardState extends ConsumerState<AppLockGuard> with WidgetsBinding
 
   @override
   Widget build(BuildContext context) {
+    final lockState = ref.watch(appLockProvider);
+    final dbState = ref.watch(mockDatabaseProvider);
+
+    if (dbState.appLockEnabled && lockState.isLocked) {
+      return Stack(
+        textDirection: TextDirection.ltr,
+        children: [
+          widget.child,
+          const AppLockScreen(),
+        ],
+      );
+    }
     return widget.child;
   }
 }
@@ -67,7 +79,7 @@ class AppLockScreen extends ConsumerStatefulWidget {
   ConsumerState<AppLockScreen> createState() => _AppLockScreenState();
 }
 
-class _AppLockScreenState extends ConsumerState<AppLockScreen> with SingleTickerProviderStateMixin {
+class _AppLockScreenState extends ConsumerState<AppLockScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   String _enteredPin = '';
   bool _isBiometricsAvailable = false;
   bool _showError = false;
@@ -78,6 +90,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> with SingleTicker
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkBiometrics();
 
     _shakeController = AnimationController(
@@ -91,11 +104,22 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> with SingleTicker
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _shakeController.dispose();
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkBiometrics();
+    }
+  }
+
   Future<void> _checkBiometrics() async {
+    final lockState = ref.read(appLockProvider);
+    if (lockState.isAuthenticating) return;
+
     final lockService = ref.read(lockServiceProvider);
     final isAvailable = await lockService.isBiometricsAvailable();
     if (mounted) {
@@ -111,10 +135,14 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> with SingleTicker
   }
 
   Future<void> _triggerBiometrics() async {
+    final lockNotifier = ref.read(appLockProvider.notifier);
+    lockNotifier.setAuthenticating(true);
     final lockService = ref.read(lockServiceProvider);
     final success = await lockService.authenticate();
     if (success && mounted) {
-      ref.read(appLockProvider.notifier).unlock(fromBiometrics: true);
+      lockNotifier.unlock();
+    } else {
+      lockNotifier.setAuthenticating(false);
     }
   }
 

@@ -6,6 +6,7 @@ import 'dart:math';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/glass_card.dart';
 import '../../domain/entities/ipo_pool_models.dart';
+import 'calculation_audit_panel.dart';
 
 class IpoWhatIfSimulator extends StatefulWidget {
   final IpoPool pool;
@@ -173,6 +174,35 @@ class _IpoWhatIfSimulatorState extends State<IpoWhatIfSimulator> {
                 ],
               ],
             ),
+          ),
+          const SizedBox(height: 12),
+          CalculationAuditPanel(
+            title: 'Verify What-If Simulation Calculations',
+            formula: 'Gain Per Share = simulatedListingPrice - issuePrice\n'
+                'Simulated Solo Shares = min(soloApplications, simulatedAllottedLots) * sharesPerLot\n'
+                'Simulated Group Shares = max(0, simulatedAllottedLots - soloApplications) * sharesPerLot\n'
+                'Simulated Solo Profit = simulatedSoloShares * gainPerShare\n'
+                'Simulated Group Profit = simulatedGroupShares * gainPerShare\n'
+                'Total Simulated Profit = simulatedSoloProfit + simulatedGroupProfit\n'
+                'Simulated ROI % = (totalSimulatedProfit / totalPoolAmount) * 100',
+            inputs: {
+              'Simulated Listing Price': '$currency${_expectedListingPrice.toStringAsFixed(2)}',
+              'Issue Price': '$currency${issuePrice.toStringAsFixed(2)}',
+              'Simulated Allotted Lots': '$_simulatedAllottedLots',
+              'Shares Per Lot': '$sharesPerLot',
+              'Solo Applications Limit': '${pool.soloApplications}',
+              'Total Pool Amount (Verified)': '$currency${totalPoolAmount.toStringAsFixed(2)}',
+            },
+            output: 'Simulated Profit: $currency${totalSimulatedProfit.toStringAsFixed(2)}',
+            steps: [
+              'Gain per share is the difference between simulated listing price and issue price: $currency${_expectedListingPrice.toStringAsFixed(2)} - $currency${issuePrice.toStringAsFixed(2)} = $currency${gainPerShare.toStringAsFixed(2)}.',
+              'Solo shares receives allocations first, up to solo applications count: min(${pool.soloApplications}, $_simulatedAllottedLots) * $sharesPerLot = $simulatedSoloShares shares.',
+              'Group shares receives the remaining allotted lots: max(0, $_simulatedAllottedLots - ${pool.soloApplications}) * $sharesPerLot = $simulatedGroupShares shares.',
+              'Simulated Solo Profit: $simulatedSoloShares shares * $currency${gainPerShare.toStringAsFixed(2)} = $currency${simulatedSoloProfit.toStringAsFixed(2)}.',
+              'Simulated Group Profit: $simulatedGroupShares shares * $currency${gainPerShare.toStringAsFixed(2)} = $currency${simulatedGroupProfit.toStringAsFixed(2)}.',
+              'Total profit: solo profit + group profit = $currency${totalSimulatedProfit.toStringAsFixed(2)}.',
+              'Simulated ROI is calculated on total pool contributions: ($currency${totalSimulatedProfit.toStringAsFixed(0)} / $currency${totalPoolAmount.toStringAsFixed(0)}) * 100 = ${simulatedRoi.toStringAsFixed(1)}%.',
+            ],
           ),
           const SizedBox(height: 16),
 

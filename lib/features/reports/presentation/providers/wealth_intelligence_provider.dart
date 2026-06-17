@@ -58,6 +58,13 @@ class WealthIntelligenceData {
   final List<String> growthMonths;
 
   final bool hasData;
+ 
+  // Portfolio metrics additions
+  final double averageHoldingPeriod;
+  final List<Map<String, dynamic>> holdingDurations;
+  final Map<String, dynamic> sipPerformance;
+  final Map<String, dynamic> mtfInterestSummary;
+  final List<Map<String, dynamic>> mtfInterestHistory;
 
   WealthIntelligenceData({
     required this.currentNetWorth,
@@ -88,6 +95,11 @@ class WealthIntelligenceData {
     required this.growthData,
     required this.growthMonths,
     required this.hasData,
+    required this.averageHoldingPeriod,
+    required this.holdingDurations,
+    required this.sipPerformance,
+    required this.mtfInterestSummary,
+    required this.mtfInterestHistory,
   });
 }
 
@@ -126,6 +138,20 @@ final wealthIntelligenceProvider = Provider<WealthIntelligenceData>((ref) {
       growthData: const [],
       growthMonths: const [],
       hasData: false,
+      averageHoldingPeriod: 0.0,
+      holdingDurations: const [],
+      sipPerformance: const {
+        'investedCapital': 0.0,
+        'currentValuation': 0.0,
+        'growth': 0.0,
+        'consistencyRate': 100.0,
+      },
+      mtfInterestSummary: const {
+        'accrued': 0.0,
+        'paid': 0.0,
+        'outstanding': 0.0,
+      },
+      mtfInterestHistory: const [],
     );
   }
 
@@ -431,6 +457,105 @@ final wealthIntelligenceProvider = Provider<WealthIntelligenceData>((ref) {
     growthMonths.add(DateFormat('MMM').format(now));
   }
 
+  // --- Portfolio metrics calculations ---
+  final activeInvestments = dbState.investments.where((i) => i.isArchived == 0).toList();
+  final List<Map<String, dynamic>> holdingDurations = [];
+  double totalHoldingDays = 0.0;
+  for (final inv in activeInvestments) {
+    final purchaseDateTime = inv.purchaseDate ?? inv.createdAt;
+    final diff = now.difference(purchaseDateTime).inDays;
+    final days = diff >= 0 ? diff : 0;
+    final ageDiff = now.difference(inv.createdAt).inDays;
+    final ageDays = ageDiff >= 0 ? ageDiff : 0;
+    holdingDurations.add({
+      'name': inv.name,
+      'days': days,
+      'purchaseDate': purchaseDateTime,
+      'id': inv.id,
+      'age': ageDays,
+      'createdAt': inv.createdAt,
+    });
+    totalHoldingDays += days;
+  }
+  final double averageHoldingPeriod = activeInvestments.isNotEmpty
+      ? totalHoldingDays / activeInvestments.length
+      : 0.0;
+
+  double sipInvestedCapital = 0.0;
+  double sipCurrentValuation = 0.0;
+  int totalSipPastOccurrences = 0;
+  int completedSipOccurrences = 0;
+
+  for (final sip in dbState.sips) {
+    final investment = dbState.investments.firstWhereOrNull((i) => i.id == sip.investmentId);
+    if (investment == null) continue;
+
+    final sipTxs = dbState.transactions.where((t) =>
+        t.type == 'investment_buy' &&
+        t.investmentId == sip.investmentId &&
+        t.notes != null &&
+        t.notes!.contains('SIP ID: ${sip.id}') &&
+        t.voidedTransactionId == null).toList();
+
+    final double investedAmt = sipTxs.fold(0.0, (sum, t) => sum + t.amount);
+    final double unitsBought = sipTxs.fold(0.0, (sum, t) => sum + (t.units ?? 0.0));
+
+    sipInvestedCapital += investedAmt;
+    sipCurrentValuation += unitsBought * (investment.marketValue ?? 1.0);
+
+    final occurrences = _getSipOccurrences(sip, dbState.transactions, now);
+    for (final occ in occurrences) {
+      totalSipPastOccurrences++;
+      if (occ.isCompleted) {
+        completedSipOccurrences++;
+      }
+    }
+  }
+
+  final double sipGrowth = sipCurrentValuation - sipInvestedCapital;
+  final double sipConsistencyRate = totalSipPastOccurrences > 0
+      ? (completedSipOccurrences / totalSipPastOccurrences) * 100.0
+      : 100.0;
+
+  double totalPaidInterest = dbState.transactions
+      .where((t) => t.category == 'MTF Interest' && t.voidedTransactionId == null)
+      .fold(0.0, (sum, t) => sum + t.amount);
+
+  double totalOutstandingInterest = 0.0;
+  final activeMtfPositions = dbState.mtfPositions.where((p) => p.isClosed == 0).toList();
+  for (final pos in activeMtfPositions) {
+    final openDate = DateTime(pos.openingDate.year, pos.openingDate.month, pos.openingDate.day);
+    final daysHeld = now.difference(openDate).inDays;
+    final dailyInterest = pos.borrowedCapital * (pos.interestRate / 100) / 365;
+    final accrued = dailyInterest * (daysHeld >= 0 ? daysHeld : 0);
+    
+    final paidForPos = dbState.transactions
+        .where((t) => t.investmentId == pos.investmentId && t.category == 'MTF Interest' && t.voidedTransactionId == null)
+        .fold(0.0, (sum, t) => sum + t.amount);
+    
+    final outstanding = accrued - paidForPos;
+    if (outstanding > 0) {
+      totalOutstandingInterest += outstanding;
+    }
+  }
+
+  double totalAccruedInterest = totalPaidInterest + totalOutstandingInterest;
+
+  final mtfInterestTransactions = dbState.transactions
+      .where((t) => t.category == 'MTF Interest' && t.voidedTransactionId == null)
+      .toList()
+    ..sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
+
+  final List<Map<String, dynamic>> mtfInterestHistory = mtfInterestTransactions.map((t) {
+    final inv = dbState.investments.firstWhereOrNull((i) => i.id == t.investmentId);
+    return {
+      'date': t.transactionDate,
+      'instrument': inv?.name ?? 'Unknown Position',
+      'amount': t.amount,
+      'notes': t.notes ?? 'MTF Interest Accrued',
+    };
+  }).toList();
+
   return WealthIntelligenceData(
     currentNetWorth: currentNetWorth,
     monthlyChange: monthlyChange,
@@ -460,5 +585,74 @@ final wealthIntelligenceProvider = Provider<WealthIntelligenceData>((ref) {
     growthData: growthData,
     growthMonths: growthMonths,
     hasData: true,
+    averageHoldingPeriod: averageHoldingPeriod,
+    holdingDurations: holdingDurations,
+    sipPerformance: {
+      'investedCapital': sipInvestedCapital,
+      'currentValuation': sipCurrentValuation,
+      'growth': sipGrowth,
+      'consistencyRate': sipConsistencyRate,
+    },
+    mtfInterestSummary: {
+      'accrued': totalAccruedInterest,
+      'paid': totalPaidInterest,
+      'outstanding': totalOutstandingInterest,
+    },
+    mtfInterestHistory: mtfInterestHistory,
   );
 });
+
+class _SipOccurrence {
+  final DateTime date;
+  final bool isCompleted;
+  _SipOccurrence({required this.date, required this.isCompleted});
+}
+
+List<_SipOccurrence> _getSipOccurrences(Sip sip, List<Transaction> transactions, DateTime today) {
+  final List<_SipOccurrence> list = [];
+  DateTime current = DateTime(sip.startDate.year, sip.startDate.month, sip.startDate.day);
+  final end = sip.endDate != null && sip.endDate!.isBefore(today)
+      ? DateTime(sip.endDate!.year, sip.endDate!.month, sip.endDate!.day)
+      : today;
+
+  if (current.isAfter(end)) return list;
+
+  int loops = 0;
+  while ((current.isBefore(end) || current.isAtSameMomentAs(end)) && loops < 500) {
+    loops++;
+    bool matches = false;
+    if (sip.frequency == 'weekly') {
+      if (current.weekday == sip.sipDate) matches = true;
+    } else if (sip.frequency == 'monthly') {
+      final daysInMonth = DateTime(current.year, current.month + 1, 0).day;
+      final targetDay = sip.sipDate > daysInMonth ? daysInMonth : sip.sipDate;
+      if (current.day == targetDay) matches = true;
+    } else if (sip.frequency == 'quarterly') {
+      final monthDiff = current.month - sip.startDate.month;
+      if (monthDiff % 3 == 0) {
+        final daysInMonth = DateTime(current.year, current.month + 1, 0).day;
+        final targetDay = sip.sipDate > daysInMonth ? daysInMonth : sip.sipDate;
+        if (current.day == targetDay) matches = true;
+      }
+    }
+
+    if (matches) {
+      final isCompleted = transactions.any((t) =>
+          t.type == 'investment_buy' &&
+          t.investmentId == sip.investmentId &&
+          t.notes != null &&
+          t.notes!.contains('SIP ID: ${sip.id}') &&
+          t.transactionDate.year == current.year &&
+          t.transactionDate.month == current.month &&
+          t.transactionDate.day == current.day &&
+          t.voidedTransactionId == null);
+
+      list.add(_SipOccurrence(
+        date: current,
+        isCompleted: isCompleted,
+      ));
+    }
+    current = current.add(const Duration(days: 1));
+  }
+  return list;
+}

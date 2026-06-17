@@ -15,12 +15,13 @@ class ExpectedIncomeService {
   AppDatabase get _db => _ref.read(realDatabaseProvider);
   bool get _isMock => _ref.read(mockModeProvider);
 
-  Future<void> addExpectedIncome({
+  Future<String> addExpectedIncome({
     required String source,
     required double amount,
     DateTime? expectedDate,
     String? notes,
   }) async {
+    final id = _uuid.v4();
     if (_isMock) {
       _ref.read(mockDatabaseProvider.notifier).addExpectedIncome(
         source,
@@ -30,7 +31,7 @@ class ExpectedIncomeService {
       );
     } else {
       await _db.into(_db.expectedIncomes).insert(ExpectedIncomesCompanion.insert(
-        id: _uuid.v4(),
+        id: id,
         source: source,
         amount: amount,
         status: 'pending',
@@ -39,7 +40,13 @@ class ExpectedIncomeService {
         createdAt: DateTime.now().toUtc(),
         updatedAt: DateTime.now().toUtc(),
       ));
+      _ref.read(syncServiceProvider).queueOperation(
+        entityType: 'expected_income',
+        entityId: id,
+        operation: 'upsert',
+      );
     }
+    return id;
   }
 
   Future<void> markReceived(String incomeId, String destinationAccountId) async {
@@ -73,6 +80,11 @@ class ExpectedIncomeService {
       );
 
       await _ref.read(realTransactionServiceProvider).createTransaction(companion);
+      _ref.read(syncServiceProvider).queueOperation(
+        entityType: 'transaction',
+        entityId: txId,
+        operation: 'upsert',
+      );
 
       final query = _db.update(_db.expectedIncomes)..where((tbl) => tbl.id.equals(incomeId));
       await query.write(ExpectedIncomesCompanion(
@@ -80,6 +92,11 @@ class ExpectedIncomeService {
         receivedTransactionId: Value(txId),
         updatedAt: Value(DateTime.now().toUtc()),
       ));
+      _ref.read(syncServiceProvider).queueOperation(
+        entityType: 'expected_income',
+        entityId: incomeId,
+        operation: 'upsert',
+      );
     }
   }
 
@@ -92,6 +109,11 @@ class ExpectedIncomeService {
         status: const Value('expired'),
         updatedAt: Value(DateTime.now().toUtc()),
       ));
+      _ref.read(syncServiceProvider).queueOperation(
+        entityType: 'expected_income',
+        entityId: incomeId,
+        operation: 'upsert',
+      );
     }
   }
 }

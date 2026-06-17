@@ -14,6 +14,8 @@ class Investment with _$Investment {
     DateTime? marketValueUpdatedAt,
     required int isArchived,
     String? notes,
+    DateTime? purchaseDate,
+    String? purchaseTime,
     required DateTime createdAt,
     required DateTime updatedAt,
     @Default('pending') String syncStatus,

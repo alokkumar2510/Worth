@@ -49,6 +49,14 @@ class InvestmentService {
         updatedAt: Value(DateTime.now().toUtc()),
       );
       await _ref.read(realTransactionServiceProvider).createTransaction(companion);
+      final txId = companion.id.value;
+      _ref.read(syncServiceProvider).queueOperation(entityType: 'transaction', entityId: txId, operation: 'upsert');
+      
+      final lots = await _db.select(_db.investmentLots).get();
+      final newLot = lots.firstWhereOrNull((l) => l.buyTransactionId == txId);
+      if (newLot != null) {
+        _ref.read(syncServiceProvider).queueOperation(entityType: 'investment_lot', entityId: newLot.id, operation: 'upsert');
+      }
     }
   }
 
@@ -85,6 +93,14 @@ class InvestmentService {
         updatedAt: Value(DateTime.now().toUtc()),
       );
       await _ref.read(realTransactionServiceProvider).createTransaction(companion);
+      final txId = companion.id.value;
+      _ref.read(syncServiceProvider).queueOperation(entityType: 'transaction', entityId: txId, operation: 'upsert');
+      
+      final consumptions = await _db.select(_db.investmentLotConsumptions).get();
+      final sellConsumptions = consumptions.where((c) => c.sellTransactionId == txId);
+      for (final cons in sellConsumptions) {
+        _ref.read(syncServiceProvider).queueOperation(entityType: 'investment_lot', entityId: cons.lotId, operation: 'upsert');
+      }
     }
   }
 

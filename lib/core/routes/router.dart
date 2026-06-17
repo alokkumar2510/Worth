@@ -33,7 +33,7 @@ import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
 import '../../features/definitions/presentation/screens/definitions_screen.dart';
 import '../../features/portfolio/presentation/screens/goal_detail_screen.dart';
-import '../widgets/app_lock_guard.dart';
+import '../../features/onboarding/presentation/screens/notification_permission_screen.dart';
 import '../providers/app_lock_provider.dart';
 import '../providers/mock_database.dart';
 import '../../features/achievements/presentation/screens/achievements_screen.dart';
@@ -244,25 +244,9 @@ class RouterNotifier extends ChangeNotifier {
     }
   }
 
-  /// Called on every navigation event to determine redirect target.
-  /// Returns null to allow navigation, or a path string to redirect.
   String? redirect(BuildContext context, GoRouterState state) {
     final path = state.matchedLocation;
-
-    // Check App Lock redirect rules first
-    final lockState = _ref.read(appLockProvider);
     final dbState = _ref.read(mockDatabaseProvider);
-
-    if (dbState.appLockEnabled && lockState.lockState == LockState.locked) {
-      if (path == '/lock') return null;
-      debugPrint('[ROUTING] Navigation executed: Redirecting to /lock');
-      return '/lock';
-    }
-
-    if (path == '/lock') {
-      debugPrint('[ROUTING] Navigation executed: Redirecting to /');
-      return '/'; // Go to root to determine destination (onboarding/dashboard/etc)
-    }
 
     // Auth state is still loading — stay on splash, do NOT redirect in a loop
     // Return null so the user sees the SplashScreen while we wait.
@@ -293,8 +277,15 @@ class RouterNotifier extends ChangeNotifier {
       return '/onboarding';
     }
 
+    // Redirect to notification onboarding before dashboard if not asked yet
+    if (!dbState.notificationsAsked) {
+      if (path == '/notifications_onboarding') return null;
+      debugPrint('[ROUTING] Navigation executed: Redirecting to /notifications_onboarding');
+      return '/notifications_onboarding';
+    }
+
     // Fully authenticated with onboarding completed: redirect away from auth/onboarding screens
-    if (path == '/' || path == '/login' || path == '/onboarding') {
+    if (path == '/' || path == '/login' || path == '/onboarding' || path == '/notifications_onboarding') {
       debugPrint('[ROUTING] Navigation executed: Redirecting to /dashboard');
       return '/dashboard';
     }
@@ -318,14 +309,6 @@ final routerNotifierProvider = ChangeNotifierProvider<RouterNotifier>((ref) {
     activeAccountsProvider,
     (_, next) {
       notifier.updateAccountsState(next);
-    },
-    fireImmediately: true,
-  );
-
-  ref.listen<AppLockState>(
-    appLockProvider,
-    (_, next) {
-      notifier.notifyListeners();
     },
     fireImmediately: true,
   );
@@ -361,16 +344,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           child: const SplashScreen(),
         ),
       ),
-      // Lock Screen Route
-      GoRoute(
-        path: '/lock',
-        parentNavigatorKey: _rootNavigatorKey,
-        pageBuilder: (context, state) => buildPremiumTransitionPage(
-          state: state,
-          child: const AppLockScreen(),
-        ),
-      ),
-      // Login & Onboarding Routes
+      // Login, Onboarding & Notification permission Routes
       GoRoute(
         path: '/login',
         parentNavigatorKey: _rootNavigatorKey,
@@ -385,6 +359,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         pageBuilder: (context, state) => buildPremiumTransitionPage(
           state: state,
           child: const OnboardingScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/notifications_onboarding',
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => buildPremiumTransitionPage(
+          state: state,
+          child: const NotificationPermissionScreen(),
         ),
       ),
 

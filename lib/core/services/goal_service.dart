@@ -53,6 +53,11 @@ class GoalService {
         createdAt: DateTime.now().toUtc(),
         updatedAt: DateTime.now().toUtc(),
       ));
+      _ref.read(syncServiceProvider).queueOperation(
+        entityType: 'goal',
+        entityId: id,
+        operation: 'upsert',
+      );
       return id;
     }
   }
@@ -69,6 +74,11 @@ class GoalService {
         currentAmount: Value(currentAmount),
         updatedAt: Value(DateTime.now().toUtc()),
       ));
+      _ref.read(syncServiceProvider).queueOperation(
+        entityType: 'goal',
+        entityId: goalId,
+        operation: 'upsert',
+      );
     }
   }
 

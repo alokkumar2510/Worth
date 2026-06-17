@@ -153,7 +153,7 @@ class _IpoContributorsListScreenState extends ConsumerState<IpoContributorsListS
   Widget build(BuildContext context) {
     final dbState = ref.watch(mockDatabaseProvider);
     final currency = dbState.currency;
-    final ledgerList = _compileLedger(dbState.ipoPools);
+    final ledgerList = _compileLedger(dbState.ipoPools.where((p) => p.deletedAt == null).toList());
 
     // Apply Search Filter
     final filteredList = ledgerList.where((c) {

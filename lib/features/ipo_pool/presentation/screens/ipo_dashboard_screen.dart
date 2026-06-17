@@ -9,6 +9,7 @@ import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/widgets/empty_state_widget.dart';
 import '../../../../core/providers/mock_database.dart';
 import '../../domain/entities/ipo_pool_models.dart';
+import '../widgets/calculation_audit_panel.dart';
 
 class IpoDashboardScreen extends ConsumerStatefulWidget {
   const IpoDashboardScreen({super.key});
@@ -240,21 +241,21 @@ class _IpoDashboardScreenState extends ConsumerState<IpoDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final dbState = ref.watch(mockDatabaseProvider);
-    final pools = dbState.ipoPools;
+    final pools = dbState.ipoPools.where((p) => p.deletedAt == null).toList();
     final currency = dbState.currency;
 
     // Aggregations
     double totalPoolAmount = 0.0;
-    int totalApplications = 0;
-    int soloApplications = 0;
-    int groupApplications = 0;
+    double totalApplications = 0.0;
+    double soloApplications = 0.0;
+    double groupApplications = 0.0;
     int totalContributors = 0;
     double totalProfit = 0.0;
 
     for (final p in pools) {
       totalPoolAmount += p.totalPoolAmount;
-      totalApplications += p.fullApplications;
-      soloApplications += p.soloApplications;
+      totalApplications += p.totalApplications;
+      soloApplications += p.soloApplications.toDouble();
       groupApplications += p.groupApplications;
       totalContributors += p.contributors.length;
       totalProfit += p.totalProfit;
@@ -263,32 +264,34 @@ class _IpoDashboardScreenState extends ConsumerState<IpoDashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'IPO Pool Manager',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.white),
+          'IPO Co-Investment Pools',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_circle_outline, color: AppColors.darkPrimary, size: 28),
-            onPressed: _showCreatePoolSheet,
+            icon: const Icon(Icons.history_edu),
+            onPressed: () => context.push('/settings/ipo_pool/archive'),
+            tooltip: 'Archive & History',
+          ),
+          IconButton(
+            icon: const Icon(Icons.people_alt_outlined),
+            onPressed: () => context.push('/settings/ipo_pool/contributors'),
+            tooltip: 'Contributor Ledger',
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showCreatePoolSheet,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('New Pool', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: AppColors.darkPrimary,
+      ),
       body: SafeArea(
         child: pools.isEmpty
-            ? EmptyStateWidget(
-                icon: Icons.groups_outlined,
+            ? const EmptyStateWidget(
+                icon: Icons.pie_chart_outline,
                 title: 'No IPO Pools',
-                description: 'Add money from contributors, reserve solo applications, and manage allotments dynamically.',
-                action: ElevatedButton.icon(
-                  onPressed: _showCreatePoolSheet,
-                  icon: const Icon(Icons.add, color: Colors.white),
-                  label: const Text('Create IPO Pool', style: TextStyle(color: Colors.white)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.darkPrimary,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
+                description: 'Create a new co-investment pool to start tracking contributions and allotments.',
               )
             : ListView(
                 padding: const EdgeInsets.all(16.0),
@@ -302,6 +305,32 @@ class _IpoDashboardScreenState extends ConsumerState<IpoDashboardScreen> {
                     groupApplications: groupApplications,
                     totalContributors: totalContributors,
                     totalProfit: totalProfit,
+                  ),
+                  const SizedBox(height: 12),
+                  CalculationAuditPanel(
+                    title: 'Verify Dashboard Aggregations',
+                    formula: 'Total Pool Amount = sum(Pool.totalPoolAmount)\n'
+                        'Total Applications = sum(Pool.totalApplications)\n'
+                        'Solo Applications = sum(Pool.soloApplications)\n'
+                        'Group Applications = sum(Pool.groupApplications)\n'
+                        'Accumulated Profit = sum(Pool.totalProfit)',
+                    inputs: {
+                      'Active IPO Pools Count': '${pools.length}',
+                      'Total Pool Amount (Raw Sum)': '$currency${totalPoolAmount.toStringAsFixed(2)}',
+                      'Total Applications (Raw Sum)': totalApplications.toStringAsFixed(2),
+                      'Solo Applications (Raw Sum)': soloApplications.toStringAsFixed(0),
+                      'Group Applications (Raw Sum)': groupApplications.toStringAsFixed(2),
+                      'Accumulated Profit (Raw Sum)': '$currency${totalProfit.toStringAsFixed(2)}',
+                    },
+                    output: 'Dashboard Aggregated Successfully',
+                    steps: [
+                      'We retrieve all co-investment pools that have not been soft deleted.',
+                      'For each pool, we read the total verified group contributions (Pool Cash).',
+                      'Total Applications is calculated for each pool as Pool Cash / Application Cost, then summed up: ${totalApplications.toStringAsFixed(2)}.',
+                      'Solo Applications is the sum of reserved solo applications: ${soloApplications.toStringAsFixed(0)}.',
+                      'Group Applications is the remaining applications for each pool: total - solo = ${groupApplications.toStringAsFixed(2)}.',
+                      'Accumulated Profit sums the listing gains from all listed pools: $currency${totalProfit.toStringAsFixed(2)}.',
+                    ],
                   ),
                   const SizedBox(height: 24),
                   Row(
@@ -334,9 +363,9 @@ class _IpoDashboardScreenState extends ConsumerState<IpoDashboardScreen> {
   Widget _buildMetricsGrid({
     required String currency,
     required double totalPoolAmount,
-    required int totalApplications,
-    required int soloApplications,
-    required int groupApplications,
+    required double totalApplications,
+    required double soloApplications,
+    required double groupApplications,
     required int totalContributors,
     required double totalProfit,
   }) {
@@ -365,8 +394,8 @@ class _IpoDashboardScreenState extends ConsumerState<IpoDashboardScreen> {
         _buildMetricItem(
           icon: Icons.assessment_outlined,
           title: 'Total Applications',
-          value: '$totalApplications',
-          subtitle: 'Solo: $soloApplications | Group: $groupApplications',
+          value: totalApplications.toStringAsFixed(2),
+          subtitle: 'Solo: ${soloApplications.toStringAsFixed(0)} | Group: ${groupApplications.toStringAsFixed(2)}',
           color: const Color(0xFF8E2DE2),
         ),
         _buildMetricItem(
@@ -478,7 +507,7 @@ class _IpoDashboardScreenState extends ConsumerState<IpoDashboardScreen> {
                     Text('APPLICATIONS', style: GoogleFonts.inter(fontSize: 10, color: AppColors.grey500)),
                     const SizedBox(height: 2),
                     Text(
-                      '${pool.fullApplications} (Solo: ${pool.soloApplications})',
+                      '${pool.totalApplications.toStringAsFixed(2)} (Solo: ${pool.soloApplications})',
                       style: GoogleFonts.outfit(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white),
                     ),
                   ],

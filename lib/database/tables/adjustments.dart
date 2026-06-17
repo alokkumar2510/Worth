@@ -9,7 +9,10 @@ class Adjustments extends Table {
   RealColumn get adjustedAmount => real()();
   TextColumn get reason => text()(); // Correction | Bank Reconciliation | Manual Fix | Migration | Other
   DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime().nullable()();
   TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
+  DateTimeColumn get lastSyncedAt => dateTime().nullable()();
+  TextColumn get deviceId => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

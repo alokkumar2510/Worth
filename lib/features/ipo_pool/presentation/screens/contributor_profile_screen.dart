@@ -82,7 +82,7 @@ class _ContributorProfileScreenState extends ConsumerState<ContributorProfileScr
 
   void _updateUpiId(String newUpi) {
     final notifier = ref.read(mockDatabaseProvider.notifier);
-    final pools = ref.read(mockDatabaseProvider).ipoPools;
+    final pools = ref.read(mockDatabaseProvider).ipoPools.where((p) => p.deletedAt == null).toList();
     int updateCount = 0;
 
     for (final pool in pools) {
@@ -155,7 +155,7 @@ class _ContributorProfileScreenState extends ConsumerState<ContributorProfileScr
     final dbState = ref.watch(mockDatabaseProvider);
     final currency = dbState.currency;
 
-    final allEvents = _compileEvents(dbState.ipoPools);
+    final allEvents = _compileEvents(dbState.ipoPools.where((p) => p.deletedAt == null).toList());
 
     // Initial UPI load
     final activeUpiMap = allEvents.firstWhereOrNull(

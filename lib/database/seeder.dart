@@ -19,6 +19,7 @@ Future<void> seedDatabaseIfEmpty(AppDatabase db) async {
     await db.into(db.settings).insert(SettingsCompanion.insert(key: 'appLockTimeout', value: const Value('0')));
 
     final now = DateTime.now().toUtc();
+    await db.into(db.settings).insert(SettingsCompanion.insert(key: 'user_created_at', value: Value(now.toIso8601String())));
 
     // Default Milestones
     final defaultMilestones = [

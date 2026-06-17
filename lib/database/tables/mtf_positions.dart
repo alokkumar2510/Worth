@@ -13,11 +13,15 @@ class MtfPositions extends Table {
   RealColumn get interestRate => real()();
   DateTimeColumn get openingDate => dateTime()();
   DateTimeColumn get interestStartDate => dateTime()();
+  DateTimeColumn get purchaseDate => dateTime().nullable()();
+  TextColumn get purchaseTime => text().nullable()();
   DateTimeColumn get closedDate => dateTime().nullable()();
   IntColumn get isClosed => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
+  DateTimeColumn get lastSyncedAt => dateTime().nullable()();
+  TextColumn get deviceId => text().nullable()();
   DateTimeColumn get lastAccrualDate => dateTime().nullable()();
 
   @override

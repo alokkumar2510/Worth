@@ -10,6 +10,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/providers/mock_database.dart';
 import '../../domain/entities/ipo_pool_models.dart';
+import 'calculation_audit_panel.dart';
 
 class IpoSettlementCenterTab extends ConsumerStatefulWidget {
   final IpoPool pool;
@@ -461,6 +462,47 @@ class _IpoSettlementCenterTabState extends ConsumerState<IpoSettlementCenterTab>
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: CalculationAuditPanel(
+              title: 'Verify Settlement Calculations',
+              formula: 'Total Amount Due = sum(Contributor.amountDue)\n'
+                  'Contributor.amountDue = listingPrice != null ? (verifiedContribution + profitShare) : verifiedContribution\n'
+                  'profitShare = groupProfit * ownershipFraction\n'
+                  'ownershipFraction = verifiedContribution / totalGroupContribution\n'
+                  'Outstanding Dues = Total Amount Due - Paid Settlements',
+              inputs: {
+                'Listing Price Set': '${pool.listingPrice != null ? "Yes ($currency${pool.listingPrice})" : "No"}',
+                'Group Profit': '$currency${pool.groupProfit.toStringAsFixed(2)}',
+                'Total Verified Group Contribution': '$currency${pool.totalGroupContribution.toStringAsFixed(2)}',
+                'Total Amount Due Sum': '$currency${totalDue.toStringAsFixed(2)}',
+                'Paid Settlements Sum': '$currency${totalPaid.toStringAsFixed(2)}',
+                'Outstanding Dues Sum': '$currency${totalOutstanding.toStringAsFixed(2)}',
+              },
+              output: 'Dues Summary Verified',
+              steps: [
+                'First, we calculate verified contributions and ownership percentage for each contributor.',
+                'If listing price is set, each contributor is due their verified contribution + their share of the group profit ($currency${pool.groupProfit.toStringAsFixed(0)}).',
+                'If not listed yet, each contributor is only due their verified principal capital.',
+                ...pool.contributors.map((c) {
+                  final split = splits[c.id]!;
+                  final verified = split['contribution'] as double;
+                  final ownFrac = split['ownershipFraction'] as double;
+                  final profit = split['profitShare'] as double;
+                  final due = split['amountDue'] as double;
+                  final paid = split['amountReceived'] as double;
+                  final out = split['outstanding'] as double;
+                  return '${c.name}: Verified Contrib = $currency${verified.toStringAsFixed(0)}, '
+                      'Ownership % = ${(ownFrac * 100).toStringAsFixed(2)}%, '
+                      'Profit Share = $currency${profit.toStringAsFixed(0)}, '
+                      'Due = $currency${due.toStringAsFixed(0)}, '
+                      'Paid = $currency${paid.toStringAsFixed(0)}, '
+                      'Outstanding = $currency${out.toStringAsFixed(0)}.';
+                }),
+              ],
             ),
           ),
           const SizedBox(height: 20),
