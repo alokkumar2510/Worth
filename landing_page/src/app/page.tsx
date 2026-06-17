@@ -37,6 +37,99 @@ export default function Home() {
   const heroRef = useRef<HTMLDivElement>(null);
   const [activeShowcase, setActiveShowcase] = useState("dashboard");
 
+  // Wealth Simulator State
+  const [simLiquid, setSimLiquid] = useState(500000);
+  const [simInvest, setSimInvest] = useState(1200000);
+  const [simLiabilities, setSimLiabilities] = useState(250000);
+
+  const simNetWorth = simLiquid + simInvest - simLiabilities;
+
+  const formatRupees = (value: number) => {
+    if (value >= 10000000) {
+      return `₹${(value / 10000000).toFixed(2)} Cr`;
+    }
+    if (value >= 100000) {
+      return `₹${(value / 100000).toFixed(2)} Lakh`;
+    }
+    if (value >= 1000) {
+      return `₹${(value / 1000).toFixed(0)}K`;
+    }
+    return `₹${value}`;
+  };
+
+  const getMilestoneInfo = (netWorth: number) => {
+    if (netWorth <= 0) {
+      return {
+        name: "Debt Alert",
+        desc: "Liabilities exceed your combined cash and investments.",
+        icon: "⚠️",
+        color: "text-red-400 border-red-500/30 bg-red-950/20",
+        badgeGlow: "shadow-[0_0_30px_rgba(239,68,68,0.2)]",
+        svgPath: (
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        )
+      };
+    }
+    if (netWorth < 50000) {
+      return {
+        name: "Base Sandbox",
+        desc: "Starting tracking state. Focus on building initial reserve.",
+        icon: "🌱",
+        color: "text-slate-400 border-slate-500/20 bg-slate-900/40",
+        badgeGlow: "shadow-[0_0_20px_rgba(148,163,184,0.15)]",
+        svgPath: (
+          <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="2" />
+        )
+      };
+    }
+    if (netWorth < 250000) {
+      return {
+        name: "₹50K Milestone",
+        desc: "Level 1: Bronze Octahedron unlocked. Liquid reserves active.",
+        icon: "🥉",
+        color: "text-amber-600 border-amber-600/30 bg-amber-950/10",
+        badgeGlow: "shadow-[0_0_30px_rgba(217,119,6,0.25)]",
+        svgPath: (
+          <polygon points="12 2, 22 12, 12 22, 2 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        )
+      };
+    }
+    if (netWorth < 1000000) {
+      return {
+        name: "₹2.5L Milestone",
+        desc: "Level 2: Silver Hexagonal Double Pyramid unlocked. Debt balanced.",
+        icon: "🥈",
+        color: "text-slate-300 border-slate-300/30 bg-slate-800/10",
+        badgeGlow: "shadow-[0_0_40px_rgba(203,213,225,0.3)]",
+        svgPath: (
+          <polygon points="12 2, 20 8, 20 16, 12 22, 4 16, 4 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        )
+      };
+    }
+    if (netWorth < 2500000) {
+      return {
+        name: "₹10L Milestone",
+        desc: "Level 3: Gold Decahedron unlocked. Wealth builder status achieved.",
+        icon: "🥇",
+        color: "text-amber-400 border-amber-400/30 bg-amber-900/15",
+        badgeGlow: "shadow-[0_0_55px_rgba(251,191,36,0.4)]",
+        svgPath: (
+          <polygon points="12 2, 18 6, 22 12, 18 18, 12 22, 6 18, 2 12, 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        )
+      };
+    }
+    return {
+      name: "₹25L Milestone",
+      desc: "Level 4: Diamond Crystal unlocked. High capital diversification.",
+      icon: "💎",
+      color: "text-accent border-accent/30 bg-[#7C4DFF]/10",
+      badgeGlow: "shadow-[0_0_70px_rgba(124,77,255,0.5)]",
+      svgPath: (
+        <polygon points="12 2, 21 9, 17 21, 7 21, 3 9" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      )
+    };
+  };
+
   // Parallax / Scroll Animations
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -100,8 +193,9 @@ export default function Home() {
             <span className="font-extrabold text-sm tracking-widest text-white">WORTH</span>
           </a>
 
-          <nav className="hidden md:flex items-center gap-8 text-xs font-semibold tracking-wider text-foreground/70">
+          <nav className="hidden lg:flex items-center gap-8 text-xs font-semibold tracking-wider text-foreground/70">
             <a href="#features" className="hover:text-white transition-colors">OS CAPABILITIES</a>
+            <a href="#simulator" className="hover:text-white transition-colors">CALIBRATOR</a>
             <a href="#showcase" className="hover:text-white transition-colors">SHOWCASE</a>
             <a href="#modules" className="hover:text-white transition-colors">MODULES</a>
             <a href="#timeline" className="hover:text-white transition-colors">TIMELINE</a>
@@ -144,19 +238,25 @@ export default function Home() {
 
         <div className="relative z-10 max-w-5xl mx-auto flex flex-col items-center">
           
-          {/* Centered Massive Logo */}
+          {/* Centered Massive Logo and Text Branding */}
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className="w-24 h-24 md:w-32 md:h-32 mb-10 relative flex items-center justify-center p-1 rounded-3xl bg-white/5 border border-white/10 shadow-[0_20px_50px_rgba(124,77,255,0.2)] backdrop-blur-md"
+            className="flex flex-col items-center gap-4 mb-8"
           >
-            <img 
-              src="/images/logo_mark.png" 
-              alt="Worth Logo" 
-              className="w-full h-full object-contain p-2"
-            />
-            <div className="absolute inset-0 bg-primary/20 blur-xl -z-10 rounded-3xl animate-pulse" />
+            <div className="w-24 h-24 md:w-32 md:h-32 relative flex items-center justify-center p-1 rounded-3xl bg-white/5 border border-white/10 shadow-[0_20px_50px_rgba(124,77,255,0.2)] backdrop-blur-md">
+              <img 
+                src="/images/logo_mark.png" 
+                alt="Worth Logo" 
+                className="w-full h-full object-contain p-2"
+              />
+              <div className="absolute inset-0 bg-primary/20 blur-xl -z-10 rounded-3xl animate-pulse" />
+            </div>
+            {/* Spaced Text Branding */}
+            <span className="text-[10px] md:text-xs font-mono font-bold tracking-[0.6em] text-white/50 uppercase select-none translate-x-[0.3em]">
+              W O R T H &nbsp; O P E R A T I N G &nbsp; S Y S T E M
+            </span>
           </motion.div>
 
           {/* Massive Typography */}
@@ -209,26 +309,54 @@ export default function Home() {
 
           {/* Floating glass microcards */}
           <motion.div
-            animate={{ y: [0, -12, 0] }}
-            transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
-            className="absolute left-[5%] top-[60%] hidden xl:flex items-center gap-3 p-4 glass-panel border border-white/5 bg-[#0B0B0F]/50 backdrop-blur-md shadow-2xl z-20 max-w-[200px] text-left"
+            animate={{ y: [0, -15, 0], rotate: [0, 1, 0] }}
+            transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
+            className="absolute left-[3%] top-[30%] hidden xl:flex items-center gap-3 p-4 glass-panel border border-emerald-500/10 bg-[#0B0B0F]/50 backdrop-blur-md shadow-[0_15px_30px_-5px_rgba(16,185,129,0.05)] z-20 max-w-[200px] text-left select-none"
           >
-            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-accent font-bold">₹</div>
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-bold">₹</div>
             <div>
-              <div className="text-[10px] text-white/40 font-mono">NET WORTH</div>
-              <div className="text-sm font-black text-white">₹12.45 Lakh</div>
+              <div className="text-[10px] text-white/40 font-mono uppercase">Liquid Cash</div>
+              <div className="text-sm font-black text-white font-mono">₹4.85 Lakh</div>
+              <div className="text-[9px] text-emerald-400 font-mono mt-0.5 font-bold">Stable Balance</div>
             </div>
           </motion.div>
 
           <motion.div
-            animate={{ y: [0, 15, 0] }}
-            transition={{ repeat: Infinity, duration: 6, ease: "easeInOut", delay: 0.3 }}
-            className="absolute right-[5%] top-[55%] hidden xl:flex items-center gap-3 p-4 glass-panel border border-white/5 bg-[#0B0B0F]/50 backdrop-blur-md shadow-2xl z-20 max-w-[220px] text-left"
+            animate={{ y: [0, 12, 0], rotate: [0, -1, 0] }}
+            transition={{ repeat: Infinity, duration: 7, ease: "easeInOut", delay: 0.4 }}
+            className="absolute right-[3%] top-[35%] hidden xl:flex items-center gap-3 p-4 glass-panel border border-[#7C4DFF]/15 bg-[#0B0B0F]/50 backdrop-blur-md shadow-[0_15px_30px_-5px_rgba(124,77,255,0.08)] z-20 max-w-[220px] text-left select-none"
           >
-            <span className="text-xl">🚀</span>
+            <div className="w-8 h-8 rounded-lg bg-[#7C4DFF]/10 flex items-center justify-center text-[#A78BFA]">💎</div>
             <div>
-              <div className="text-[9px] text-white/40 font-mono">MILESTONE TRACKER</div>
-              <div className="text-xs font-extrabold text-emerald-400">₹10L Milestone Reached</div>
+              <div className="text-[10px] text-white/40 font-mono uppercase">Milestone Track</div>
+              <div className="text-xs font-black text-white">₹10L Unlocked</div>
+              <div className="text-[9px] text-[#A78BFA] font-mono mt-0.5 font-bold font-extrabold">Gold Decahedron</div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            animate={{ y: [0, -18, 0], rotate: [0, -1.5, 0] }}
+            transition={{ repeat: Infinity, duration: 8, ease: "easeInOut", delay: 0.2 }}
+            className="absolute left-[5%] top-[65%] hidden xl:flex items-center gap-3 p-4 glass-panel border border-[#00B0FF]/10 bg-[#0B0B0F]/50 backdrop-blur-md shadow-[0_15px_30px_-5px_rgba(0,176,255,0.06)] z-20 max-w-[210px] text-left select-none"
+          >
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">📈</div>
+            <div>
+              <div className="text-[10px] text-white/40 font-mono uppercase">Investments</div>
+              <div className="text-sm font-black text-white font-mono">₹18.20 Lakh</div>
+              <div className="text-[9px] text-emerald-400 font-mono mt-0.5 font-bold">+12.4% Annual Yield</div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            animate={{ y: [0, 16, 0], rotate: [0, 1.2, 0] }}
+            transition={{ repeat: Infinity, duration: 6.5, ease: "easeInOut", delay: 0.6 }}
+            className="absolute right-[5%] top-[60%] hidden xl:flex items-center gap-3 p-4 glass-panel border border-red-500/10 bg-[#0B0B0F]/50 backdrop-blur-md shadow-[0_15px_30px_-5px_rgba(239,68,68,0.05)] z-20 max-w-[220px] text-left select-none"
+          >
+            <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400">📉</div>
+            <div>
+              <div className="text-[10px] text-white/40 font-mono uppercase">Liabilities</div>
+              <div className="text-sm font-black text-white font-mono font-bold">₹3.10 Lakh</div>
+              <div className="text-[9px] text-red-400 font-mono mt-0.5 font-bold">Reduced by ₹45K</div>
             </div>
           </motion.div>
         </div>
@@ -297,6 +425,159 @@ export default function Home() {
                   All databases reside on-device. Back up conflict-resolved snapshots directly to your personal Firestore bucket.
                 </p>
               </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* 2.5 Wealth Calibration Sandbox (Section 2.5) */}
+      <section id="simulator" className="py-32 bg-[#050507] border-t border-b border-white/5 relative overflow-hidden">
+        {/* Glow Effects */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <div className="absolute top-1/2 left-1/3 -translate-y-1/2 w-[500px] h-[500px] bg-[#7C4DFF]/5 rounded-full blur-[120px]" />
+          <div className="absolute top-1/2 right-1/4 -translate-y-1/2 w-[400px] h-[400px] bg-emerald-500/5 rounded-full blur-[100px]" />
+        </div>
+
+        <div className="max-w-5xl mx-auto px-6 relative z-10">
+          
+          <div className="text-center max-w-2xl mx-auto mb-20">
+            <span className="text-xs font-bold text-emerald-400 tracking-widest font-mono uppercase bg-emerald-400/10 border border-emerald-400/20 px-3 py-1 rounded-full">
+              Interactive Calibration
+            </span>
+            <h2 className="text-4xl md:text-5xl font-black text-white mt-6 mb-6 tracking-tight leading-tight">
+              Calibrate Your Ledger.
+            </h2>
+            <p className="text-base text-foreground/50 leading-relaxed">
+              Use the sliders below to simulate assets, liabilities, and investment allocations. Watch the OS calculate your aggregate Net Worth and unlock milestone crystal badges.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            {/* Control Sliders */}
+            <div className="lg:col-span-6 space-y-8 glass-panel p-8 md:p-10 border border-white/5 bg-[#0B0B0F]/30 backdrop-blur-md rounded-3xl">
+              <h3 className="text-lg font-black text-white mb-6 flex items-center gap-2">
+                <span>🎛️</span> Capital Controllers
+              </h3>
+
+              {/* Slider 1: Liquid Assets */}
+              <div className="space-y-3 text-left">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-extrabold text-white/70 tracking-wider">LIQUID CASH & DEPOSITS</span>
+                  <span className="font-mono text-emerald-400 font-bold">{formatRupees(simLiquid)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="2000000"
+                  step="25000"
+                  value={simLiquid}
+                  onChange={(e) => setSimLiquid(Number(e.target.value))}
+                  className="w-full h-1.5 rounded-full appearance-none bg-white/5 cursor-pointer accent-[#7C4DFF] focus:outline-none"
+                />
+                <div className="flex justify-between text-[10px] text-white/30 font-mono">
+                  <span>₹0</span>
+                  <span>₹20 Lakh</span>
+                </div>
+              </div>
+
+              {/* Slider 2: Invested Capital */}
+              <div className="space-y-3 text-left">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-extrabold text-white/70 tracking-wider">INVESTMENTS (EQUITIES/GOLD)</span>
+                  <span className="font-mono text-accent font-bold">{formatRupees(simInvest)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="4000000"
+                  step="50000"
+                  value={simInvest}
+                  onChange={(e) => setSimInvest(Number(e.target.value))}
+                  className="w-full h-1.5 rounded-full appearance-none bg-white/5 cursor-pointer accent-[#7C4DFF] focus:outline-none"
+                />
+                <div className="flex justify-between text-[10px] text-white/30 font-mono">
+                  <span>₹0</span>
+                  <span>₹40 Lakh</span>
+                </div>
+              </div>
+
+              {/* Slider 3: Liabilities */}
+              <div className="space-y-3 text-left">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="font-extrabold text-white/70 tracking-wider">ACTIVE LIABILITIES / DEBTS</span>
+                  <span className="font-mono text-red-400 font-bold">{formatRupees(simLiabilities)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1500000"
+                  step="25000"
+                  value={simLiabilities}
+                  onChange={(e) => setSimLiabilities(Number(e.target.value))}
+                  className="w-full h-1.5 rounded-full appearance-none bg-white/5 cursor-pointer accent-red-500 focus:outline-none"
+                />
+                <div className="flex justify-between text-[10px] text-white/30 font-mono">
+                  <span>₹0</span>
+                  <span>₹15 Lakh</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Calculations & Badge Display */}
+            <div className="lg:col-span-6 flex flex-col justify-center items-center">
+              {(() => {
+                const info = getMilestoneInfo(simNetWorth);
+                return (
+                  <div className={`w-full glass-panel p-8 border ${info.color} backdrop-blur-md rounded-3xl flex flex-col items-center justify-between text-center relative transition-all duration-500 ${info.badgeGlow}`}>
+                    <span className="text-[10px] font-mono tracking-widest text-white/40 uppercase mb-4">CALCULATED METRIC</span>
+                    
+                    {/* Animated Counter */}
+                    <div className="mb-4">
+                      <div className="text-sm text-foreground/50 mb-1 font-mono uppercase tracking-widest">NET WORTH TODAY</div>
+                      <div className="text-4xl md:text-5xl font-black text-white font-mono tracking-tight">
+                        {formatRupees(simNetWorth)}
+                      </div>
+                    </div>
+
+                    {/* Progress Bar of allocations */}
+                    <div className="w-full max-w-sm h-2.5 bg-white/5 border border-white/5 rounded-full mb-8 overflow-hidden flex">
+                      {simNetWorth > 0 ? (
+                        <>
+                          <div 
+                            style={{ width: `${Math.max(5, (simLiquid / (simLiquid + simInvest)) * 100)}%` }} 
+                            className="h-full bg-emerald-400" 
+                            title="Liquid Assets"
+                          />
+                          <div 
+                            style={{ width: `${Math.max(5, (simInvest / (simLiquid + simInvest)) * 100)}%` }} 
+                            className="h-full bg-[#7C4DFF]" 
+                            title="Investments"
+                          />
+                        </>
+                      ) : (
+                        <div className="w-full h-full bg-red-500" title="Negative Net Worth" />
+                      )}
+                    </div>
+
+                    {/* Milestone Crystal Badge Display */}
+                    <div className="w-24 h-24 mb-6 relative flex items-center justify-center text-white">
+                      <svg className="w-full h-full transform animate-[spin_20s_linear_infinite]" viewBox="0 0 24 24">
+                        {info.svgPath}
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center text-2xl filter drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]">
+                        {info.icon}
+                      </div>
+                    </div>
+
+                    {/* Milestone details */}
+                    <div>
+                      <h4 className="font-extrabold text-lg text-white mb-2">{info.name}</h4>
+                      <p className="text-xs text-foreground/50 max-w-sm leading-relaxed">{info.desc}</p>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 
