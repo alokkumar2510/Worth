@@ -36,6 +36,8 @@ class MockDatabaseState {
   final List<IpoPool> ipoPools;
   final List<MtfPosition> mtfPositions;
   final List<Sip> sips;
+  final List<String> categories;
+  final List<String> customLabels;
   
   // Settings & Auth State
   final String currency;
@@ -74,6 +76,8 @@ class MockDatabaseState {
     required this.ipoPools,
     required this.mtfPositions,
     required this.sips,
+    required this.categories,
+    required this.customLabels,
     required this.currency,
     required this.themeMode,
     required this.appLockEnabled,
@@ -111,6 +115,8 @@ class MockDatabaseState {
     List<IpoPool>? ipoPools,
     List<MtfPosition>? mtfPositions,
     List<Sip>? sips,
+    List<String>? categories,
+    List<String>? customLabels,
     String? currency,
     String? themeMode,
     bool? appLockEnabled,
@@ -147,6 +153,8 @@ class MockDatabaseState {
       ipoPools: ipoPools ?? this.ipoPools,
       mtfPositions: mtfPositions ?? this.mtfPositions,
       sips: sips ?? this.sips,
+      categories: categories ?? this.categories,
+      customLabels: customLabels ?? this.customLabels,
       currency: currency ?? this.currency,
       themeMode: themeMode ?? this.themeMode,
       appLockEnabled: appLockEnabled ?? this.appLockEnabled,
@@ -207,9 +215,14 @@ class MockDatabaseState {
         // Spending on credit card increases liability
         liability += tx.amount;
       }
-      if (tx.toAccountId == accountId && tx.type == 'repay_money') {
-        // Repaying credit card reduces liability
-        liability -= tx.amount;
+      if (tx.toAccountId == accountId) {
+        if (tx.type == 'borrow_money' || tx.type == 'interest_accrued') {
+          // Opening balance or borrowing increases liability
+          liability += tx.amount;
+        } else {
+          // Repayments, transfers, refunds/incomes decrease liability
+          liability -= tx.amount;
+        }
       }
     }
     for (final adj in adjustments) {
@@ -442,19 +455,28 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
   Future<void> loadStateFromDatabase() async {
     try {
       final db = _ref.read(realDatabaseProvider);
-      final accounts = await db.select(db.accounts).get();
-      final people = await db.select(db.people).get();
-      final investments = await db.select(db.investments).get();
-      final transactions = await db.select(db.transactions).get();
-      final expectedIncomes = await db.select(db.expectedIncomes).get();
-      final goals = await db.select(db.goals).get();
+      final rawAccounts = await db.select(db.accounts).get();
+      final rawPeople = await db.select(db.people).get();
+      final rawInvestments = await db.select(db.investments).get();
+      final rawTransactions = await db.select(db.transactions).get();
+      final rawExpectedIncomes = await db.select(db.expectedIncomes).get();
+      final rawGoals = await db.select(db.goals).get();
       final snapshots = await db.select(db.snapshots).get();
       final investmentLots = await db.select(db.investmentLots).get();
       final consumptions = await db.select(db.investmentLotConsumptions).get();
       final adjustments = await db.select(db.adjustments).get();
       final settingsList = await db.select(db.settings).get();
-      final mtfPositions = await db.select(db.mtfPositions).get();
-      final sips = await db.select(db.sips).get();
+      final rawMtfPositions = await db.select(db.mtfPositions).get();
+      final rawSips = await db.select(db.sips).get();
+
+      final accounts = rawAccounts.where((x) => x.deletedAt == null).toList();
+      final people = rawPeople.where((x) => x.deletedAt == null).toList();
+      final investments = rawInvestments.where((x) => x.deletedAt == null).toList();
+      final transactions = rawTransactions.where((x) => x.deletedAt == null).toList();
+      final expectedIncomes = rawExpectedIncomes.where((x) => x.deletedAt == null).toList();
+      final goals = rawGoals.where((x) => x.deletedAt == null).toList();
+      final mtfPositions = rawMtfPositions.where((x) => x.deletedAt == null).toList();
+      final sips = rawSips.where((x) => x.deletedAt == null).toList();
 
       final settingsMap = {for (var s in settingsList) s.key: s.value};
 
@@ -478,6 +500,30 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final notificationPrefSip = settingsMap['notificationPrefSip'] != 'false';
       final notificationPrefGoals = settingsMap['notificationPrefGoals'] != 'false';
       final notificationsAsked = settingsMap['notificationsAsked'] == 'true';
+
+      List<String> categories = const [
+        'Food', 'Travel', 'Shopping', 'Education', 'Bills', 'Subscriptions',
+        'Health', 'Entertainment', 'Fees', 'General', 'Salary',
+        'Investment Return', 'Miscellaneous'
+      ];
+      final categoriesData = settingsMap['categories'];
+      if (categoriesData != null) {
+        try {
+          categories = List<String>.from(jsonDecode(categoriesData) as List);
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      List<String> customLabels = const ['Urgent', 'Personal', 'Tax Deductible', 'Business'];
+      final labelsData = settingsMap['customLabels'];
+      if (labelsData != null) {
+        try {
+          customLabels = List<String>.from(jsonDecode(labelsData) as List);
+        } catch (e) {
+          // ignore
+        }
+      }
 
       final userCreatedAtStr = settingsMap['user_created_at'];
       DateTime? userCreatedAt;
@@ -548,6 +594,8 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         ipoPools: ipoPools,
         mtfPositions: mtfPositions,
         sips: sips,
+        categories: categories,
+        customLabels: customLabels,
         currency: currency,
         themeMode: themeMode,
         appLockEnabled: appLockEnabled,
@@ -770,16 +818,17 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
 
   // --- Database Mutations ---
 
-  Future<Account> addAccount(String name, String type, String? notes, double openingBalance, {String? id}) async {
+  Future<Account> addAccount(String name, String type, String? notes, double openingBalance, {String? id, DateTime? openingDate}) async {
     final actualId = id ?? _uuid.v4();
     final now = DateTime.now().toUtc();
+    final creationDate = openingDate ?? now;
     final newAccount = Account(
       id: actualId,
       name: name,
       type: type,
       notes: notes,
       isArchived: 0,
-      createdAt: now,
+      createdAt: creationDate,
       updatedAt: now,
       syncStatus: 'pending',
     );
@@ -791,15 +840,15 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       _queueSync('account', actualId, 'upsert');
       if (openingBalance > 0) {
         if (type == 'credit') {
-          await addBorrowTransaction(actualId, actualId, openingBalance, 'Opening Balance Owed', now);
+          await addBorrowTransaction(actualId, actualId, openingBalance, notes ?? 'Opening Balance Owed', creationDate);
         } else {
           await addTransaction(
             type: 'income',
             amount: openingBalance,
             toAccountId: actualId,
             category: 'Opening Balance',
-            notes: 'Initial deposit',
-            date: now,
+            notes: notes ?? 'Initial deposit',
+            date: creationDate,
           );
         }
       }
@@ -815,8 +864,8 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
             type: 'borrow_money',
             amount: openingBalance,
             toAccountId: actualId,
-            notes: 'Opening Balance Owed',
-            date: now,
+            notes: notes ?? 'Opening Balance Owed',
+            date: creationDate,
           );
         } else {
           _createTransactionInternal(
@@ -824,8 +873,8 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
             amount: openingBalance,
             toAccountId: actualId,
             category: 'Opening Balance',
-            notes: 'Initial deposit',
-            date: now,
+            notes: notes ?? 'Initial deposit',
+            date: creationDate,
           );
         }
       }
@@ -1380,8 +1429,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     }
   }
 
-  void addExpectedIncome(String source, double amount, DateTime? expectedDate, String? notes) {
+  void addExpectedIncome(String source, double amount, DateTime? expectedDate, String? notes, {DateTime? createdAt}) {
     final isMock = _ref.read(mockModeProvider);
+    final creationDate = createdAt ?? DateTime.now().toUtc();
     if (!isMock) {
       _ref.read(realExpectedIncomeServiceProvider).addExpectedIncome(
         source: source,
@@ -1397,8 +1447,8 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         status: 'pending',
         expectedDate: expectedDate,
         notes: notes,
-        createdAt: DateTime.now().toUtc(),
-        updatedAt: DateTime.now().toUtc(),
+        createdAt: creationDate,
+        updatedAt: creationDate,
         syncStatus: 'pending',
       );
 
@@ -2203,6 +2253,41 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     await _saveIpoPoolsToDb();
   }
 
+  Future<void> restoreIpoPool(IpoPool pool) async {
+    final updatedList = state.ipoPools.map((p) {
+      if (p.id == pool.id) {
+        return pool.copyWith(deletedAt: () => null);
+      }
+      return p;
+    }).toList();
+    state = state.copyWith(ipoPools: updatedList);
+    await _saveIpoPoolsToDb();
+  }
+
+  Future<void> duplicateIpoPool(String id) async {
+    final orig = state.ipoPools.firstWhere((p) => p.id == id);
+    final newId = const Uuid().v4();
+    final now = DateTime.now();
+    final copy = orig.copyWith(
+      id: newId,
+      name: '${orig.name} (Copy)',
+      createdAt: now,
+      deletedAt: () => null,
+      activities: [
+        PoolActivity(
+          id: const Uuid().v4(),
+          type: 'Created',
+          description: 'Duplicated from pool: ${orig.name}',
+          timestamp: now,
+          userId: 'Me',
+        ),
+      ],
+    );
+    final updatedList = [...state.ipoPools, copy];
+    state = state.copyWith(ipoPools: updatedList);
+    await _saveIpoPoolsToDb();
+  }
+
   Future<void> _saveIpoPoolsToDb() async {
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
@@ -2229,6 +2314,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     DateTime? purchaseDate,
     String? purchaseTime,
     String? investmentId,
+    String? notes,
   }) async {
     final id = _uuid.v4();
     final now = DateTime.now().toUtc();
@@ -2238,7 +2324,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     if (investmentId != null) {
       actualInvestmentId = investmentId;
     } else {
-      final inv = addInvestment(instrument, 'stock', null, 'MTF Position: $broker', averagePrice);
+      final inv = addInvestment(instrument, 'stock', null, notes ?? 'MTF Position: $broker', averagePrice);
       actualInvestmentId = inv.id;
     }
 
@@ -2293,7 +2379,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     state = state.copyWith(mtfPositions: [...state.mtfPositions, newPos]);
 
     // 3. Add Buy Transaction (decreases cash by units * averagePrice)
-    buyInvestment(actualInvestmentId, 'acc_primary_bank_uuid', units, averagePrice, 'MTF Buy: $instrument', purchaseDate ?? openingDate);
+    buyInvestment(actualInvestmentId, 'acc_primary_bank_uuid', units, averagePrice, notes ?? 'MTF Buy: $instrument', purchaseDate ?? openingDate);
 
     // 4. Add Borrow Transaction (deposits borrowedCapital back to offset cash)
     await addBorrowTransaction('person_broker_uuid_placeholder', 'acc_primary_bank_uuid', borrowedCapital, 'MTF Borrowed Funding for $instrument', openingDate);
@@ -2397,6 +2483,540 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
 
     // Also delete/archive associated investment and transactions
     await deleteInvestment(pos.investmentId);
+  }
+
+  // --- SOFT DELETE, RESTORE & DUPLICATE FUNCTIONS ---
+
+  Future<void> deleteAccountSoft(String id) async {
+    final now = DateTime.now().toUtc();
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.accounts)..where((tbl) => tbl.id.equals(id))).write(
+        AccountsCompanion(deletedAt: Value(now)),
+      );
+      _queueSync('account', id, 'upsert');
+    }
+    state = state.copyWith(
+      accounts: state.accounts.where((a) => a.id != id).toList(),
+    );
+  }
+
+  Future<void> restoreAccount(Account item) async {
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.accounts)..where((tbl) => tbl.id.equals(item.id))).write(
+        const AccountsCompanion(deletedAt: Value(null)),
+      );
+      _queueSync('account', item.id, 'upsert');
+    }
+    state = state.copyWith(
+      accounts: [...state.accounts, item.copyWith(deletedAt: const Value(null))],
+    );
+  }
+
+  Future<Account> duplicateAccount(String id) async {
+    final item = state.accounts.firstWhere((x) => x.id == id);
+    final newId = _uuid.v4();
+    final now = DateTime.now().toUtc();
+    final copy = item.copyWith(
+      id: newId,
+      name: '${item.name} (Copy)',
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: const Value(null),
+    );
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await db.into(db.accounts).insert(copy);
+      _queueSync('account', newId, 'upsert');
+    }
+    state = state.copyWith(
+      accounts: [...state.accounts, copy],
+    );
+    return copy;
+  }
+
+  Future<void> unarchiveAccount(String id) async {
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.accounts)..where((tbl) => tbl.id.equals(id)))
+        .write(AccountsCompanion(isArchived: const Value(0), updatedAt: Value(DateTime.now().toUtc())));
+      _queueSync('account', id, 'upsert');
+    }
+    state = state.copyWith(
+      accounts: state.accounts.map((a) => a.id == id ? a.copyWith(isArchived: 0, updatedAt: DateTime.now().toUtc()) : a).toList(),
+    );
+  }
+
+  Future<void> unarchivePerson(String id) async {
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.people)..where((tbl) => tbl.id.equals(id)))
+        .write(PeopleCompanion(isArchived: const Value(0), updatedAt: Value(DateTime.now().toUtc())));
+      _queueSync('person', id, 'upsert');
+    }
+    state = state.copyWith(
+      people: state.people.map((p) => p.id == id ? p.copyWith(isArchived: 0, updatedAt: DateTime.now().toUtc()) : p).toList(),
+    );
+  }
+
+  Future<void> unarchiveInvestment(String id) async {
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.investments)..where((tbl) => tbl.id.equals(id)))
+        .write(InvestmentsCompanion(isArchived: const Value(0), updatedAt: Value(DateTime.now().toUtc())));
+      _queueSync('investment', id, 'upsert');
+    }
+    state = state.copyWith(
+      investments: state.investments.map((i) => i.id == id ? i.copyWith(isArchived: 0, updatedAt: DateTime.now().toUtc()) : i).toList(),
+    );
+  }
+
+  Future<void> unarchiveGoal(String id) async {
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.goals)..where((tbl) => tbl.id.equals(id)))
+        .write(GoalsCompanion(isArchived: const Value(0), updatedAt: Value(DateTime.now().toUtc())));
+      _queueSync('goal', id, 'upsert');
+    }
+    state = state.copyWith(
+      goals: state.goals.map((g) => g.id == id ? g.copyWith(isArchived: 0, updatedAt: DateTime.now().toUtc()) : g).toList(),
+    );
+  }
+
+  Future<void> deletePersonSoft(String id) async {
+    final now = DateTime.now().toUtc();
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.people)..where((tbl) => tbl.id.equals(id))).write(
+        PeopleCompanion(deletedAt: Value(now)),
+      );
+      _queueSync('person', id, 'upsert');
+    }
+    state = state.copyWith(
+      people: state.people.where((p) => p.id != id).toList(),
+    );
+  }
+
+  Future<void> restorePerson(Person item) async {
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.people)..where((tbl) => tbl.id.equals(item.id))).write(
+        const PeopleCompanion(deletedAt: Value(null)),
+      );
+      _queueSync('person', item.id, 'upsert');
+    }
+    state = state.copyWith(
+      people: [...state.people, item.copyWith(deletedAt: const Value(null))],
+    );
+  }
+
+  Future<Person> duplicatePerson(String id) async {
+    final item = state.people.firstWhere((x) => x.id == id);
+    final newId = _uuid.v4();
+    final now = DateTime.now().toUtc();
+    final copy = item.copyWith(
+      id: newId,
+      name: '${item.name} (Copy)',
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: const Value(null),
+    );
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await db.into(db.people).insert(copy);
+      _queueSync('person', newId, 'upsert');
+    }
+    state = state.copyWith(
+      people: [...state.people, copy],
+    );
+    return copy;
+  }
+
+  Future<void> deleteInvestmentSoft(String id) async {
+    final now = DateTime.now().toUtc();
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.investments)..where((tbl) => tbl.id.equals(id))).write(
+        InvestmentsCompanion(deletedAt: Value(now)),
+      );
+      _queueSync('investment', id, 'upsert');
+    }
+    state = state.copyWith(
+      investments: state.investments.where((i) => i.id != id).toList(),
+    );
+  }
+
+  Future<void> restoreInvestment(Investment item) async {
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.investments)..where((tbl) => tbl.id.equals(item.id))).write(
+        const InvestmentsCompanion(deletedAt: Value(null)),
+      );
+      _queueSync('investment', item.id, 'upsert');
+    }
+    state = state.copyWith(
+      investments: [...state.investments, item.copyWith(deletedAt: const Value(null))],
+    );
+  }
+
+  Future<Investment> duplicateInvestment(String id) async {
+    final item = state.investments.firstWhere((x) => x.id == id);
+    final newId = _uuid.v4();
+    final now = DateTime.now().toUtc();
+    final copy = item.copyWith(
+      id: newId,
+      name: '${item.name} (Copy)',
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: const Value(null),
+    );
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await db.into(db.investments).insert(copy);
+      _queueSync('investment', newId, 'upsert');
+    }
+    state = state.copyWith(
+      investments: [...state.investments, copy],
+    );
+    return copy;
+  }
+
+  Future<void> deleteMtfPositionSoft(String id) async {
+    final now = DateTime.now().toUtc();
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.mtfPositions)..where((tbl) => tbl.id.equals(id))).write(
+        MtfPositionsCompanion(deletedAt: Value(now)),
+      );
+      _queueSync('mtf_position', id, 'upsert');
+    }
+    state = state.copyWith(
+      mtfPositions: state.mtfPositions.where((p) => p.id != id).toList(),
+    );
+  }
+
+  Future<void> restoreMtfPosition(MtfPosition item) async {
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.mtfPositions)..where((tbl) => tbl.id.equals(item.id))).write(
+        const MtfPositionsCompanion(deletedAt: Value(null)),
+      );
+      _queueSync('mtf_position', item.id, 'upsert');
+    }
+    state = state.copyWith(
+      mtfPositions: [...state.mtfPositions, item.copyWith(deletedAt: const Value(null))],
+    );
+  }
+
+  Future<MtfPosition> duplicateMtfPosition(String id) async {
+    final item = state.mtfPositions.firstWhere((x) => x.id == id);
+    final newId = _uuid.v4();
+    final now = DateTime.now().toUtc();
+    final copy = item.copyWith(
+      id: newId,
+      broker: '${item.broker} (Copy)',
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: const Value(null),
+    );
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await db.into(db.mtfPositions).insert(copy);
+      _queueSync('mtf_position', newId, 'upsert');
+    }
+    state = state.copyWith(
+      mtfPositions: [...state.mtfPositions, copy],
+    );
+    return copy;
+  }
+
+  Future<void> deleteExpectedIncomeSoft(String id) async {
+    final now = DateTime.now().toUtc();
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.expectedIncomes)..where((tbl) => tbl.id.equals(id))).write(
+        ExpectedIncomesCompanion(deletedAt: Value(now)),
+      );
+      _queueSync('expected_income', id, 'upsert');
+    }
+    state = state.copyWith(
+      expectedIncomes: state.expectedIncomes.where((i) => i.id != id).toList(),
+    );
+  }
+
+  Future<void> restoreExpectedIncome(ExpectedIncome item) async {
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.expectedIncomes)..where((tbl) => tbl.id.equals(item.id))).write(
+        const ExpectedIncomesCompanion(deletedAt: Value(null)),
+      );
+      _queueSync('expected_income', item.id, 'upsert');
+    }
+    state = state.copyWith(
+      expectedIncomes: [...state.expectedIncomes, item.copyWith(deletedAt: const Value(null))],
+    );
+  }
+
+  Future<ExpectedIncome> duplicateExpectedIncome(String id) async {
+    final item = state.expectedIncomes.firstWhere((x) => x.id == id);
+    final newId = _uuid.v4();
+    final now = DateTime.now().toUtc();
+    final copy = item.copyWith(
+      id: newId,
+      source: '${item.source} (Copy)',
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: const Value(null),
+    );
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await db.into(db.expectedIncomes).insert(copy);
+      _queueSync('expected_income', newId, 'upsert');
+    }
+    state = state.copyWith(
+      expectedIncomes: [...state.expectedIncomes, copy],
+    );
+    return copy;
+  }
+
+  Future<void> deleteGoalSoft(String id) async {
+    final now = DateTime.now().toUtc();
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.goals)..where((tbl) => tbl.id.equals(id))).write(
+        GoalsCompanion(deletedAt: Value(now)),
+      );
+      _queueSync('goal', id, 'upsert');
+    }
+    state = state.copyWith(
+      goals: state.goals.where((g) => g.id != id).toList(),
+    );
+  }
+
+  Future<void> restoreGoal(Goal item) async {
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.goals)..where((tbl) => tbl.id.equals(item.id))).write(
+        const GoalsCompanion(deletedAt: Value(null)),
+      );
+      _queueSync('goal', item.id, 'upsert');
+    }
+    state = state.copyWith(
+      goals: [...state.goals, item.copyWith(deletedAt: const Value(null))],
+    );
+  }
+
+  Future<Goal> duplicateGoal(String id) async {
+    final item = state.goals.firstWhere((x) => x.id == id);
+    final newId = _uuid.v4();
+    final now = DateTime.now().toUtc();
+    final copy = item.copyWith(
+      id: newId,
+      name: '${item.name} (Copy)',
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: const Value(null),
+    );
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await db.into(db.goals).insert(copy);
+      _queueSync('goal', newId, 'upsert');
+    }
+    state = state.copyWith(
+      goals: [...state.goals, copy],
+    );
+    return copy;
+  }
+
+  Future<void> deleteTransactionSoft(String id) async {
+    final now = DateTime.now().toUtc();
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.transactions)..where((tbl) => tbl.id.equals(id))).write(
+        TransactionsCompanion(deletedAt: Value(now)),
+      );
+      _queueSync('transaction', id, 'upsert');
+      await _ref.read(realBalanceCacheServiceProvider).rebuildCache();
+    }
+    state = state.copyWith(
+      transactions: state.transactions.where((t) => t.id != id).toList(),
+    );
+  }
+
+  Future<void> restoreTransaction(Transaction item) async {
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.transactions)..where((tbl) => tbl.id.equals(item.id))).write(
+        const TransactionsCompanion(deletedAt: Value(null)),
+      );
+      _queueSync('transaction', item.id, 'upsert');
+      await _ref.read(realBalanceCacheServiceProvider).rebuildCache();
+    }
+    state = state.copyWith(
+      transactions: [...state.transactions, item.copyWith(deletedAt: const Value(null))],
+    );
+  }
+
+
+
+  Future<void> deleteSipSoft(String id) async {
+    final now = DateTime.now().toUtc();
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.sips)..where((tbl) => tbl.id.equals(id))).write(
+        SipsCompanion(deletedAt: Value(now)),
+      );
+      _queueSync('sip', id, 'upsert');
+    }
+    state = state.copyWith(
+      sips: state.sips.where((s) => s.id != id).toList(),
+    );
+  }
+
+  Future<void> restoreSip(Sip item) async {
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.sips)..where((tbl) => tbl.id.equals(item.id))).write(
+        const SipsCompanion(deletedAt: Value(null)),
+      );
+      _queueSync('sip', item.id, 'upsert');
+    }
+    state = state.copyWith(
+      sips: [...state.sips, item.copyWith(deletedAt: const Value(null))],
+    );
+  }
+
+  Future<Sip> duplicateSip(String id) async {
+    final item = state.sips.firstWhere((x) => x.id == id);
+    final newId = _uuid.v4();
+    final now = DateTime.now().toUtc();
+    final copy = item.copyWith(
+      id: newId,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: const Value(null),
+    );
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await db.into(db.sips).insert(copy);
+      _queueSync('sip', newId, 'upsert');
+    }
+    state = state.copyWith(
+      sips: [...state.sips, copy],
+    );
+    return copy;
+  }
+
+  // --- Category / Label CRUD ---
+
+  Future<void> addCategory(String category) async {
+    final newCategories = [...state.categories, category].toSet().toList();
+    state = state.copyWith(categories: newCategories);
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await db.into(db.settings).insertOnConflictUpdate(
+        Setting(key: 'categories', value: jsonEncode(newCategories)),
+      );
+      _syncSetting('categories');
+    }
+  }
+
+  Future<void> editCategory(String oldCategory, String newCategory) async {
+    final newCategories = state.categories.map((c) => c == oldCategory ? newCategory : c).toSet().toList();
+    state = state.copyWith(categories: newCategories);
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await db.into(db.settings).insertOnConflictUpdate(
+        Setting(key: 'categories', value: jsonEncode(newCategories)),
+      );
+      _syncSetting('categories');
+      
+      // Update any transactions using the old category
+      await (db.update(db.transactions)..where((tbl) => tbl.category.equals(oldCategory)))
+          .write(TransactionsCompanion(category: Value(newCategory)));
+    }
+  }
+
+  Future<void> deleteCategory(String category) async {
+    final newCategories = state.categories.where((c) => c != category).toList();
+    state = state.copyWith(categories: newCategories);
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await db.into(db.settings).insertOnConflictUpdate(
+        Setting(key: 'categories', value: jsonEncode(newCategories)),
+      );
+      _syncSetting('categories');
+    }
+  }
+
+  Future<void> addCustomLabel(String label) async {
+    final newLabels = [...state.customLabels, label].toSet().toList();
+    state = state.copyWith(customLabels: newLabels);
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await db.into(db.settings).insertOnConflictUpdate(
+        Setting(key: 'customLabels', value: jsonEncode(newLabels)),
+      );
+      _syncSetting('customLabels');
+    }
+  }
+
+  Future<void> editCustomLabel(String oldLabel, String newLabel) async {
+    final newLabels = state.customLabels.map((l) => l == oldLabel ? newLabel : l).toSet().toList();
+    state = state.copyWith(customLabels: newLabels);
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await db.into(db.settings).insertOnConflictUpdate(
+        Setting(key: 'customLabels', value: jsonEncode(newLabels)),
+      );
+      _syncSetting('customLabels');
+    }
+  }
+
+  Future<void> deleteCustomLabel(String label) async {
+    final newLabels = state.customLabels.where((l) => l != label).toList();
+    state = state.copyWith(customLabels: newLabels);
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await db.into(db.settings).insertOnConflictUpdate(
+        Setting(key: 'customLabels', value: jsonEncode(newLabels)),
+      );
+      _syncSetting('customLabels');
+    }
   }
 
   Future<void> updateMtfPositionAccrual(String id, DateTime date) async {
@@ -2668,6 +3288,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       ipoPools: const [],
       mtfPositions: const [],
       sips: const [],
+      categories: const [
+        'Food', 'Travel', 'Shopping', 'Education', 'Bills', 'Subscriptions',
+        'Health', 'Entertainment', 'Fees', 'General', 'Salary',
+        'Investment Return', 'Miscellaneous'
+      ],
+      customLabels: const ['Urgent', 'Personal', 'Tax Deductible', 'Business'],
       currency: mockCurrency,
       themeMode: 'dark', // Premium Dark Theme by default
       appLockEnabled: false,

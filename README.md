@@ -50,6 +50,10 @@ Timeline grouping, collapsible advanced filter trays, and multi-category chips p
 
 ## ✨ Key Features
 
+- **🔄 Complete CRUD & Editability Overhaul**: Full Create, Read, Update, Delete, Archive, Restore, and Duplicate operations implemented for every single ledger module (Assets, Liabilities, Investments, MTF, Receivables, Expected Income, Goals, Transactions, SIPs, IPO Pools, settlements, and profiles) with bottom audit panels (Created At / Last Edited) and safe warning dialogs with undo SnackBar actions.
+- **🏷️ Dynamic Categories & Custom Labels Manager**: Manage and edit transaction categories/labels dynamically via settings, allowing addition, renaming, and removal.
+- **📂 Archived Portfolio Center**: Centralized list under settings to review, detail-check, and restore archived assets, liabilities, and goals.
+- **📈 Dedicated MTF Position Details**: Specialized details screen for MTF trackers displaying full calculations, daily interest accruals, borrowing breakdowns, and detail management options.
 - **📊 Wealth Intelligence Reports & Spending Intelligence**: Custom multi-trend charts, allocation summaries (assets/liabilities/investments), and automatic textual financial insights. Spending Intelligence provides category breakdowns, daily heatmaps, monthly trend analysis, and dynamic insights for permanent wealth outflows.
 - **✨ Premium Onboarding Carousel**: A high-end, glassmorphic onboarding experience that introduces Worth's local-first architecture and key features prior to user sign-up.
 - **📈 Margin Trading Facility (MTF) Tracking**: Enhanced position date tracking, Position Open Date selection, and automatic daily and total accrued interest calculations (Days Held, Daily Interest, Total Interest Accrued).
@@ -108,7 +112,7 @@ Worth is structured following clean coding patterns and responsive architectures
 ## 📦 Releases
 
 Download the latest production-ready APK directly from our releases:
-* **[Download Worth v1.4.0 APK](https://github.com/alokkumar2510/Worth/releases/download/v1.4.0/app-release.apk)**
+* **[Download Worth v1.5.0 APK](https://github.com/alokkumar2510/Worth/releases/download/v1.5.0/app-release.apk)**
 
 ---
 

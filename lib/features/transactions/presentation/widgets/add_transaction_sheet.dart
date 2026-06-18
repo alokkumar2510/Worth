@@ -25,6 +25,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   final _amountController = TextEditingController();
   final _notesController = TextEditingController();
   
+  DateTime _transactionDate = DateTime.now();
+  TimeOfDay _transactionTime = TimeOfDay.now();
+  
   // Custom segment index: 0 = Income, 1 = Expense, 2 = Transfer, 3 = More
   late int _segmentedIndex;
   
@@ -116,6 +119,14 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
 
     final notes = _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null;
 
+    final txDateTime = DateTime(
+      _transactionDate.year,
+      _transactionDate.month,
+      _transactionDate.day,
+      _transactionTime.hour,
+      _transactionTime.minute,
+    ).toUtc();
+
     if (finalType == 'income') {
       notifier.addTransaction(
         type: 'income',
@@ -123,7 +134,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         category: _category,
         toAccountId: _selectedToAccountId,
         notes: notes,
-        date: DateTime.now().toUtc(),
+        date: txDateTime,
       );
     } else if (finalType == 'expense') {
       notifier.addTransaction(
@@ -132,7 +143,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         category: _category,
         fromAccountId: _selectedFromAccountId,
         notes: notes,
-        date: DateTime.now().toUtc(),
+        date: txDateTime,
       );
     } else if (finalType == 'transfer') {
       notifier.addTransaction(
@@ -141,61 +152,29 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         fromAccountId: _selectedFromAccountId,
         toAccountId: _selectedToAccountId,
         notes: notes ?? 'Funds Transfer',
-        date: DateTime.now().toUtc(),
+        date: txDateTime,
       );
     } else if (finalType == 'borrow_money') {
       if (_selectedPersonId != null) {
-        notifier.addBorrowTransaction(_selectedPersonId!, _selectedToAccountId ?? 'acc_primary_bank_uuid', amount, notes, DateTime.now().toUtc());
+        notifier.addBorrowTransaction(_selectedPersonId!, _selectedToAccountId ?? 'acc_primary_bank_uuid', amount, notes, txDateTime);
       }
     } else if (finalType == 'repay_money') {
       if (_selectedPersonId != null) {
-        notifier.addRepayTransaction(_selectedPersonId!, _selectedFromAccountId ?? 'acc_primary_bank_uuid', amount, notes, DateTime.now().toUtc());
+        notifier.addRepayTransaction(_selectedPersonId!, _selectedFromAccountId ?? 'acc_primary_bank_uuid', amount, notes, txDateTime);
       }
     } else if (finalType == 'lend_money') {
       if (_selectedPersonId != null) {
-        notifier.addLendTransaction(_selectedPersonId!, _selectedFromAccountId ?? 'acc_primary_bank_uuid', amount, notes, DateTime.now().toUtc());
+        notifier.addLendTransaction(_selectedPersonId!, _selectedFromAccountId ?? 'acc_primary_bank_uuid', amount, notes, txDateTime);
       }
     } else if (finalType == 'recover_money') {
       if (_selectedPersonId != null) {
-        notifier.addRecoverTransaction(_selectedPersonId!, _selectedToAccountId ?? 'acc_primary_bank_uuid', amount, notes, DateTime.now().toUtc());
+        notifier.addRecoverTransaction(_selectedPersonId!, _selectedToAccountId ?? 'acc_primary_bank_uuid', amount, notes, txDateTime);
       }
     } else if (finalType == 'investment_buy') {
       final units = double.tryParse(_unitsController.text.trim()) ?? 0.0;
       final price = double.tryParse(_priceController.text.trim()) ?? 0.0;
       if (_selectedInvestmentId != null && units > 0 && price > 0) {
-        DateTime finalPurchaseDate;
-        if (_purchaseDate == null) {
-          final confirmToday = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('No Purchase Date Selected', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              content: const Text(
-                'You have not selected a purchase date. Would you like to use today\'s date as the purchase date?',
-                style: TextStyle(color: Colors.white70),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Select Date', style: TextStyle(color: AppColors.darkPrimary)),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
-                  child: const Text('Use Today', style: TextStyle(color: Colors.white)),
-                ),
-              ],
-            ),
-          );
-
-          if (confirmToday == true) {
-            finalPurchaseDate = DateTime.now();
-          } else {
-            return; // Abort saving
-          }
-        } else {
-          finalPurchaseDate = _purchaseDate!;
-        }
-
+        final finalPurchaseDate = _purchaseDate ?? txDateTime;
         final purchaseTimeStr = _purchaseTimeController.text.trim().isNotEmpty
             ? _purchaseTimeController.text.trim()
             : null;
@@ -220,6 +199,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
             purchaseDate: finalPurchaseDate,
             purchaseTime: purchaseTimeStr,
             investmentId: _selectedInvestmentId,
+            notes: notes,
           );
         } else {
           notifier.buyInvestment(_selectedInvestmentId!, _selectedFromAccountId ?? 'acc_primary_bank_uuid', units, price, notes, finalPurchaseDate);
@@ -229,7 +209,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       final units = double.tryParse(_unitsController.text.trim()) ?? 0.0;
       final price = double.tryParse(_priceController.text.trim()) ?? 0.0;
       if (_selectedInvestmentId != null && units > 0 && price > 0) {
-        notifier.sellInvestment(_selectedInvestmentId!, _selectedToAccountId ?? 'acc_primary_bank_uuid', units, price, notes, DateTime.now().toUtc());
+        notifier.sellInvestment(_selectedInvestmentId!, _selectedToAccountId ?? 'acc_primary_bank_uuid', units, price, notes, txDateTime);
       }
     } else if (finalType == 'expected_income_received') {
       if (_selectedExpectedIncomeId != null) {
@@ -249,6 +229,10 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   Widget build(BuildContext context) {
     final dbState = ref.watch(mockDatabaseProvider);
     final currency = dbState.currency;
+
+    if (dbState.categories.isNotEmpty && !dbState.categories.contains(_category)) {
+      _category = dbState.categories.first;
+    }
 
     // Accounts available
     final activeAccounts = dbState.accounts.where((a) => a.isArchived == 0).toList();
@@ -616,7 +600,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                   labelText: 'Category',
                   labelStyle: TextStyle(color: AppColors.grey500),
                 ),
-                items: (isIncome ? _incomeCategories : _expenseCategories).map((c) => DropdownMenuItem(
+                items: dbState.categories.map((c) => DropdownMenuItem(
                   value: c,
                   child: Text(c),
                 )).toList(),
@@ -624,6 +608,59 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
               ),
               const SizedBox(height: 16),
             ],
+
+            // Date & Time Picker
+            Row(
+              children: [
+                Expanded(
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      'Date: ${DateFormat('dd MMM yyyy').format(_transactionDate)}',
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                    trailing: const Icon(Icons.calendar_today, color: AppColors.darkPrimary, size: 16),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _transactionDate,
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          _transactionDate = picked;
+                          _purchaseDate = picked;
+                        });
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      'Time: ${_transactionTime.format(context)}',
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                    trailing: const Icon(Icons.access_time, color: AppColors.darkPrimary, size: 16),
+                    onTap: () async {
+                      final picked = await showTimePicker(
+                        context: context,
+                        initialTime: _transactionTime,
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          _transactionTime = picked;
+                        });
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
 
             // 5. Notes Toggle & Field
             GestureDetector(

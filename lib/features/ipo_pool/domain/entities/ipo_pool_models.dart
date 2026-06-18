@@ -9,6 +9,7 @@ class IpoContributor {
   final String notes;
   final double amountReceived; // Paid back to contributor
   final String upiId; // UPI ID for payments
+  final DateTime? createdAt;
 
   IpoContributor({
     required this.id,
@@ -18,6 +19,7 @@ class IpoContributor {
     required this.notes,
     this.amountReceived = 0.0,
     this.upiId = '',
+    this.createdAt,
   });
 
   IpoContributor copyWith({
@@ -28,6 +30,7 @@ class IpoContributor {
     String? notes,
     double? amountReceived,
     String? upiId,
+    DateTime? createdAt,
   }) {
     return IpoContributor(
       id: id ?? this.id,
@@ -37,6 +40,7 @@ class IpoContributor {
       notes: notes ?? this.notes,
       amountReceived: amountReceived ?? this.amountReceived,
       upiId: upiId ?? this.upiId,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 
@@ -49,6 +53,7 @@ class IpoContributor {
       'notes': notes,
       'amountReceived': amountReceived,
       'upiId': upiId,
+      'createdAt': createdAt?.toIso8601String(),
     };
   }
 
@@ -61,6 +66,7 @@ class IpoContributor {
       notes: json['notes'] as String,
       amountReceived: (json['amountReceived'] as num?)?.toDouble() ?? 0.0,
       upiId: json['upiId'] as String? ?? '',
+      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,
     );
   }
 }

@@ -36,6 +36,11 @@ class NetWorthLineChart extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
+    final minX = spots.map((s) => s.x).reduce((a, b) => a < b ? a : b);
+    final maxX = spots.map((s) => s.x).reduce((a, b) => a > b ? a : b);
+    final range = maxX - minX;
+    final intervalVal = range > 0 ? (range / 3) : 2592000000.0;
+
     return LineChart(
       LineChartData(
         gridData: FlGridData(
@@ -64,33 +69,27 @@ class NetWorthLineChart extends StatelessWidget {
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 30,
-              interval: 1,
+              interval: intervalVal,
               getTitlesWidget: (value, meta) {
-                final int idx = value.toInt();
-                if (idx < 0 || idx >= dates.length) return const SizedBox.shrink();
-                
-                // Show first, middle, and last date label for spacing
-                if (idx == 0 || idx == dates.length - 1 || idx == (dates.length / 2).floor()) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      dates[idx],
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: isDark ? AppColors.grey500 : AppColors.grey500,
-                        fontWeight: FontWeight.w500,
-                      ),
+                final date = DateTime.fromMillisecondsSinceEpoch(value.toInt());
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    DateFormat('MMM yy').format(date),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isDark ? AppColors.grey500 : AppColors.grey500,
+                      fontWeight: FontWeight.w500,
                     ),
-                  );
-                }
-                return const SizedBox.shrink();
+                  ),
+                );
               },
             ),
           ),
         ),
         borderData: FlBorderData(show: false),
-        minX: 0,
-        maxX: (spots.length - 1).toDouble(),
+        minX: minX,
+        maxX: maxX,
         minY: spots.map((s) => s.y).reduce((a, b) => a < b ? a : b) * 0.9,
         maxY: spots.map((s) => s.y).reduce((a, b) => a > b ? a : b) * 1.1,
         lineTouchData: LineTouchData(
@@ -103,9 +102,11 @@ class NetWorthLineChart extends StatelessWidget {
             tooltipRoundedRadius: 8.0,
             getTooltipItems: (touchedSpots) {
               return touchedSpots.map((touchedSpot) {
-                final amount = NumberFormat.compact().format(touchedSpot.y);
+                final date = DateTime.fromMillisecondsSinceEpoch(touchedSpot.x.toInt());
+                final dateStr = DateFormat('dd MMM yyyy').format(date);
+                final amount = NumberFormat.decimalPattern().format(touchedSpot.y);
                 return LineTooltipItem(
-                  '$currency$amount',
+                  '$dateStr\n$currency$amount',
                   TextStyle(
                     color: isDark ? Colors.white : AppColors.lightText,
                     fontWeight: FontWeight.bold,
@@ -143,7 +144,7 @@ class NetWorthLineChart extends StatelessWidget {
   }
 }
 
-class AllocationPieChart extends StatelessWidget {
+class AllocationPieChart extends StatefulWidget {
   final Map<String, double> data;
   final String currency;
 
@@ -154,8 +155,15 @@ class AllocationPieChart extends StatelessWidget {
   });
 
   @override
+  State<AllocationPieChart> createState() => _AllocationPieChartState();
+}
+
+class _AllocationPieChartState extends State<AllocationPieChart> {
+  bool _showBarList = false;
+
+  @override
   Widget build(BuildContext context) {
-    if (data.isEmpty) {
+    if (widget.data.isEmpty) {
       return const Center(
         child: Text('No allocation data available.'),
       );
@@ -163,6 +171,25 @@ class AllocationPieChart extends StatelessWidget {
 
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
+    final sortedEntries = widget.data.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    double total = sortedEntries.fold(0, (sum, entry) => sum + entry.value);
+
+    final List<MapEntry<String, double>> processedEntries = [];
+    if (sortedEntries.length <= 5) {
+      processedEntries.addAll(sortedEntries);
+    } else {
+      processedEntries.addAll(sortedEntries.sublist(0, 4));
+      double otherSum = 0.0;
+      for (int i = 4; i < sortedEntries.length; i++) {
+        otherSum += sortedEntries[i].value;
+      }
+      if (otherSum > 0) {
+        processedEntries.add(MapEntry('Other Assets', otherSum));
+      }
+    }
 
     final colors = [
       AppColors.darkPrimary,
@@ -173,28 +200,138 @@ class AllocationPieChart extends StatelessWidget {
       const Color(0xFFEC4899), // Hot Pink
     ];
 
-    double total = data.values.fold(0, (sum, val) => sum + val);
-
     int colorIdx = 0;
-    final sections = data.entries.map((entry) {
+    final sections = processedEntries.map((entry) {
       final color = colors[colorIdx % colors.length];
       colorIdx++;
       
       final double percentage = total > 0 ? (entry.value / total) * 100 : 0;
+      final String title = percentage >= 5.0 ? '${percentage.toStringAsFixed(0)}%' : '';
       
       return PieChartSectionData(
         color: color,
         value: entry.value,
-        title: '${percentage.toStringAsFixed(0)}%',
-        radius: 40,
+        title: title,
+        radius: 36,
         titleStyle: const TextStyle(
-          fontSize: 12,
+          fontSize: 10,
           fontWeight: FontWeight.bold,
           color: Colors.white,
         ),
       );
     }).toList();
 
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Text(
+              _showBarList ? 'Horizontal Bar View' : 'Donut Chart View',
+              style: const TextStyle(color: AppColors.grey500, fontSize: 11, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              icon: Icon(
+                _showBarList ? Icons.donut_large : Icons.format_list_bulleted,
+                color: AppColors.darkPrimary,
+                size: 20,
+              ),
+              onPressed: () {
+                setState(() {
+                  _showBarList = !_showBarList;
+                });
+              },
+              tooltip: _showBarList ? 'Show Donut Chart' : 'Show Progress Bar List',
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _showBarList
+            ? _buildProgressBarList(processedEntries, colors, total, isDark)
+            : _buildDonutLayout(processedEntries, colors, sections, total, isDark),
+      ],
+    );
+  }
+
+  Widget _buildProgressBarList(
+    List<MapEntry<String, double>> processedEntries,
+    List<Color> colors,
+    double total,
+    bool isDark,
+  ) {
+    return Column(
+      children: List.generate(processedEntries.length, (index) {
+        final entry = processedEntries[index];
+        final color = colors[index % colors.length];
+        final double percentage = total > 0 ? (entry.value / total) * 100 : 0;
+        final amount = NumberFormat.compact().format(entry.value);
+        
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        entry.key,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: isDark ? AppColors.grey400 : AppColors.grey700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    '${widget.currency}$amount (${percentage.toStringAsFixed(1)}%)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : AppColors.lightText,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: total > 0 ? (entry.value / total) : 0,
+                  backgroundColor: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                  minHeight: 6,
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildDonutLayout(
+    List<MapEntry<String, double>> processedEntries,
+    List<Color> colors,
+    List<PieChartSectionData> sections,
+    double total,
+    bool isDark,
+  ) {
     return Row(
       children: [
         Expanded(
@@ -204,7 +341,7 @@ class AllocationPieChart extends StatelessWidget {
             child: PieChart(
               PieChartData(
                 sectionsSpace: 4,
-                centerSpaceRadius: 40,
+                centerSpaceRadius: 36,
                 sections: sections,
               ),
             ),
@@ -216,10 +353,12 @@ class AllocationPieChart extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: List.generate(data.length, (index) {
-              final entry = data.entries.elementAt(index);
+            children: List.generate(processedEntries.length, (index) {
+              final entry = processedEntries[index];
               final color = colors[index % colors.length];
               final amount = NumberFormat.compact().format(entry.value);
+              final double percentage = total > 0 ? (entry.value / total) * 100 : 0;
+              
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4.0),
                 child: Row(
@@ -245,10 +384,11 @@ class AllocationPieChart extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    const SizedBox(width: 4),
                     Text(
-                      '$currency$amount',
+                      '${widget.currency}$amount (${percentage.toStringAsFixed(0)}%)',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: isDark ? Colors.white : AppColors.lightText,
                       ),

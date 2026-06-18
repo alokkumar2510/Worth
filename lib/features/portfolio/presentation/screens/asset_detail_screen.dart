@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:collection/collection.dart';
 
+import '../../../../core/widgets/calculation_audit_panel.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/providers/mock_database.dart';
@@ -122,11 +123,9 @@ class AssetDetailScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        
-        
         title: const Text('Delete Account?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         content: const Text(
-          'This action cannot be undone.',
+          'Are you sure you want to delete this account? This will hide it from all views and calculations. You can undo this action immediately.',
           style: TextStyle(color: AppColors.grey400, fontSize: 13, height: 1.4),
         ),
         actions: [
@@ -136,26 +135,22 @@ class AssetDetailScreen extends ConsumerWidget {
           ),
           ElevatedButton(
             onPressed: () async {
-              final success = await ref.read(mockDatabaseProvider.notifier).deleteAccountEmpty(acc.id);
-              Navigator.pop(context);
-              if (success) {
-                context.pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Account "${acc.name}" deleted.')),
-                );
-              } else {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    
-                    title: const Text('Cannot Delete Account', style: TextStyle(color: Colors.white)),
-                    content: const Text('This account is not empty. Please clear its transactions or merge it first.', style: TextStyle(color: AppColors.grey400)),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK', style: TextStyle(color: AppColors.darkPrimary))),
-                    ],
+              Navigator.pop(context); // close dialog
+              await ref.read(mockDatabaseProvider.notifier).deleteAccountSoft(acc.id);
+              context.pop(); // pop details screen
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Account "${acc.name}" deleted.'),
+                  action: SnackBarAction(
+                    label: 'Undo',
+                    textColor: AppColors.darkPrimary,
+                    onPressed: () {
+                      ref.read(mockDatabaseProvider.notifier).restoreAccount(acc);
+                    },
                   ),
-                );
-              }
+                  duration: const Duration(seconds: 5),
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkDanger, foregroundColor: Colors.white),
             child: const Text('Delete'),
@@ -178,6 +173,9 @@ class AssetDetailScreen extends ConsumerWidget {
       );
     }
 
+    final createdStr = DateFormat('dd MMM yyyy, hh:mm a').format(account.createdAt.toLocal());
+    final updatedStr = DateFormat('dd MMM yyyy, hh:mm a').format(account.updatedAt.toLocal());
+
     final currency = dbState.currency;
     final balance = dbState.getAccountCashBalance(accountId);
     final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
@@ -198,11 +196,21 @@ class AssetDetailScreen extends ConsumerWidget {
                 _showAdjustBalanceDialog(context, ref, account, balance);
               } else if (value == 'view_history') {
                 showAdjustmentHistorySheet(context, account.id, 'account', account.name);
+              } else if (value == 'duplicate') {
+                ref.read(mockDatabaseProvider.notifier).duplicateAccount(account.id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Account "${account.name}" duplicated.')),
+                );
               } else if (value == 'archive') {
                 ref.read(mockDatabaseProvider.notifier).archiveAccount(accountId);
                 context.pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('${account.name} archived successfully.')),
+                );
+              } else if (value == 'restore') {
+                ref.read(mockDatabaseProvider.notifier).unarchiveAccount(accountId);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('${account.name} unarchived successfully.')),
                 );
               } else if (value == 'delete') {
                 _confirmDeleteAccount(context, ref, account);
@@ -222,8 +230,12 @@ class AssetDetailScreen extends ConsumerWidget {
                 child: Text('View History', style: TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
-                value: 'archive',
-                child: Text('Archive', style: TextStyle(color: Colors.white)),
+                value: 'duplicate',
+                child: Text('Duplicate', style: TextStyle(color: Colors.white)),
+              ),
+              PopupMenuItem(
+                value: account.isArchived == 1 ? 'restore' : 'archive',
+                child: Text(account.isArchived == 1 ? 'Restore from Archive' : 'Archive', style: const TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
                 value: 'delete',
@@ -254,6 +266,36 @@ class AssetDetailScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
+              ),
+              const SizedBox(height: 12),
+              Builder(
+                builder: (context) {
+                  final double inflows = txs
+                      .where((t) => t.toAccountId == accountId && t.voidedTransactionId == null && t.type != 'void')
+                      .fold(0.0, (sum, t) => sum + t.amount);
+                  final double outflows = txs
+                      .where((t) => t.fromAccountId == accountId && t.voidedTransactionId == null && t.type != 'void')
+                      .fold(0.0, (sum, t) => sum + t.amount);
+                  final double adjs = dbState.adjustments
+                      .where((a) => a.entityId == accountId && a.entityType == 'account')
+                      .fold(0.0, (sum, a) => sum + a.adjustedAmount);
+                  return CalculationAuditPanel(
+                    title: 'Verify Cash Balance Calculation',
+                    formula: 'Cash Balance = Total Inflows - Total Outflows + Adjustments',
+                    inputs: {
+                      'Total Inflows': format.format(inflows),
+                      'Total Outflows': format.format(outflows),
+                      'Adjustments': format.format(adjs),
+                    },
+                    output: format.format(balance),
+                    steps: [
+                      'Sum all active inflows deposited into this account: ${format.format(inflows)}.',
+                      'Sum all active outflows paid out from this account: ${format.format(outflows)}.',
+                      'Sum all balance adjustments applied: ${format.format(adjs)}.',
+                      'Calculate net cash balance: Inflows (${format.format(inflows)}) - Outflows (${format.format(outflows)}) + Adjustments (${format.format(adjs)}) = ${format.format(balance)}.',
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 20),
 
@@ -343,6 +385,37 @@ class AssetDetailScreen extends ConsumerWidget {
                     );
                   },
                 ),
+              const SizedBox(height: 24),
+              GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'AUDIT LOG INFORMATION',
+                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Created At', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                          Text(createdStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Last Edited', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                          Text(updatedStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),

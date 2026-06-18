@@ -109,9 +109,13 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 
   void _showEditTransactionDialog(BuildContext context, Transaction tx) {
     final amountController = TextEditingController(text: tx.amount.toStringAsFixed(2));
-    final categoryController = TextEditingController(text: tx.category ?? '');
     final notesController = TextEditingController(text: tx.notes ?? '');
     DateTime selectedDate = tx.transactionDate;
+    final dbState = ref.read(mockDatabaseProvider);
+    String selectedCategory = tx.category ?? '';
+    if (dbState.categories.isNotEmpty && !dbState.categories.contains(selectedCategory)) {
+      selectedCategory = dbState.categories.first;
+    }
 
     showDialog(
       context: context,
@@ -130,10 +134,19 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 ),
                 const SizedBox(height: 16),
                 if (tx.type == 'income' || tx.type == 'expense') ...[
-                  TextField(
-                    controller: categoryController,
+                  DropdownButtonFormField<String>(
+                    value: selectedCategory,
+                    dropdownColor: AppColors.layer1,
                     style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(labelText: 'Category'),
+                    decoration: const InputDecoration(
+                      labelText: 'Category',
+                      labelStyle: TextStyle(color: AppColors.grey500),
+                    ),
+                    items: dbState.categories.map((c) => DropdownMenuItem(
+                      value: c,
+                      child: Text(c),
+                    )).toList(),
+                    onChanged: (val) => setState(() => selectedCategory = val!),
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -175,7 +188,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             ElevatedButton(
               onPressed: () {
                 final amt = double.tryParse(amountController.text.trim()) ?? tx.amount;
-                final cat = categoryController.text.trim();
+                final cat = selectedCategory;
                 final notes = notesController.text.trim();
 
                 final updated = db.Transaction(

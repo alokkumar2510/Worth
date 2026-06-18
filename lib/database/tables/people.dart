@@ -11,6 +11,8 @@ class People extends Table {
   TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
   DateTimeColumn get lastSyncedAt => dateTime().nullable()();
   TextColumn get deviceId => text().nullable()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  TextColumn get deletedBy => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

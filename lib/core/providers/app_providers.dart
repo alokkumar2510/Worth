@@ -229,6 +229,8 @@ final realReminderSchedulerProvider = Provider<ReminderScheduler>((ref) {
     onCheck: () async {
       await ref.read(mockDatabaseProvider.notifier).runAutoInterestAccrual();
       await ref.read(mockDatabaseProvider.notifier).runAutoSipProcessing();
+      final dbState = ref.read(mockDatabaseProvider);
+      await ref.read(realNotificationServiceProvider).scheduleFutureReminders(dbState);
     },
     onCheckIn: () async {
       await ref.read(checkInReminderEngineProvider).checkAndTrigger();

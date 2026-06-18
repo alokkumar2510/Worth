@@ -25,14 +25,6 @@ class _AppLockGuardState extends ConsumerState<AppLockGuard> with WidgetsBinding
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-
-    // Lock immediately on cold start if app lock is enabled
-    Future.microtask(() {
-      final dbState = ref.read(mockDatabaseProvider);
-      if (dbState.appLockEnabled) {
-        ref.read(appLockProvider.notifier).lockImmediately();
-      }
-    });
   }
 
   @override
@@ -53,8 +45,37 @@ class _AppLockGuardState extends ConsumerState<AppLockGuard> with WidgetsBinding
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<MockDatabaseState>(
+      mockDatabaseProvider,
+      (previous, next) {
+        final lockNotifier = ref.read(appLockProvider.notifier);
+        if (!lockNotifier.hasAttemptedStartupLock) {
+          if (next.appLockEnabled) {
+            Future.microtask(() {
+              lockNotifier.lockImmediately();
+            });
+          }
+          if (previous != null || next.appLockEnabled) {
+            Future.microtask(() {
+              lockNotifier.markStartupLockAttempted();
+            });
+          }
+        }
+      },
+    );
+
     final lockState = ref.watch(appLockProvider);
     final dbState = ref.watch(mockDatabaseProvider);
+
+    final lockNotifier = ref.read(appLockProvider.notifier);
+    if (!lockNotifier.hasAttemptedStartupLock) {
+      if (dbState.appLockEnabled) {
+        Future.microtask(() {
+          lockNotifier.lockImmediately();
+          lockNotifier.markStartupLockAttempted();
+        });
+      }
+    }
 
     if (dbState.appLockEnabled && lockState.isLocked) {
       return Stack(

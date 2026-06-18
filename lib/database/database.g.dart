@@ -68,6 +68,18 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
   late final GeneratedColumn<String> deviceId = GeneratedColumn<String>(
       'device_id', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _deletedByMeta =
+      const VerificationMeta('deletedBy');
+  @override
+  late final GeneratedColumn<String> deletedBy = GeneratedColumn<String>(
+      'deleted_by', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -79,7 +91,9 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         updatedAt,
         syncStatus,
         lastSyncedAt,
-        deviceId
+        deviceId,
+        deletedAt,
+        deletedBy
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -146,6 +160,14 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
       context.handle(_deviceIdMeta,
           deviceId.isAcceptableOrUnknown(data['device_id']!, _deviceIdMeta));
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    if (data.containsKey('deleted_by')) {
+      context.handle(_deletedByMeta,
+          deletedBy.isAcceptableOrUnknown(data['deleted_by']!, _deletedByMeta));
+    }
     return context;
   }
 
@@ -175,6 +197,10 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
           DriftSqlType.dateTime, data['${effectivePrefix}last_synced_at']),
       deviceId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}device_id']),
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
+      deletedBy: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}deleted_by']),
     );
   }
 
@@ -195,6 +221,8 @@ class Account extends DataClass implements Insertable<Account> {
   final String syncStatus;
   final DateTime? lastSyncedAt;
   final String? deviceId;
+  final DateTime? deletedAt;
+  final String? deletedBy;
   const Account(
       {required this.id,
       required this.name,
@@ -205,7 +233,9 @@ class Account extends DataClass implements Insertable<Account> {
       required this.updatedAt,
       required this.syncStatus,
       this.lastSyncedAt,
-      this.deviceId});
+      this.deviceId,
+      this.deletedAt,
+      this.deletedBy});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -224,6 +254,12 @@ class Account extends DataClass implements Insertable<Account> {
     }
     if (!nullToAbsent || deviceId != null) {
       map['device_id'] = Variable<String>(deviceId);
+    }
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    if (!nullToAbsent || deletedBy != null) {
+      map['deleted_by'] = Variable<String>(deletedBy);
     }
     return map;
   }
@@ -245,6 +281,12 @@ class Account extends DataClass implements Insertable<Account> {
       deviceId: deviceId == null && nullToAbsent
           ? const Value.absent()
           : Value(deviceId),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      deletedBy: deletedBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedBy),
     );
   }
 
@@ -262,6 +304,8 @@ class Account extends DataClass implements Insertable<Account> {
       syncStatus: serializer.fromJson<String>(json['syncStatus']),
       lastSyncedAt: serializer.fromJson<DateTime?>(json['lastSyncedAt']),
       deviceId: serializer.fromJson<String?>(json['deviceId']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      deletedBy: serializer.fromJson<String?>(json['deletedBy']),
     );
   }
   @override
@@ -278,6 +322,8 @@ class Account extends DataClass implements Insertable<Account> {
       'syncStatus': serializer.toJson<String>(syncStatus),
       'lastSyncedAt': serializer.toJson<DateTime?>(lastSyncedAt),
       'deviceId': serializer.toJson<String?>(deviceId),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'deletedBy': serializer.toJson<String?>(deletedBy),
     };
   }
 
@@ -291,7 +337,9 @@ class Account extends DataClass implements Insertable<Account> {
           DateTime? updatedAt,
           String? syncStatus,
           Value<DateTime?> lastSyncedAt = const Value.absent(),
-          Value<String?> deviceId = const Value.absent()}) =>
+          Value<String?> deviceId = const Value.absent(),
+          Value<DateTime?> deletedAt = const Value.absent(),
+          Value<String?> deletedBy = const Value.absent()}) =>
       Account(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -304,6 +352,8 @@ class Account extends DataClass implements Insertable<Account> {
         lastSyncedAt:
             lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
         deviceId: deviceId.present ? deviceId.value : this.deviceId,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+        deletedBy: deletedBy.present ? deletedBy.value : this.deletedBy,
       );
   Account copyWithCompanion(AccountsCompanion data) {
     return Account(
@@ -321,6 +371,8 @@ class Account extends DataClass implements Insertable<Account> {
           ? data.lastSyncedAt.value
           : this.lastSyncedAt,
       deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      deletedBy: data.deletedBy.present ? data.deletedBy.value : this.deletedBy,
     );
   }
 
@@ -336,14 +388,16 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('updatedAt: $updatedAt, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
-          ..write('deviceId: $deviceId')
+          ..write('deviceId: $deviceId, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('deletedBy: $deletedBy')
           ..write(')'))
         .toString();
   }
 
   @override
   int get hashCode => Object.hash(id, name, type, notes, isArchived, createdAt,
-      updatedAt, syncStatus, lastSyncedAt, deviceId);
+      updatedAt, syncStatus, lastSyncedAt, deviceId, deletedAt, deletedBy);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -357,7 +411,9 @@ class Account extends DataClass implements Insertable<Account> {
           other.updatedAt == this.updatedAt &&
           other.syncStatus == this.syncStatus &&
           other.lastSyncedAt == this.lastSyncedAt &&
-          other.deviceId == this.deviceId);
+          other.deviceId == this.deviceId &&
+          other.deletedAt == this.deletedAt &&
+          other.deletedBy == this.deletedBy);
 }
 
 class AccountsCompanion extends UpdateCompanion<Account> {
@@ -371,6 +427,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<String> syncStatus;
   final Value<DateTime?> lastSyncedAt;
   final Value<String?> deviceId;
+  final Value<DateTime?> deletedAt;
+  final Value<String?> deletedBy;
   final Value<int> rowid;
   const AccountsCompanion({
     this.id = const Value.absent(),
@@ -383,6 +441,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.syncStatus = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
     this.deviceId = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.deletedBy = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   AccountsCompanion.insert({
@@ -396,6 +456,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.syncStatus = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
     this.deviceId = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.deletedBy = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -413,6 +475,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<String>? syncStatus,
     Expression<DateTime>? lastSyncedAt,
     Expression<String>? deviceId,
+    Expression<DateTime>? deletedAt,
+    Expression<String>? deletedBy,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -426,6 +490,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (syncStatus != null) 'sync_status': syncStatus,
       if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
       if (deviceId != null) 'device_id': deviceId,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (deletedBy != null) 'deleted_by': deletedBy,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -441,6 +507,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       Value<String>? syncStatus,
       Value<DateTime?>? lastSyncedAt,
       Value<String?>? deviceId,
+      Value<DateTime?>? deletedAt,
+      Value<String?>? deletedBy,
       Value<int>? rowid}) {
     return AccountsCompanion(
       id: id ?? this.id,
@@ -453,6 +521,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       syncStatus: syncStatus ?? this.syncStatus,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       deviceId: deviceId ?? this.deviceId,
+      deletedAt: deletedAt ?? this.deletedAt,
+      deletedBy: deletedBy ?? this.deletedBy,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -490,6 +560,12 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (deviceId.present) {
       map['device_id'] = Variable<String>(deviceId.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (deletedBy.present) {
+      map['deleted_by'] = Variable<String>(deletedBy.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -509,6 +585,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('syncStatus: $syncStatus, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('deviceId: $deviceId, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('deletedBy: $deletedBy, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -580,6 +658,18 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PeopleData> {
   late final GeneratedColumn<String> deviceId = GeneratedColumn<String>(
       'device_id', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _deletedByMeta =
+      const VerificationMeta('deletedBy');
+  @override
+  late final GeneratedColumn<String> deletedBy = GeneratedColumn<String>(
+      'deleted_by', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -591,7 +681,9 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PeopleData> {
         updatedAt,
         syncStatus,
         lastSyncedAt,
-        deviceId
+        deviceId,
+        deletedAt,
+        deletedBy
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -656,6 +748,14 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PeopleData> {
       context.handle(_deviceIdMeta,
           deviceId.isAcceptableOrUnknown(data['device_id']!, _deviceIdMeta));
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    if (data.containsKey('deleted_by')) {
+      context.handle(_deletedByMeta,
+          deletedBy.isAcceptableOrUnknown(data['deleted_by']!, _deletedByMeta));
+    }
     return context;
   }
 
@@ -685,6 +785,10 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PeopleData> {
           DriftSqlType.dateTime, data['${effectivePrefix}last_synced_at']),
       deviceId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}device_id']),
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
+      deletedBy: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}deleted_by']),
     );
   }
 
@@ -705,6 +809,8 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
   final String syncStatus;
   final DateTime? lastSyncedAt;
   final String? deviceId;
+  final DateTime? deletedAt;
+  final String? deletedBy;
   const PeopleData(
       {required this.id,
       required this.name,
@@ -715,7 +821,9 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       required this.updatedAt,
       required this.syncStatus,
       this.lastSyncedAt,
-      this.deviceId});
+      this.deviceId,
+      this.deletedAt,
+      this.deletedBy});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -736,6 +844,12 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
     }
     if (!nullToAbsent || deviceId != null) {
       map['device_id'] = Variable<String>(deviceId);
+    }
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    if (!nullToAbsent || deletedBy != null) {
+      map['deleted_by'] = Variable<String>(deletedBy);
     }
     return map;
   }
@@ -758,6 +872,12 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       deviceId: deviceId == null && nullToAbsent
           ? const Value.absent()
           : Value(deviceId),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      deletedBy: deletedBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedBy),
     );
   }
 
@@ -775,6 +895,8 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       syncStatus: serializer.fromJson<String>(json['syncStatus']),
       lastSyncedAt: serializer.fromJson<DateTime?>(json['lastSyncedAt']),
       deviceId: serializer.fromJson<String?>(json['deviceId']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      deletedBy: serializer.fromJson<String?>(json['deletedBy']),
     );
   }
   @override
@@ -791,6 +913,8 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       'syncStatus': serializer.toJson<String>(syncStatus),
       'lastSyncedAt': serializer.toJson<DateTime?>(lastSyncedAt),
       'deviceId': serializer.toJson<String?>(deviceId),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'deletedBy': serializer.toJson<String?>(deletedBy),
     };
   }
 
@@ -804,7 +928,9 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
           DateTime? updatedAt,
           String? syncStatus,
           Value<DateTime?> lastSyncedAt = const Value.absent(),
-          Value<String?> deviceId = const Value.absent()}) =>
+          Value<String?> deviceId = const Value.absent(),
+          Value<DateTime?> deletedAt = const Value.absent(),
+          Value<String?> deletedBy = const Value.absent()}) =>
       PeopleData(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -817,6 +943,8 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
         lastSyncedAt:
             lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
         deviceId: deviceId.present ? deviceId.value : this.deviceId,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+        deletedBy: deletedBy.present ? deletedBy.value : this.deletedBy,
       );
   PeopleData copyWithCompanion(PeopleCompanion data) {
     return PeopleData(
@@ -834,6 +962,8 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
           ? data.lastSyncedAt.value
           : this.lastSyncedAt,
       deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      deletedBy: data.deletedBy.present ? data.deletedBy.value : this.deletedBy,
     );
   }
 
@@ -849,14 +979,16 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
           ..write('updatedAt: $updatedAt, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
-          ..write('deviceId: $deviceId')
+          ..write('deviceId: $deviceId, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('deletedBy: $deletedBy')
           ..write(')'))
         .toString();
   }
 
   @override
   int get hashCode => Object.hash(id, name, phone, notes, isArchived, createdAt,
-      updatedAt, syncStatus, lastSyncedAt, deviceId);
+      updatedAt, syncStatus, lastSyncedAt, deviceId, deletedAt, deletedBy);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -870,7 +1002,9 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
           other.updatedAt == this.updatedAt &&
           other.syncStatus == this.syncStatus &&
           other.lastSyncedAt == this.lastSyncedAt &&
-          other.deviceId == this.deviceId);
+          other.deviceId == this.deviceId &&
+          other.deletedAt == this.deletedAt &&
+          other.deletedBy == this.deletedBy);
 }
 
 class PeopleCompanion extends UpdateCompanion<PeopleData> {
@@ -884,6 +1018,8 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
   final Value<String> syncStatus;
   final Value<DateTime?> lastSyncedAt;
   final Value<String?> deviceId;
+  final Value<DateTime?> deletedAt;
+  final Value<String?> deletedBy;
   final Value<int> rowid;
   const PeopleCompanion({
     this.id = const Value.absent(),
@@ -896,6 +1032,8 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
     this.syncStatus = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
     this.deviceId = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.deletedBy = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PeopleCompanion.insert({
@@ -909,6 +1047,8 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
     this.syncStatus = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
     this.deviceId = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.deletedBy = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -925,6 +1065,8 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
     Expression<String>? syncStatus,
     Expression<DateTime>? lastSyncedAt,
     Expression<String>? deviceId,
+    Expression<DateTime>? deletedAt,
+    Expression<String>? deletedBy,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -938,6 +1080,8 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
       if (syncStatus != null) 'sync_status': syncStatus,
       if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
       if (deviceId != null) 'device_id': deviceId,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (deletedBy != null) 'deleted_by': deletedBy,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -953,6 +1097,8 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
       Value<String>? syncStatus,
       Value<DateTime?>? lastSyncedAt,
       Value<String?>? deviceId,
+      Value<DateTime?>? deletedAt,
+      Value<String?>? deletedBy,
       Value<int>? rowid}) {
     return PeopleCompanion(
       id: id ?? this.id,
@@ -965,6 +1111,8 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
       syncStatus: syncStatus ?? this.syncStatus,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       deviceId: deviceId ?? this.deviceId,
+      deletedAt: deletedAt ?? this.deletedAt,
+      deletedBy: deletedBy ?? this.deletedBy,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1002,6 +1150,12 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
     if (deviceId.present) {
       map['device_id'] = Variable<String>(deviceId.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (deletedBy.present) {
+      map['deleted_by'] = Variable<String>(deletedBy.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1021,6 +1175,8 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
           ..write('syncStatus: $syncStatus, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('deviceId: $deviceId, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('deletedBy: $deletedBy, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1122,6 +1278,18 @@ class $InvestmentsTable extends Investments
   late final GeneratedColumn<String> deviceId = GeneratedColumn<String>(
       'device_id', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _deletedByMeta =
+      const VerificationMeta('deletedBy');
+  @override
+  late final GeneratedColumn<String> deletedBy = GeneratedColumn<String>(
+      'deleted_by', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -1138,7 +1306,9 @@ class $InvestmentsTable extends Investments
         updatedAt,
         syncStatus,
         lastSyncedAt,
-        deviceId
+        deviceId,
+        deletedAt,
+        deletedBy
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1233,6 +1403,14 @@ class $InvestmentsTable extends Investments
       context.handle(_deviceIdMeta,
           deviceId.isAcceptableOrUnknown(data['device_id']!, _deviceIdMeta));
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    if (data.containsKey('deleted_by')) {
+      context.handle(_deletedByMeta,
+          deletedBy.isAcceptableOrUnknown(data['deleted_by']!, _deletedByMeta));
+    }
     return context;
   }
 
@@ -1273,6 +1451,10 @@ class $InvestmentsTable extends Investments
           DriftSqlType.dateTime, data['${effectivePrefix}last_synced_at']),
       deviceId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}device_id']),
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
+      deletedBy: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}deleted_by']),
     );
   }
 
@@ -1298,6 +1480,8 @@ class Investment extends DataClass implements Insertable<Investment> {
   final String syncStatus;
   final DateTime? lastSyncedAt;
   final String? deviceId;
+  final DateTime? deletedAt;
+  final String? deletedBy;
   const Investment(
       {required this.id,
       required this.name,
@@ -1313,7 +1497,9 @@ class Investment extends DataClass implements Insertable<Investment> {
       required this.updatedAt,
       required this.syncStatus,
       this.lastSyncedAt,
-      this.deviceId});
+      this.deviceId,
+      this.deletedAt,
+      this.deletedBy});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1347,6 +1533,12 @@ class Investment extends DataClass implements Insertable<Investment> {
     }
     if (!nullToAbsent || deviceId != null) {
       map['device_id'] = Variable<String>(deviceId);
+    }
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    if (!nullToAbsent || deletedBy != null) {
+      map['deleted_by'] = Variable<String>(deletedBy);
     }
     return map;
   }
@@ -1382,6 +1574,12 @@ class Investment extends DataClass implements Insertable<Investment> {
       deviceId: deviceId == null && nullToAbsent
           ? const Value.absent()
           : Value(deviceId),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      deletedBy: deletedBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedBy),
     );
   }
 
@@ -1405,6 +1603,8 @@ class Investment extends DataClass implements Insertable<Investment> {
       syncStatus: serializer.fromJson<String>(json['syncStatus']),
       lastSyncedAt: serializer.fromJson<DateTime?>(json['lastSyncedAt']),
       deviceId: serializer.fromJson<String?>(json['deviceId']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      deletedBy: serializer.fromJson<String?>(json['deletedBy']),
     );
   }
   @override
@@ -1427,6 +1627,8 @@ class Investment extends DataClass implements Insertable<Investment> {
       'syncStatus': serializer.toJson<String>(syncStatus),
       'lastSyncedAt': serializer.toJson<DateTime?>(lastSyncedAt),
       'deviceId': serializer.toJson<String?>(deviceId),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'deletedBy': serializer.toJson<String?>(deletedBy),
     };
   }
 
@@ -1445,7 +1647,9 @@ class Investment extends DataClass implements Insertable<Investment> {
           DateTime? updatedAt,
           String? syncStatus,
           Value<DateTime?> lastSyncedAt = const Value.absent(),
-          Value<String?> deviceId = const Value.absent()}) =>
+          Value<String?> deviceId = const Value.absent(),
+          Value<DateTime?> deletedAt = const Value.absent(),
+          Value<String?> deletedBy = const Value.absent()}) =>
       Investment(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -1467,6 +1671,8 @@ class Investment extends DataClass implements Insertable<Investment> {
         lastSyncedAt:
             lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
         deviceId: deviceId.present ? deviceId.value : this.deviceId,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+        deletedBy: deletedBy.present ? deletedBy.value : this.deletedBy,
       );
   Investment copyWithCompanion(InvestmentsCompanion data) {
     return Investment(
@@ -1496,6 +1702,8 @@ class Investment extends DataClass implements Insertable<Investment> {
           ? data.lastSyncedAt.value
           : this.lastSyncedAt,
       deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      deletedBy: data.deletedBy.present ? data.deletedBy.value : this.deletedBy,
     );
   }
 
@@ -1516,7 +1724,9 @@ class Investment extends DataClass implements Insertable<Investment> {
           ..write('updatedAt: $updatedAt, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
-          ..write('deviceId: $deviceId')
+          ..write('deviceId: $deviceId, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('deletedBy: $deletedBy')
           ..write(')'))
         .toString();
   }
@@ -1537,7 +1747,9 @@ class Investment extends DataClass implements Insertable<Investment> {
       updatedAt,
       syncStatus,
       lastSyncedAt,
-      deviceId);
+      deviceId,
+      deletedAt,
+      deletedBy);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1556,7 +1768,9 @@ class Investment extends DataClass implements Insertable<Investment> {
           other.updatedAt == this.updatedAt &&
           other.syncStatus == this.syncStatus &&
           other.lastSyncedAt == this.lastSyncedAt &&
-          other.deviceId == this.deviceId);
+          other.deviceId == this.deviceId &&
+          other.deletedAt == this.deletedAt &&
+          other.deletedBy == this.deletedBy);
 }
 
 class InvestmentsCompanion extends UpdateCompanion<Investment> {
@@ -1575,6 +1789,8 @@ class InvestmentsCompanion extends UpdateCompanion<Investment> {
   final Value<String> syncStatus;
   final Value<DateTime?> lastSyncedAt;
   final Value<String?> deviceId;
+  final Value<DateTime?> deletedAt;
+  final Value<String?> deletedBy;
   final Value<int> rowid;
   const InvestmentsCompanion({
     this.id = const Value.absent(),
@@ -1592,6 +1808,8 @@ class InvestmentsCompanion extends UpdateCompanion<Investment> {
     this.syncStatus = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
     this.deviceId = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.deletedBy = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   InvestmentsCompanion.insert({
@@ -1610,6 +1828,8 @@ class InvestmentsCompanion extends UpdateCompanion<Investment> {
     this.syncStatus = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
     this.deviceId = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.deletedBy = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -1632,6 +1852,8 @@ class InvestmentsCompanion extends UpdateCompanion<Investment> {
     Expression<String>? syncStatus,
     Expression<DateTime>? lastSyncedAt,
     Expression<String>? deviceId,
+    Expression<DateTime>? deletedAt,
+    Expression<String>? deletedBy,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1651,6 +1873,8 @@ class InvestmentsCompanion extends UpdateCompanion<Investment> {
       if (syncStatus != null) 'sync_status': syncStatus,
       if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
       if (deviceId != null) 'device_id': deviceId,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (deletedBy != null) 'deleted_by': deletedBy,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1671,6 +1895,8 @@ class InvestmentsCompanion extends UpdateCompanion<Investment> {
       Value<String>? syncStatus,
       Value<DateTime?>? lastSyncedAt,
       Value<String?>? deviceId,
+      Value<DateTime?>? deletedAt,
+      Value<String?>? deletedBy,
       Value<int>? rowid}) {
     return InvestmentsCompanion(
       id: id ?? this.id,
@@ -1688,6 +1914,8 @@ class InvestmentsCompanion extends UpdateCompanion<Investment> {
       syncStatus: syncStatus ?? this.syncStatus,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       deviceId: deviceId ?? this.deviceId,
+      deletedAt: deletedAt ?? this.deletedAt,
+      deletedBy: deletedBy ?? this.deletedBy,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1741,6 +1969,12 @@ class InvestmentsCompanion extends UpdateCompanion<Investment> {
     if (deviceId.present) {
       map['device_id'] = Variable<String>(deviceId.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (deletedBy.present) {
+      map['deleted_by'] = Variable<String>(deletedBy.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1765,6 +1999,8 @@ class InvestmentsCompanion extends UpdateCompanion<Investment> {
           ..write('syncStatus: $syncStatus, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('deviceId: $deviceId, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('deletedBy: $deletedBy, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2973,6 +3209,18 @@ class $TransactionsTable extends Transactions
   late final GeneratedColumn<String> deviceId = GeneratedColumn<String>(
       'device_id', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _deletedByMeta =
+      const VerificationMeta('deletedBy');
+  @override
+  late final GeneratedColumn<String> deletedBy = GeneratedColumn<String>(
+      'deleted_by', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -2992,7 +3240,9 @@ class $TransactionsTable extends Transactions
         updatedAt,
         syncStatus,
         lastSyncedAt,
-        deviceId
+        deviceId,
+        deletedAt,
+        deletedBy
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3103,6 +3353,14 @@ class $TransactionsTable extends Transactions
       context.handle(_deviceIdMeta,
           deviceId.isAcceptableOrUnknown(data['device_id']!, _deviceIdMeta));
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    if (data.containsKey('deleted_by')) {
+      context.handle(_deletedByMeta,
+          deletedBy.isAcceptableOrUnknown(data['deleted_by']!, _deletedByMeta));
+    }
     return context;
   }
 
@@ -3148,6 +3406,10 @@ class $TransactionsTable extends Transactions
           DriftSqlType.dateTime, data['${effectivePrefix}last_synced_at']),
       deviceId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}device_id']),
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
+      deletedBy: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}deleted_by']),
     );
   }
 
@@ -3176,6 +3438,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String syncStatus;
   final DateTime? lastSyncedAt;
   final String? deviceId;
+  final DateTime? deletedAt;
+  final String? deletedBy;
   const Transaction(
       {required this.id,
       required this.type,
@@ -3194,7 +3458,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       required this.updatedAt,
       required this.syncStatus,
       this.lastSyncedAt,
-      this.deviceId});
+      this.deviceId,
+      this.deletedAt,
+      this.deletedBy});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -3237,6 +3503,12 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     }
     if (!nullToAbsent || deviceId != null) {
       map['device_id'] = Variable<String>(deviceId);
+    }
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    if (!nullToAbsent || deletedBy != null) {
+      map['deleted_by'] = Variable<String>(deletedBy);
     }
     return map;
   }
@@ -3281,6 +3553,12 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       deviceId: deviceId == null && nullToAbsent
           ? const Value.absent()
           : Value(deviceId),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      deletedBy: deletedBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedBy),
     );
   }
 
@@ -3307,6 +3585,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       syncStatus: serializer.fromJson<String>(json['syncStatus']),
       lastSyncedAt: serializer.fromJson<DateTime?>(json['lastSyncedAt']),
       deviceId: serializer.fromJson<String?>(json['deviceId']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      deletedBy: serializer.fromJson<String?>(json['deletedBy']),
     );
   }
   @override
@@ -3331,6 +3611,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'syncStatus': serializer.toJson<String>(syncStatus),
       'lastSyncedAt': serializer.toJson<DateTime?>(lastSyncedAt),
       'deviceId': serializer.toJson<String?>(deviceId),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'deletedBy': serializer.toJson<String?>(deletedBy),
     };
   }
 
@@ -3352,7 +3634,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           DateTime? updatedAt,
           String? syncStatus,
           Value<DateTime?> lastSyncedAt = const Value.absent(),
-          Value<String?> deviceId = const Value.absent()}) =>
+          Value<String?> deviceId = const Value.absent(),
+          Value<DateTime?> deletedAt = const Value.absent(),
+          Value<String?> deletedBy = const Value.absent()}) =>
       Transaction(
         id: id ?? this.id,
         type: type ?? this.type,
@@ -3378,6 +3662,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         lastSyncedAt:
             lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
         deviceId: deviceId.present ? deviceId.value : this.deviceId,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+        deletedBy: deletedBy.present ? deletedBy.value : this.deletedBy,
       );
   Transaction copyWithCompanion(TransactionsCompanion data) {
     return Transaction(
@@ -3413,6 +3699,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ? data.lastSyncedAt.value
           : this.lastSyncedAt,
       deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      deletedBy: data.deletedBy.present ? data.deletedBy.value : this.deletedBy,
     );
   }
 
@@ -3436,7 +3724,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('updatedAt: $updatedAt, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
-          ..write('deviceId: $deviceId')
+          ..write('deviceId: $deviceId, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('deletedBy: $deletedBy')
           ..write(')'))
         .toString();
   }
@@ -3460,7 +3750,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       updatedAt,
       syncStatus,
       lastSyncedAt,
-      deviceId);
+      deviceId,
+      deletedAt,
+      deletedBy);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3482,7 +3774,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.updatedAt == this.updatedAt &&
           other.syncStatus == this.syncStatus &&
           other.lastSyncedAt == this.lastSyncedAt &&
-          other.deviceId == this.deviceId);
+          other.deviceId == this.deviceId &&
+          other.deletedAt == this.deletedAt &&
+          other.deletedBy == this.deletedBy);
 }
 
 class TransactionsCompanion extends UpdateCompanion<Transaction> {
@@ -3504,6 +3798,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String> syncStatus;
   final Value<DateTime?> lastSyncedAt;
   final Value<String?> deviceId;
+  final Value<DateTime?> deletedAt;
+  final Value<String?> deletedBy;
   final Value<int> rowid;
   const TransactionsCompanion({
     this.id = const Value.absent(),
@@ -3524,6 +3820,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.syncStatus = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
     this.deviceId = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.deletedBy = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   TransactionsCompanion.insert({
@@ -3545,6 +3843,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.syncStatus = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
     this.deviceId = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.deletedBy = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         type = Value(type),
@@ -3571,6 +3871,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? syncStatus,
     Expression<DateTime>? lastSyncedAt,
     Expression<String>? deviceId,
+    Expression<DateTime>? deletedAt,
+    Expression<String>? deletedBy,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -3593,6 +3895,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (syncStatus != null) 'sync_status': syncStatus,
       if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
       if (deviceId != null) 'device_id': deviceId,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (deletedBy != null) 'deleted_by': deletedBy,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -3616,6 +3920,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       Value<String>? syncStatus,
       Value<DateTime?>? lastSyncedAt,
       Value<String?>? deviceId,
+      Value<DateTime?>? deletedAt,
+      Value<String?>? deletedBy,
       Value<int>? rowid}) {
     return TransactionsCompanion(
       id: id ?? this.id,
@@ -3636,6 +3942,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       syncStatus: syncStatus ?? this.syncStatus,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       deviceId: deviceId ?? this.deviceId,
+      deletedAt: deletedAt ?? this.deletedAt,
+      deletedBy: deletedBy ?? this.deletedBy,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -3698,6 +4006,12 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (deviceId.present) {
       map['device_id'] = Variable<String>(deviceId.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (deletedBy.present) {
+      map['deleted_by'] = Variable<String>(deletedBy.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -3725,6 +4039,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('syncStatus: $syncStatus, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('deviceId: $deviceId, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('deletedBy: $deletedBy, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -3808,6 +4124,18 @@ class $ExpectedIncomesTable extends ExpectedIncomes
   late final GeneratedColumn<String> deviceId = GeneratedColumn<String>(
       'device_id', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _deletedByMeta =
+      const VerificationMeta('deletedBy');
+  @override
+  late final GeneratedColumn<String> deletedBy = GeneratedColumn<String>(
+      'deleted_by', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -3821,7 +4149,9 @@ class $ExpectedIncomesTable extends ExpectedIncomes
         updatedAt,
         syncStatus,
         lastSyncedAt,
-        deviceId
+        deviceId,
+        deletedAt,
+        deletedBy
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3900,6 +4230,14 @@ class $ExpectedIncomesTable extends ExpectedIncomes
       context.handle(_deviceIdMeta,
           deviceId.isAcceptableOrUnknown(data['device_id']!, _deviceIdMeta));
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    if (data.containsKey('deleted_by')) {
+      context.handle(_deletedByMeta,
+          deletedBy.isAcceptableOrUnknown(data['deleted_by']!, _deletedByMeta));
+    }
     return context;
   }
 
@@ -3934,6 +4272,10 @@ class $ExpectedIncomesTable extends ExpectedIncomes
           DriftSqlType.dateTime, data['${effectivePrefix}last_synced_at']),
       deviceId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}device_id']),
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
+      deletedBy: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}deleted_by']),
     );
   }
 
@@ -3956,6 +4298,8 @@ class ExpectedIncome extends DataClass implements Insertable<ExpectedIncome> {
   final String syncStatus;
   final DateTime? lastSyncedAt;
   final String? deviceId;
+  final DateTime? deletedAt;
+  final String? deletedBy;
   const ExpectedIncome(
       {required this.id,
       required this.source,
@@ -3968,7 +4312,9 @@ class ExpectedIncome extends DataClass implements Insertable<ExpectedIncome> {
       required this.updatedAt,
       required this.syncStatus,
       this.lastSyncedAt,
-      this.deviceId});
+      this.deviceId,
+      this.deletedAt,
+      this.deletedBy});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -3993,6 +4339,12 @@ class ExpectedIncome extends DataClass implements Insertable<ExpectedIncome> {
     }
     if (!nullToAbsent || deviceId != null) {
       map['device_id'] = Variable<String>(deviceId);
+    }
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    if (!nullToAbsent || deletedBy != null) {
+      map['deleted_by'] = Variable<String>(deletedBy);
     }
     return map;
   }
@@ -4020,6 +4372,12 @@ class ExpectedIncome extends DataClass implements Insertable<ExpectedIncome> {
       deviceId: deviceId == null && nullToAbsent
           ? const Value.absent()
           : Value(deviceId),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      deletedBy: deletedBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedBy),
     );
   }
 
@@ -4040,6 +4398,8 @@ class ExpectedIncome extends DataClass implements Insertable<ExpectedIncome> {
       syncStatus: serializer.fromJson<String>(json['syncStatus']),
       lastSyncedAt: serializer.fromJson<DateTime?>(json['lastSyncedAt']),
       deviceId: serializer.fromJson<String?>(json['deviceId']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      deletedBy: serializer.fromJson<String?>(json['deletedBy']),
     );
   }
   @override
@@ -4059,6 +4419,8 @@ class ExpectedIncome extends DataClass implements Insertable<ExpectedIncome> {
       'syncStatus': serializer.toJson<String>(syncStatus),
       'lastSyncedAt': serializer.toJson<DateTime?>(lastSyncedAt),
       'deviceId': serializer.toJson<String?>(deviceId),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'deletedBy': serializer.toJson<String?>(deletedBy),
     };
   }
 
@@ -4074,7 +4436,9 @@ class ExpectedIncome extends DataClass implements Insertable<ExpectedIncome> {
           DateTime? updatedAt,
           String? syncStatus,
           Value<DateTime?> lastSyncedAt = const Value.absent(),
-          Value<String?> deviceId = const Value.absent()}) =>
+          Value<String?> deviceId = const Value.absent(),
+          Value<DateTime?> deletedAt = const Value.absent(),
+          Value<String?> deletedBy = const Value.absent()}) =>
       ExpectedIncome(
         id: id ?? this.id,
         source: source ?? this.source,
@@ -4092,6 +4456,8 @@ class ExpectedIncome extends DataClass implements Insertable<ExpectedIncome> {
         lastSyncedAt:
             lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
         deviceId: deviceId.present ? deviceId.value : this.deviceId,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+        deletedBy: deletedBy.present ? deletedBy.value : this.deletedBy,
       );
   ExpectedIncome copyWithCompanion(ExpectedIncomesCompanion data) {
     return ExpectedIncome(
@@ -4114,6 +4480,8 @@ class ExpectedIncome extends DataClass implements Insertable<ExpectedIncome> {
           ? data.lastSyncedAt.value
           : this.lastSyncedAt,
       deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      deletedBy: data.deletedBy.present ? data.deletedBy.value : this.deletedBy,
     );
   }
 
@@ -4131,7 +4499,9 @@ class ExpectedIncome extends DataClass implements Insertable<ExpectedIncome> {
           ..write('updatedAt: $updatedAt, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
-          ..write('deviceId: $deviceId')
+          ..write('deviceId: $deviceId, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('deletedBy: $deletedBy')
           ..write(')'))
         .toString();
   }
@@ -4149,7 +4519,9 @@ class ExpectedIncome extends DataClass implements Insertable<ExpectedIncome> {
       updatedAt,
       syncStatus,
       lastSyncedAt,
-      deviceId);
+      deviceId,
+      deletedAt,
+      deletedBy);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4165,7 +4537,9 @@ class ExpectedIncome extends DataClass implements Insertable<ExpectedIncome> {
           other.updatedAt == this.updatedAt &&
           other.syncStatus == this.syncStatus &&
           other.lastSyncedAt == this.lastSyncedAt &&
-          other.deviceId == this.deviceId);
+          other.deviceId == this.deviceId &&
+          other.deletedAt == this.deletedAt &&
+          other.deletedBy == this.deletedBy);
 }
 
 class ExpectedIncomesCompanion extends UpdateCompanion<ExpectedIncome> {
@@ -4181,6 +4555,8 @@ class ExpectedIncomesCompanion extends UpdateCompanion<ExpectedIncome> {
   final Value<String> syncStatus;
   final Value<DateTime?> lastSyncedAt;
   final Value<String?> deviceId;
+  final Value<DateTime?> deletedAt;
+  final Value<String?> deletedBy;
   final Value<int> rowid;
   const ExpectedIncomesCompanion({
     this.id = const Value.absent(),
@@ -4195,6 +4571,8 @@ class ExpectedIncomesCompanion extends UpdateCompanion<ExpectedIncome> {
     this.syncStatus = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
     this.deviceId = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.deletedBy = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ExpectedIncomesCompanion.insert({
@@ -4210,6 +4588,8 @@ class ExpectedIncomesCompanion extends UpdateCompanion<ExpectedIncome> {
     this.syncStatus = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
     this.deviceId = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.deletedBy = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         source = Value(source),
@@ -4230,6 +4610,8 @@ class ExpectedIncomesCompanion extends UpdateCompanion<ExpectedIncome> {
     Expression<String>? syncStatus,
     Expression<DateTime>? lastSyncedAt,
     Expression<String>? deviceId,
+    Expression<DateTime>? deletedAt,
+    Expression<String>? deletedBy,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4246,6 +4628,8 @@ class ExpectedIncomesCompanion extends UpdateCompanion<ExpectedIncome> {
       if (syncStatus != null) 'sync_status': syncStatus,
       if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
       if (deviceId != null) 'device_id': deviceId,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (deletedBy != null) 'deleted_by': deletedBy,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4263,6 +4647,8 @@ class ExpectedIncomesCompanion extends UpdateCompanion<ExpectedIncome> {
       Value<String>? syncStatus,
       Value<DateTime?>? lastSyncedAt,
       Value<String?>? deviceId,
+      Value<DateTime?>? deletedAt,
+      Value<String?>? deletedBy,
       Value<int>? rowid}) {
     return ExpectedIncomesCompanion(
       id: id ?? this.id,
@@ -4278,6 +4664,8 @@ class ExpectedIncomesCompanion extends UpdateCompanion<ExpectedIncome> {
       syncStatus: syncStatus ?? this.syncStatus,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       deviceId: deviceId ?? this.deviceId,
+      deletedAt: deletedAt ?? this.deletedAt,
+      deletedBy: deletedBy ?? this.deletedBy,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4322,6 +4710,12 @@ class ExpectedIncomesCompanion extends UpdateCompanion<ExpectedIncome> {
     if (deviceId.present) {
       map['device_id'] = Variable<String>(deviceId.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (deletedBy.present) {
+      map['deleted_by'] = Variable<String>(deletedBy.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4343,6 +4737,8 @@ class ExpectedIncomesCompanion extends UpdateCompanion<ExpectedIncome> {
           ..write('syncStatus: $syncStatus, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('deviceId: $deviceId, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('deletedBy: $deletedBy, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4429,6 +4825,18 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
   late final GeneratedColumn<String> deviceId = GeneratedColumn<String>(
       'device_id', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _deletedByMeta =
+      const VerificationMeta('deletedBy');
+  @override
+  late final GeneratedColumn<String> deletedBy = GeneratedColumn<String>(
+      'deleted_by', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -4442,7 +4850,9 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
         updatedAt,
         syncStatus,
         lastSyncedAt,
-        deviceId
+        deviceId,
+        deletedAt,
+        deletedBy
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4521,6 +4931,14 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
       context.handle(_deviceIdMeta,
           deviceId.isAcceptableOrUnknown(data['device_id']!, _deviceIdMeta));
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    if (data.containsKey('deleted_by')) {
+      context.handle(_deletedByMeta,
+          deletedBy.isAcceptableOrUnknown(data['deleted_by']!, _deletedByMeta));
+    }
     return context;
   }
 
@@ -4554,6 +4972,10 @@ class $GoalsTable extends Goals with TableInfo<$GoalsTable, Goal> {
           DriftSqlType.dateTime, data['${effectivePrefix}last_synced_at']),
       deviceId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}device_id']),
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
+      deletedBy: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}deleted_by']),
     );
   }
 
@@ -4576,6 +4998,8 @@ class Goal extends DataClass implements Insertable<Goal> {
   final String syncStatus;
   final DateTime? lastSyncedAt;
   final String? deviceId;
+  final DateTime? deletedAt;
+  final String? deletedBy;
   const Goal(
       {required this.id,
       required this.name,
@@ -4588,7 +5012,9 @@ class Goal extends DataClass implements Insertable<Goal> {
       required this.updatedAt,
       required this.syncStatus,
       this.lastSyncedAt,
-      this.deviceId});
+      this.deviceId,
+      this.deletedAt,
+      this.deletedBy});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -4611,6 +5037,12 @@ class Goal extends DataClass implements Insertable<Goal> {
     }
     if (!nullToAbsent || deviceId != null) {
       map['device_id'] = Variable<String>(deviceId);
+    }
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    if (!nullToAbsent || deletedBy != null) {
+      map['deleted_by'] = Variable<String>(deletedBy);
     }
     return map;
   }
@@ -4636,6 +5068,12 @@ class Goal extends DataClass implements Insertable<Goal> {
       deviceId: deviceId == null && nullToAbsent
           ? const Value.absent()
           : Value(deviceId),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      deletedBy: deletedBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedBy),
     );
   }
 
@@ -4655,6 +5093,8 @@ class Goal extends DataClass implements Insertable<Goal> {
       syncStatus: serializer.fromJson<String>(json['syncStatus']),
       lastSyncedAt: serializer.fromJson<DateTime?>(json['lastSyncedAt']),
       deviceId: serializer.fromJson<String?>(json['deviceId']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      deletedBy: serializer.fromJson<String?>(json['deletedBy']),
     );
   }
   @override
@@ -4673,6 +5113,8 @@ class Goal extends DataClass implements Insertable<Goal> {
       'syncStatus': serializer.toJson<String>(syncStatus),
       'lastSyncedAt': serializer.toJson<DateTime?>(lastSyncedAt),
       'deviceId': serializer.toJson<String?>(deviceId),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'deletedBy': serializer.toJson<String?>(deletedBy),
     };
   }
 
@@ -4688,7 +5130,9 @@ class Goal extends DataClass implements Insertable<Goal> {
           DateTime? updatedAt,
           String? syncStatus,
           Value<DateTime?> lastSyncedAt = const Value.absent(),
-          Value<String?> deviceId = const Value.absent()}) =>
+          Value<String?> deviceId = const Value.absent(),
+          Value<DateTime?> deletedAt = const Value.absent(),
+          Value<String?> deletedBy = const Value.absent()}) =>
       Goal(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -4703,6 +5147,8 @@ class Goal extends DataClass implements Insertable<Goal> {
         lastSyncedAt:
             lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
         deviceId: deviceId.present ? deviceId.value : this.deviceId,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+        deletedBy: deletedBy.present ? deletedBy.value : this.deletedBy,
       );
   Goal copyWithCompanion(GoalsCompanion data) {
     return Goal(
@@ -4726,6 +5172,8 @@ class Goal extends DataClass implements Insertable<Goal> {
           ? data.lastSyncedAt.value
           : this.lastSyncedAt,
       deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      deletedBy: data.deletedBy.present ? data.deletedBy.value : this.deletedBy,
     );
   }
 
@@ -4743,7 +5191,9 @@ class Goal extends DataClass implements Insertable<Goal> {
           ..write('updatedAt: $updatedAt, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
-          ..write('deviceId: $deviceId')
+          ..write('deviceId: $deviceId, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('deletedBy: $deletedBy')
           ..write(')'))
         .toString();
   }
@@ -4761,7 +5211,9 @@ class Goal extends DataClass implements Insertable<Goal> {
       updatedAt,
       syncStatus,
       lastSyncedAt,
-      deviceId);
+      deviceId,
+      deletedAt,
+      deletedBy);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -4777,7 +5229,9 @@ class Goal extends DataClass implements Insertable<Goal> {
           other.updatedAt == this.updatedAt &&
           other.syncStatus == this.syncStatus &&
           other.lastSyncedAt == this.lastSyncedAt &&
-          other.deviceId == this.deviceId);
+          other.deviceId == this.deviceId &&
+          other.deletedAt == this.deletedAt &&
+          other.deletedBy == this.deletedBy);
 }
 
 class GoalsCompanion extends UpdateCompanion<Goal> {
@@ -4793,6 +5247,8 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
   final Value<String> syncStatus;
   final Value<DateTime?> lastSyncedAt;
   final Value<String?> deviceId;
+  final Value<DateTime?> deletedAt;
+  final Value<String?> deletedBy;
   final Value<int> rowid;
   const GoalsCompanion({
     this.id = const Value.absent(),
@@ -4807,6 +5263,8 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     this.syncStatus = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
     this.deviceId = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.deletedBy = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   GoalsCompanion.insert({
@@ -4822,6 +5280,8 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     this.syncStatus = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
     this.deviceId = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.deletedBy = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -4841,6 +5301,8 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     Expression<String>? syncStatus,
     Expression<DateTime>? lastSyncedAt,
     Expression<String>? deviceId,
+    Expression<DateTime>? deletedAt,
+    Expression<String>? deletedBy,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4856,6 +5318,8 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
       if (syncStatus != null) 'sync_status': syncStatus,
       if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
       if (deviceId != null) 'device_id': deviceId,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (deletedBy != null) 'deleted_by': deletedBy,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4873,6 +5337,8 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
       Value<String>? syncStatus,
       Value<DateTime?>? lastSyncedAt,
       Value<String?>? deviceId,
+      Value<DateTime?>? deletedAt,
+      Value<String?>? deletedBy,
       Value<int>? rowid}) {
     return GoalsCompanion(
       id: id ?? this.id,
@@ -4887,6 +5353,8 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
       syncStatus: syncStatus ?? this.syncStatus,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       deviceId: deviceId ?? this.deviceId,
+      deletedAt: deletedAt ?? this.deletedAt,
+      deletedBy: deletedBy ?? this.deletedBy,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4930,6 +5398,12 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
     if (deviceId.present) {
       map['device_id'] = Variable<String>(deviceId.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (deletedBy.present) {
+      map['deleted_by'] = Variable<String>(deletedBy.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4951,6 +5425,8 @@ class GoalsCompanion extends UpdateCompanion<Goal> {
           ..write('syncStatus: $syncStatus, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('deviceId: $deviceId, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('deletedBy: $deletedBy, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -10279,6 +10755,18 @@ class $MtfPositionsTable extends MtfPositions
   late final GeneratedColumn<DateTime> lastAccrualDate =
       GeneratedColumn<DateTime>('last_accrual_date', aliasedName, true,
           type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _deletedByMeta =
+      const VerificationMeta('deletedBy');
+  @override
+  late final GeneratedColumn<String> deletedBy = GeneratedColumn<String>(
+      'deleted_by', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -10301,7 +10789,9 @@ class $MtfPositionsTable extends MtfPositions
         syncStatus,
         lastSyncedAt,
         deviceId,
-        lastAccrualDate
+        lastAccrualDate,
+        deletedAt,
+        deletedBy
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -10450,6 +10940,14 @@ class $MtfPositionsTable extends MtfPositions
           lastAccrualDate.isAcceptableOrUnknown(
               data['last_accrual_date']!, _lastAccrualDateMeta));
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    if (data.containsKey('deleted_by')) {
+      context.handle(_deletedByMeta,
+          deletedBy.isAcceptableOrUnknown(data['deleted_by']!, _deletedByMeta));
+    }
     return context;
   }
 
@@ -10502,6 +11000,10 @@ class $MtfPositionsTable extends MtfPositions
           .read(DriftSqlType.string, data['${effectivePrefix}device_id']),
       lastAccrualDate: attachedDatabase.typeMapping.read(
           DriftSqlType.dateTime, data['${effectivePrefix}last_accrual_date']),
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
+      deletedBy: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}deleted_by']),
     );
   }
 
@@ -10533,6 +11035,8 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
   final DateTime? lastSyncedAt;
   final String? deviceId;
   final DateTime? lastAccrualDate;
+  final DateTime? deletedAt;
+  final String? deletedBy;
   const MtfPosition(
       {required this.id,
       required this.investmentId,
@@ -10554,7 +11058,9 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
       required this.syncStatus,
       this.lastSyncedAt,
       this.deviceId,
-      this.lastAccrualDate});
+      this.lastAccrualDate,
+      this.deletedAt,
+      this.deletedBy});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -10590,6 +11096,12 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
     }
     if (!nullToAbsent || lastAccrualDate != null) {
       map['last_accrual_date'] = Variable<DateTime>(lastAccrualDate);
+    }
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    if (!nullToAbsent || deletedBy != null) {
+      map['deleted_by'] = Variable<String>(deletedBy);
     }
     return map;
   }
@@ -10629,6 +11141,12 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
       lastAccrualDate: lastAccrualDate == null && nullToAbsent
           ? const Value.absent()
           : Value(lastAccrualDate),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      deletedBy: deletedBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedBy),
     );
   }
 
@@ -10658,6 +11176,8 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
       lastSyncedAt: serializer.fromJson<DateTime?>(json['lastSyncedAt']),
       deviceId: serializer.fromJson<String?>(json['deviceId']),
       lastAccrualDate: serializer.fromJson<DateTime?>(json['lastAccrualDate']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      deletedBy: serializer.fromJson<String?>(json['deletedBy']),
     );
   }
   @override
@@ -10685,6 +11205,8 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
       'lastSyncedAt': serializer.toJson<DateTime?>(lastSyncedAt),
       'deviceId': serializer.toJson<String?>(deviceId),
       'lastAccrualDate': serializer.toJson<DateTime?>(lastAccrualDate),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'deletedBy': serializer.toJson<String?>(deletedBy),
     };
   }
 
@@ -10709,7 +11231,9 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
           String? syncStatus,
           Value<DateTime?> lastSyncedAt = const Value.absent(),
           Value<String?> deviceId = const Value.absent(),
-          Value<DateTime?> lastAccrualDate = const Value.absent()}) =>
+          Value<DateTime?> lastAccrualDate = const Value.absent(),
+          Value<DateTime?> deletedAt = const Value.absent(),
+          Value<String?> deletedBy = const Value.absent()}) =>
       MtfPosition(
         id: id ?? this.id,
         investmentId: investmentId ?? this.investmentId,
@@ -10737,6 +11261,8 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
         lastAccrualDate: lastAccrualDate.present
             ? lastAccrualDate.value
             : this.lastAccrualDate,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+        deletedBy: deletedBy.present ? deletedBy.value : this.deletedBy,
       );
   MtfPosition copyWithCompanion(MtfPositionsCompanion data) {
     return MtfPosition(
@@ -10784,6 +11310,8 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
       lastAccrualDate: data.lastAccrualDate.present
           ? data.lastAccrualDate.value
           : this.lastAccrualDate,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      deletedBy: data.deletedBy.present ? data.deletedBy.value : this.deletedBy,
     );
   }
 
@@ -10810,7 +11338,9 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
           ..write('syncStatus: $syncStatus, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('deviceId: $deviceId, ')
-          ..write('lastAccrualDate: $lastAccrualDate')
+          ..write('lastAccrualDate: $lastAccrualDate, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('deletedBy: $deletedBy')
           ..write(')'))
         .toString();
   }
@@ -10837,7 +11367,9 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
         syncStatus,
         lastSyncedAt,
         deviceId,
-        lastAccrualDate
+        lastAccrualDate,
+        deletedAt,
+        deletedBy
       ]);
   @override
   bool operator ==(Object other) =>
@@ -10863,7 +11395,9 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
           other.syncStatus == this.syncStatus &&
           other.lastSyncedAt == this.lastSyncedAt &&
           other.deviceId == this.deviceId &&
-          other.lastAccrualDate == this.lastAccrualDate);
+          other.lastAccrualDate == this.lastAccrualDate &&
+          other.deletedAt == this.deletedAt &&
+          other.deletedBy == this.deletedBy);
 }
 
 class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
@@ -10888,6 +11422,8 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
   final Value<DateTime?> lastSyncedAt;
   final Value<String?> deviceId;
   final Value<DateTime?> lastAccrualDate;
+  final Value<DateTime?> deletedAt;
+  final Value<String?> deletedBy;
   final Value<int> rowid;
   const MtfPositionsCompanion({
     this.id = const Value.absent(),
@@ -10911,6 +11447,8 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
     this.lastSyncedAt = const Value.absent(),
     this.deviceId = const Value.absent(),
     this.lastAccrualDate = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.deletedBy = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   MtfPositionsCompanion.insert({
@@ -10935,6 +11473,8 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
     this.lastSyncedAt = const Value.absent(),
     this.deviceId = const Value.absent(),
     this.lastAccrualDate = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.deletedBy = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         investmentId = Value(investmentId),
@@ -10971,6 +11511,8 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
     Expression<DateTime>? lastSyncedAt,
     Expression<String>? deviceId,
     Expression<DateTime>? lastAccrualDate,
+    Expression<DateTime>? deletedAt,
+    Expression<String>? deletedBy,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -10995,6 +11537,8 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
       if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
       if (deviceId != null) 'device_id': deviceId,
       if (lastAccrualDate != null) 'last_accrual_date': lastAccrualDate,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (deletedBy != null) 'deleted_by': deletedBy,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -11021,6 +11565,8 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
       Value<DateTime?>? lastSyncedAt,
       Value<String?>? deviceId,
       Value<DateTime?>? lastAccrualDate,
+      Value<DateTime?>? deletedAt,
+      Value<String?>? deletedBy,
       Value<int>? rowid}) {
     return MtfPositionsCompanion(
       id: id ?? this.id,
@@ -11044,6 +11590,8 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       deviceId: deviceId ?? this.deviceId,
       lastAccrualDate: lastAccrualDate ?? this.lastAccrualDate,
+      deletedAt: deletedAt ?? this.deletedAt,
+      deletedBy: deletedBy ?? this.deletedBy,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -11114,6 +11662,12 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
     if (lastAccrualDate.present) {
       map['last_accrual_date'] = Variable<DateTime>(lastAccrualDate.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (deletedBy.present) {
+      map['deleted_by'] = Variable<String>(deletedBy.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -11144,6 +11698,8 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
           ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('deviceId: $deviceId, ')
           ..write('lastAccrualDate: $lastAccrualDate, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('deletedBy: $deletedBy, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -11245,6 +11801,18 @@ class $SipsTable extends Sips with TableInfo<$SipsTable, Sip> {
   late final GeneratedColumn<String> deviceId = GeneratedColumn<String>(
       'device_id', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _deletedAtMeta =
+      const VerificationMeta('deletedAt');
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+      'deleted_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _deletedByMeta =
+      const VerificationMeta('deletedBy');
+  @override
+  late final GeneratedColumn<String> deletedBy = GeneratedColumn<String>(
+      'deleted_by', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -11260,7 +11828,9 @@ class $SipsTable extends Sips with TableInfo<$SipsTable, Sip> {
         updatedAt,
         syncStatus,
         lastSyncedAt,
-        deviceId
+        deviceId,
+        deletedAt,
+        deletedBy
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -11351,6 +11921,14 @@ class $SipsTable extends Sips with TableInfo<$SipsTable, Sip> {
       context.handle(_deviceIdMeta,
           deviceId.isAcceptableOrUnknown(data['device_id']!, _deviceIdMeta));
     }
+    if (data.containsKey('deleted_at')) {
+      context.handle(_deletedAtMeta,
+          deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta));
+    }
+    if (data.containsKey('deleted_by')) {
+      context.handle(_deletedByMeta,
+          deletedBy.isAcceptableOrUnknown(data['deleted_by']!, _deletedByMeta));
+    }
     return context;
   }
 
@@ -11388,6 +11966,10 @@ class $SipsTable extends Sips with TableInfo<$SipsTable, Sip> {
           DriftSqlType.dateTime, data['${effectivePrefix}last_synced_at']),
       deviceId: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}device_id']),
+      deletedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
+      deletedBy: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}deleted_by']),
     );
   }
 
@@ -11412,6 +11994,8 @@ class Sip extends DataClass implements Insertable<Sip> {
   final String syncStatus;
   final DateTime? lastSyncedAt;
   final String? deviceId;
+  final DateTime? deletedAt;
+  final String? deletedBy;
   const Sip(
       {required this.id,
       required this.investmentId,
@@ -11426,7 +12010,9 @@ class Sip extends DataClass implements Insertable<Sip> {
       required this.updatedAt,
       required this.syncStatus,
       this.lastSyncedAt,
-      this.deviceId});
+      this.deviceId,
+      this.deletedAt,
+      this.deletedBy});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -11449,6 +12035,12 @@ class Sip extends DataClass implements Insertable<Sip> {
     }
     if (!nullToAbsent || deviceId != null) {
       map['device_id'] = Variable<String>(deviceId);
+    }
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    if (!nullToAbsent || deletedBy != null) {
+      map['deleted_by'] = Variable<String>(deletedBy);
     }
     return map;
   }
@@ -11475,6 +12067,12 @@ class Sip extends DataClass implements Insertable<Sip> {
       deviceId: deviceId == null && nullToAbsent
           ? const Value.absent()
           : Value(deviceId),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      deletedBy: deletedBy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedBy),
     );
   }
 
@@ -11496,6 +12094,8 @@ class Sip extends DataClass implements Insertable<Sip> {
       syncStatus: serializer.fromJson<String>(json['syncStatus']),
       lastSyncedAt: serializer.fromJson<DateTime?>(json['lastSyncedAt']),
       deviceId: serializer.fromJson<String?>(json['deviceId']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      deletedBy: serializer.fromJson<String?>(json['deletedBy']),
     );
   }
   @override
@@ -11516,6 +12116,8 @@ class Sip extends DataClass implements Insertable<Sip> {
       'syncStatus': serializer.toJson<String>(syncStatus),
       'lastSyncedAt': serializer.toJson<DateTime?>(lastSyncedAt),
       'deviceId': serializer.toJson<String?>(deviceId),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'deletedBy': serializer.toJson<String?>(deletedBy),
     };
   }
 
@@ -11533,7 +12135,9 @@ class Sip extends DataClass implements Insertable<Sip> {
           DateTime? updatedAt,
           String? syncStatus,
           Value<DateTime?> lastSyncedAt = const Value.absent(),
-          Value<String?> deviceId = const Value.absent()}) =>
+          Value<String?> deviceId = const Value.absent(),
+          Value<DateTime?> deletedAt = const Value.absent(),
+          Value<String?> deletedBy = const Value.absent()}) =>
       Sip(
         id: id ?? this.id,
         investmentId: investmentId ?? this.investmentId,
@@ -11550,6 +12154,8 @@ class Sip extends DataClass implements Insertable<Sip> {
         lastSyncedAt:
             lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
         deviceId: deviceId.present ? deviceId.value : this.deviceId,
+        deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+        deletedBy: deletedBy.present ? deletedBy.value : this.deletedBy,
       );
   Sip copyWithCompanion(SipsCompanion data) {
     return Sip(
@@ -11573,6 +12179,8 @@ class Sip extends DataClass implements Insertable<Sip> {
           ? data.lastSyncedAt.value
           : this.lastSyncedAt,
       deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      deletedBy: data.deletedBy.present ? data.deletedBy.value : this.deletedBy,
     );
   }
 
@@ -11592,7 +12200,9 @@ class Sip extends DataClass implements Insertable<Sip> {
           ..write('updatedAt: $updatedAt, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
-          ..write('deviceId: $deviceId')
+          ..write('deviceId: $deviceId, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('deletedBy: $deletedBy')
           ..write(')'))
         .toString();
   }
@@ -11612,7 +12222,9 @@ class Sip extends DataClass implements Insertable<Sip> {
       updatedAt,
       syncStatus,
       lastSyncedAt,
-      deviceId);
+      deviceId,
+      deletedAt,
+      deletedBy);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -11630,7 +12242,9 @@ class Sip extends DataClass implements Insertable<Sip> {
           other.updatedAt == this.updatedAt &&
           other.syncStatus == this.syncStatus &&
           other.lastSyncedAt == this.lastSyncedAt &&
-          other.deviceId == this.deviceId);
+          other.deviceId == this.deviceId &&
+          other.deletedAt == this.deletedAt &&
+          other.deletedBy == this.deletedBy);
 }
 
 class SipsCompanion extends UpdateCompanion<Sip> {
@@ -11648,6 +12262,8 @@ class SipsCompanion extends UpdateCompanion<Sip> {
   final Value<String> syncStatus;
   final Value<DateTime?> lastSyncedAt;
   final Value<String?> deviceId;
+  final Value<DateTime?> deletedAt;
+  final Value<String?> deletedBy;
   final Value<int> rowid;
   const SipsCompanion({
     this.id = const Value.absent(),
@@ -11664,6 +12280,8 @@ class SipsCompanion extends UpdateCompanion<Sip> {
     this.syncStatus = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
     this.deviceId = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.deletedBy = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SipsCompanion.insert({
@@ -11681,6 +12299,8 @@ class SipsCompanion extends UpdateCompanion<Sip> {
     this.syncStatus = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
     this.deviceId = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.deletedBy = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         investmentId = Value(investmentId),
@@ -11705,6 +12325,8 @@ class SipsCompanion extends UpdateCompanion<Sip> {
     Expression<String>? syncStatus,
     Expression<DateTime>? lastSyncedAt,
     Expression<String>? deviceId,
+    Expression<DateTime>? deletedAt,
+    Expression<String>? deletedBy,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -11722,6 +12344,8 @@ class SipsCompanion extends UpdateCompanion<Sip> {
       if (syncStatus != null) 'sync_status': syncStatus,
       if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
       if (deviceId != null) 'device_id': deviceId,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (deletedBy != null) 'deleted_by': deletedBy,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -11741,6 +12365,8 @@ class SipsCompanion extends UpdateCompanion<Sip> {
       Value<String>? syncStatus,
       Value<DateTime?>? lastSyncedAt,
       Value<String?>? deviceId,
+      Value<DateTime?>? deletedAt,
+      Value<String?>? deletedBy,
       Value<int>? rowid}) {
     return SipsCompanion(
       id: id ?? this.id,
@@ -11757,6 +12383,8 @@ class SipsCompanion extends UpdateCompanion<Sip> {
       syncStatus: syncStatus ?? this.syncStatus,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       deviceId: deviceId ?? this.deviceId,
+      deletedAt: deletedAt ?? this.deletedAt,
+      deletedBy: deletedBy ?? this.deletedBy,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -11806,6 +12434,12 @@ class SipsCompanion extends UpdateCompanion<Sip> {
     if (deviceId.present) {
       map['device_id'] = Variable<String>(deviceId.value);
     }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (deletedBy.present) {
+      map['deleted_by'] = Variable<String>(deletedBy.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -11829,6 +12463,8 @@ class SipsCompanion extends UpdateCompanion<Sip> {
           ..write('syncStatus: $syncStatus, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('deviceId: $deviceId, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('deletedBy: $deletedBy, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -12861,6 +13497,8 @@ typedef $$AccountsTableCreateCompanionBuilder = AccountsCompanion Function({
   Value<String> syncStatus,
   Value<DateTime?> lastSyncedAt,
   Value<String?> deviceId,
+  Value<DateTime?> deletedAt,
+  Value<String?> deletedBy,
   Value<int> rowid,
 });
 typedef $$AccountsTableUpdateCompanionBuilder = AccountsCompanion Function({
@@ -12874,6 +13512,8 @@ typedef $$AccountsTableUpdateCompanionBuilder = AccountsCompanion Function({
   Value<String> syncStatus,
   Value<DateTime?> lastSyncedAt,
   Value<String?> deviceId,
+  Value<DateTime?> deletedAt,
+  Value<String?> deletedBy,
   Value<int> rowid,
 });
 
@@ -12940,6 +13580,12 @@ class $$AccountsTableFilterComposer
   ColumnFilters<String> get deviceId => $composableBuilder(
       column: $table.deviceId, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get deletedBy => $composableBuilder(
+      column: $table.deletedBy, builder: (column) => ColumnFilters(column));
+
   Expression<bool> accountBalanceCachesRefs(
       Expression<bool> Function($$AccountBalanceCachesTableFilterComposer f)
           f) {
@@ -13002,6 +13648,12 @@ class $$AccountsTableOrderingComposer
 
   ColumnOrderings<String> get deviceId => $composableBuilder(
       column: $table.deviceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get deletedBy => $composableBuilder(
+      column: $table.deletedBy, builder: (column) => ColumnOrderings(column));
 }
 
 class $$AccountsTableAnnotationComposer
@@ -13042,6 +13694,12 @@ class $$AccountsTableAnnotationComposer
 
   GeneratedColumn<String> get deviceId =>
       $composableBuilder(column: $table.deviceId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get deletedBy =>
+      $composableBuilder(column: $table.deletedBy, builder: (column) => column);
 
   Expression<T> accountBalanceCachesRefs<T extends Object>(
       Expression<T> Function($$AccountBalanceCachesTableAnnotationComposer a)
@@ -13100,6 +13758,8 @@ class $$AccountsTableTableManager extends RootTableManager<
             Value<String> syncStatus = const Value.absent(),
             Value<DateTime?> lastSyncedAt = const Value.absent(),
             Value<String?> deviceId = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<String?> deletedBy = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               AccountsCompanion(
@@ -13113,6 +13773,8 @@ class $$AccountsTableTableManager extends RootTableManager<
             syncStatus: syncStatus,
             lastSyncedAt: lastSyncedAt,
             deviceId: deviceId,
+            deletedAt: deletedAt,
+            deletedBy: deletedBy,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -13126,6 +13788,8 @@ class $$AccountsTableTableManager extends RootTableManager<
             Value<String> syncStatus = const Value.absent(),
             Value<DateTime?> lastSyncedAt = const Value.absent(),
             Value<String?> deviceId = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<String?> deletedBy = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               AccountsCompanion.insert(
@@ -13139,6 +13803,8 @@ class $$AccountsTableTableManager extends RootTableManager<
             syncStatus: syncStatus,
             lastSyncedAt: lastSyncedAt,
             deviceId: deviceId,
+            deletedAt: deletedAt,
+            deletedBy: deletedBy,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -13197,6 +13863,8 @@ typedef $$PeopleTableCreateCompanionBuilder = PeopleCompanion Function({
   Value<String> syncStatus,
   Value<DateTime?> lastSyncedAt,
   Value<String?> deviceId,
+  Value<DateTime?> deletedAt,
+  Value<String?> deletedBy,
   Value<int> rowid,
 });
 typedef $$PeopleTableUpdateCompanionBuilder = PeopleCompanion Function({
@@ -13210,6 +13878,8 @@ typedef $$PeopleTableUpdateCompanionBuilder = PeopleCompanion Function({
   Value<String> syncStatus,
   Value<DateTime?> lastSyncedAt,
   Value<String?> deviceId,
+  Value<DateTime?> deletedAt,
+  Value<String?> deletedBy,
   Value<int> rowid,
 });
 
@@ -13275,6 +13945,12 @@ class $$PeopleTableFilterComposer
   ColumnFilters<String> get deviceId => $composableBuilder(
       column: $table.deviceId, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get deletedBy => $composableBuilder(
+      column: $table.deletedBy, builder: (column) => ColumnFilters(column));
+
   Expression<bool> personBalanceCachesRefs(
       Expression<bool> Function($$PersonBalanceCachesTableFilterComposer f) f) {
     final $$PersonBalanceCachesTableFilterComposer composer = $composerBuilder(
@@ -13336,6 +14012,12 @@ class $$PeopleTableOrderingComposer
 
   ColumnOrderings<String> get deviceId => $composableBuilder(
       column: $table.deviceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get deletedBy => $composableBuilder(
+      column: $table.deletedBy, builder: (column) => ColumnOrderings(column));
 }
 
 class $$PeopleTableAnnotationComposer
@@ -13376,6 +14058,12 @@ class $$PeopleTableAnnotationComposer
 
   GeneratedColumn<String> get deviceId =>
       $composableBuilder(column: $table.deviceId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get deletedBy =>
+      $composableBuilder(column: $table.deletedBy, builder: (column) => column);
 
   Expression<T> personBalanceCachesRefs<T extends Object>(
       Expression<T> Function($$PersonBalanceCachesTableAnnotationComposer a)
@@ -13434,6 +14122,8 @@ class $$PeopleTableTableManager extends RootTableManager<
             Value<String> syncStatus = const Value.absent(),
             Value<DateTime?> lastSyncedAt = const Value.absent(),
             Value<String?> deviceId = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<String?> deletedBy = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               PeopleCompanion(
@@ -13447,6 +14137,8 @@ class $$PeopleTableTableManager extends RootTableManager<
             syncStatus: syncStatus,
             lastSyncedAt: lastSyncedAt,
             deviceId: deviceId,
+            deletedAt: deletedAt,
+            deletedBy: deletedBy,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -13460,6 +14152,8 @@ class $$PeopleTableTableManager extends RootTableManager<
             Value<String> syncStatus = const Value.absent(),
             Value<DateTime?> lastSyncedAt = const Value.absent(),
             Value<String?> deviceId = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<String?> deletedBy = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               PeopleCompanion.insert(
@@ -13473,6 +14167,8 @@ class $$PeopleTableTableManager extends RootTableManager<
             syncStatus: syncStatus,
             lastSyncedAt: lastSyncedAt,
             deviceId: deviceId,
+            deletedAt: deletedAt,
+            deletedBy: deletedBy,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -13537,6 +14233,8 @@ typedef $$InvestmentsTableCreateCompanionBuilder = InvestmentsCompanion
   Value<String> syncStatus,
   Value<DateTime?> lastSyncedAt,
   Value<String?> deviceId,
+  Value<DateTime?> deletedAt,
+  Value<String?> deletedBy,
   Value<int> rowid,
 });
 typedef $$InvestmentsTableUpdateCompanionBuilder = InvestmentsCompanion
@@ -13556,6 +14254,8 @@ typedef $$InvestmentsTableUpdateCompanionBuilder = InvestmentsCompanion
   Value<String> syncStatus,
   Value<DateTime?> lastSyncedAt,
   Value<String?> deviceId,
+  Value<DateTime?> deletedAt,
+  Value<String?> deletedBy,
   Value<int> rowid,
 });
 
@@ -13669,6 +14369,12 @@ class $$InvestmentsTableFilterComposer
 
   ColumnFilters<String> get deviceId => $composableBuilder(
       column: $table.deviceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get deletedBy => $composableBuilder(
+      column: $table.deletedBy, builder: (column) => ColumnFilters(column));
 
   Expression<bool> investmentBalanceCachesRefs(
       Expression<bool> Function($$InvestmentBalanceCachesTableFilterComposer f)
@@ -13793,6 +14499,12 @@ class $$InvestmentsTableOrderingComposer
 
   ColumnOrderings<String> get deviceId => $composableBuilder(
       column: $table.deviceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get deletedBy => $composableBuilder(
+      column: $table.deletedBy, builder: (column) => ColumnOrderings(column));
 }
 
 class $$InvestmentsTableAnnotationComposer
@@ -13848,6 +14560,12 @@ class $$InvestmentsTableAnnotationComposer
 
   GeneratedColumn<String> get deviceId =>
       $composableBuilder(column: $table.deviceId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get deletedBy =>
+      $composableBuilder(column: $table.deletedBy, builder: (column) => column);
 
   Expression<T> investmentBalanceCachesRefs<T extends Object>(
       Expression<T> Function($$InvestmentBalanceCachesTableAnnotationComposer a)
@@ -13956,6 +14674,8 @@ class $$InvestmentsTableTableManager extends RootTableManager<
             Value<String> syncStatus = const Value.absent(),
             Value<DateTime?> lastSyncedAt = const Value.absent(),
             Value<String?> deviceId = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<String?> deletedBy = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               InvestmentsCompanion(
@@ -13974,6 +14694,8 @@ class $$InvestmentsTableTableManager extends RootTableManager<
             syncStatus: syncStatus,
             lastSyncedAt: lastSyncedAt,
             deviceId: deviceId,
+            deletedAt: deletedAt,
+            deletedBy: deletedBy,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -13992,6 +14714,8 @@ class $$InvestmentsTableTableManager extends RootTableManager<
             Value<String> syncStatus = const Value.absent(),
             Value<DateTime?> lastSyncedAt = const Value.absent(),
             Value<String?> deviceId = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<String?> deletedBy = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               InvestmentsCompanion.insert(
@@ -14010,6 +14734,8 @@ class $$InvestmentsTableTableManager extends RootTableManager<
             syncStatus: syncStatus,
             lastSyncedAt: lastSyncedAt,
             deviceId: deviceId,
+            deletedAt: deletedAt,
+            deletedBy: deletedBy,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -14633,6 +15359,8 @@ typedef $$TransactionsTableCreateCompanionBuilder = TransactionsCompanion
   Value<String> syncStatus,
   Value<DateTime?> lastSyncedAt,
   Value<String?> deviceId,
+  Value<DateTime?> deletedAt,
+  Value<String?> deletedBy,
   Value<int> rowid,
 });
 typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
@@ -14655,6 +15383,8 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
   Value<String> syncStatus,
   Value<DateTime?> lastSyncedAt,
   Value<String?> deviceId,
+  Value<DateTime?> deletedAt,
+  Value<String?> deletedBy,
   Value<int> rowid,
 });
 
@@ -14786,6 +15516,12 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<String> get deviceId => $composableBuilder(
       column: $table.deviceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get deletedBy => $composableBuilder(
+      column: $table.deletedBy, builder: (column) => ColumnFilters(column));
 
   Expression<bool> accountBalanceCachesRefs(
       Expression<bool> Function($$AccountBalanceCachesTableFilterComposer f)
@@ -14922,6 +15658,12 @@ class $$TransactionsTableOrderingComposer
 
   ColumnOrderings<String> get deviceId => $composableBuilder(
       column: $table.deviceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get deletedBy => $composableBuilder(
+      column: $table.deletedBy, builder: (column) => ColumnOrderings(column));
 }
 
 class $$TransactionsTableAnnotationComposer
@@ -14986,6 +15728,12 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<String> get deviceId =>
       $composableBuilder(column: $table.deviceId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get deletedBy =>
+      $composableBuilder(column: $table.deletedBy, builder: (column) => column);
 
   Expression<T> accountBalanceCachesRefs<T extends Object>(
       Expression<T> Function($$AccountBalanceCachesTableAnnotationComposer a)
@@ -15101,6 +15849,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String> syncStatus = const Value.absent(),
             Value<DateTime?> lastSyncedAt = const Value.absent(),
             Value<String?> deviceId = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<String?> deletedBy = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               TransactionsCompanion(
@@ -15122,6 +15872,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             syncStatus: syncStatus,
             lastSyncedAt: lastSyncedAt,
             deviceId: deviceId,
+            deletedAt: deletedAt,
+            deletedBy: deletedBy,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -15143,6 +15895,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String> syncStatus = const Value.absent(),
             Value<DateTime?> lastSyncedAt = const Value.absent(),
             Value<String?> deviceId = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<String?> deletedBy = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               TransactionsCompanion.insert(
@@ -15164,6 +15918,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             syncStatus: syncStatus,
             lastSyncedAt: lastSyncedAt,
             deviceId: deviceId,
+            deletedAt: deletedAt,
+            deletedBy: deletedBy,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -15261,6 +16017,8 @@ typedef $$ExpectedIncomesTableCreateCompanionBuilder = ExpectedIncomesCompanion
   Value<String> syncStatus,
   Value<DateTime?> lastSyncedAt,
   Value<String?> deviceId,
+  Value<DateTime?> deletedAt,
+  Value<String?> deletedBy,
   Value<int> rowid,
 });
 typedef $$ExpectedIncomesTableUpdateCompanionBuilder = ExpectedIncomesCompanion
@@ -15277,6 +16035,8 @@ typedef $$ExpectedIncomesTableUpdateCompanionBuilder = ExpectedIncomesCompanion
   Value<String> syncStatus,
   Value<DateTime?> lastSyncedAt,
   Value<String?> deviceId,
+  Value<DateTime?> deletedAt,
+  Value<String?> deletedBy,
   Value<int> rowid,
 });
 
@@ -15325,6 +16085,12 @@ class $$ExpectedIncomesTableFilterComposer
 
   ColumnFilters<String> get deviceId => $composableBuilder(
       column: $table.deviceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get deletedBy => $composableBuilder(
+      column: $table.deletedBy, builder: (column) => ColumnFilters(column));
 }
 
 class $$ExpectedIncomesTableOrderingComposer
@@ -15374,6 +16140,12 @@ class $$ExpectedIncomesTableOrderingComposer
 
   ColumnOrderings<String> get deviceId => $composableBuilder(
       column: $table.deviceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get deletedBy => $composableBuilder(
+      column: $table.deletedBy, builder: (column) => ColumnOrderings(column));
 }
 
 class $$ExpectedIncomesTableAnnotationComposer
@@ -15420,6 +16192,12 @@ class $$ExpectedIncomesTableAnnotationComposer
 
   GeneratedColumn<String> get deviceId =>
       $composableBuilder(column: $table.deviceId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get deletedBy =>
+      $composableBuilder(column: $table.deletedBy, builder: (column) => column);
 }
 
 class $$ExpectedIncomesTableTableManager extends RootTableManager<
@@ -15461,6 +16239,8 @@ class $$ExpectedIncomesTableTableManager extends RootTableManager<
             Value<String> syncStatus = const Value.absent(),
             Value<DateTime?> lastSyncedAt = const Value.absent(),
             Value<String?> deviceId = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<String?> deletedBy = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               ExpectedIncomesCompanion(
@@ -15476,6 +16256,8 @@ class $$ExpectedIncomesTableTableManager extends RootTableManager<
             syncStatus: syncStatus,
             lastSyncedAt: lastSyncedAt,
             deviceId: deviceId,
+            deletedAt: deletedAt,
+            deletedBy: deletedBy,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -15491,6 +16273,8 @@ class $$ExpectedIncomesTableTableManager extends RootTableManager<
             Value<String> syncStatus = const Value.absent(),
             Value<DateTime?> lastSyncedAt = const Value.absent(),
             Value<String?> deviceId = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<String?> deletedBy = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               ExpectedIncomesCompanion.insert(
@@ -15506,6 +16290,8 @@ class $$ExpectedIncomesTableTableManager extends RootTableManager<
             syncStatus: syncStatus,
             lastSyncedAt: lastSyncedAt,
             deviceId: deviceId,
+            deletedAt: deletedAt,
+            deletedBy: deletedBy,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -15543,6 +16329,8 @@ typedef $$GoalsTableCreateCompanionBuilder = GoalsCompanion Function({
   Value<String> syncStatus,
   Value<DateTime?> lastSyncedAt,
   Value<String?> deviceId,
+  Value<DateTime?> deletedAt,
+  Value<String?> deletedBy,
   Value<int> rowid,
 });
 typedef $$GoalsTableUpdateCompanionBuilder = GoalsCompanion Function({
@@ -15558,6 +16346,8 @@ typedef $$GoalsTableUpdateCompanionBuilder = GoalsCompanion Function({
   Value<String> syncStatus,
   Value<DateTime?> lastSyncedAt,
   Value<String?> deviceId,
+  Value<DateTime?> deletedAt,
+  Value<String?> deletedBy,
   Value<int> rowid,
 });
 
@@ -15604,6 +16394,12 @@ class $$GoalsTableFilterComposer extends Composer<_$AppDatabase, $GoalsTable> {
 
   ColumnFilters<String> get deviceId => $composableBuilder(
       column: $table.deviceId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get deletedBy => $composableBuilder(
+      column: $table.deletedBy, builder: (column) => ColumnFilters(column));
 }
 
 class $$GoalsTableOrderingComposer
@@ -15653,6 +16449,12 @@ class $$GoalsTableOrderingComposer
 
   ColumnOrderings<String> get deviceId => $composableBuilder(
       column: $table.deviceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get deletedBy => $composableBuilder(
+      column: $table.deletedBy, builder: (column) => ColumnOrderings(column));
 }
 
 class $$GoalsTableAnnotationComposer
@@ -15699,6 +16501,12 @@ class $$GoalsTableAnnotationComposer
 
   GeneratedColumn<String> get deviceId =>
       $composableBuilder(column: $table.deviceId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get deletedBy =>
+      $composableBuilder(column: $table.deletedBy, builder: (column) => column);
 }
 
 class $$GoalsTableTableManager extends RootTableManager<
@@ -15736,6 +16544,8 @@ class $$GoalsTableTableManager extends RootTableManager<
             Value<String> syncStatus = const Value.absent(),
             Value<DateTime?> lastSyncedAt = const Value.absent(),
             Value<String?> deviceId = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<String?> deletedBy = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               GoalsCompanion(
@@ -15751,6 +16561,8 @@ class $$GoalsTableTableManager extends RootTableManager<
             syncStatus: syncStatus,
             lastSyncedAt: lastSyncedAt,
             deviceId: deviceId,
+            deletedAt: deletedAt,
+            deletedBy: deletedBy,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -15766,6 +16578,8 @@ class $$GoalsTableTableManager extends RootTableManager<
             Value<String> syncStatus = const Value.absent(),
             Value<DateTime?> lastSyncedAt = const Value.absent(),
             Value<String?> deviceId = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<String?> deletedBy = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               GoalsCompanion.insert(
@@ -15781,6 +16595,8 @@ class $$GoalsTableTableManager extends RootTableManager<
             syncStatus: syncStatus,
             lastSyncedAt: lastSyncedAt,
             deviceId: deviceId,
+            deletedAt: deletedAt,
+            deletedBy: deletedBy,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -18931,6 +19747,8 @@ typedef $$MtfPositionsTableCreateCompanionBuilder = MtfPositionsCompanion
   Value<DateTime?> lastSyncedAt,
   Value<String?> deviceId,
   Value<DateTime?> lastAccrualDate,
+  Value<DateTime?> deletedAt,
+  Value<String?> deletedBy,
   Value<int> rowid,
 });
 typedef $$MtfPositionsTableUpdateCompanionBuilder = MtfPositionsCompanion
@@ -18956,6 +19774,8 @@ typedef $$MtfPositionsTableUpdateCompanionBuilder = MtfPositionsCompanion
   Value<DateTime?> lastSyncedAt,
   Value<String?> deviceId,
   Value<DateTime?> lastAccrualDate,
+  Value<DateTime?> deletedAt,
+  Value<String?> deletedBy,
   Value<int> rowid,
 });
 
@@ -19050,6 +19870,12 @@ class $$MtfPositionsTableFilterComposer
   ColumnFilters<DateTime> get lastAccrualDate => $composableBuilder(
       column: $table.lastAccrualDate,
       builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get deletedBy => $composableBuilder(
+      column: $table.deletedBy, builder: (column) => ColumnFilters(column));
 
   $$InvestmentsTableFilterComposer get investmentId {
     final $$InvestmentsTableFilterComposer composer = $composerBuilder(
@@ -19149,6 +19975,12 @@ class $$MtfPositionsTableOrderingComposer
       column: $table.lastAccrualDate,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get deletedBy => $composableBuilder(
+      column: $table.deletedBy, builder: (column) => ColumnOrderings(column));
+
   $$InvestmentsTableOrderingComposer get investmentId {
     final $$InvestmentsTableOrderingComposer composer = $composerBuilder(
         composer: this,
@@ -19239,6 +20071,12 @@ class $$MtfPositionsTableAnnotationComposer
   GeneratedColumn<DateTime> get lastAccrualDate => $composableBuilder(
       column: $table.lastAccrualDate, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get deletedBy =>
+      $composableBuilder(column: $table.deletedBy, builder: (column) => column);
+
   $$InvestmentsTableAnnotationComposer get investmentId {
     final $$InvestmentsTableAnnotationComposer composer = $composerBuilder(
         composer: this,
@@ -19304,6 +20142,8 @@ class $$MtfPositionsTableTableManager extends RootTableManager<
             Value<DateTime?> lastSyncedAt = const Value.absent(),
             Value<String?> deviceId = const Value.absent(),
             Value<DateTime?> lastAccrualDate = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<String?> deletedBy = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               MtfPositionsCompanion(
@@ -19328,6 +20168,8 @@ class $$MtfPositionsTableTableManager extends RootTableManager<
             lastSyncedAt: lastSyncedAt,
             deviceId: deviceId,
             lastAccrualDate: lastAccrualDate,
+            deletedAt: deletedAt,
+            deletedBy: deletedBy,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -19352,6 +20194,8 @@ class $$MtfPositionsTableTableManager extends RootTableManager<
             Value<DateTime?> lastSyncedAt = const Value.absent(),
             Value<String?> deviceId = const Value.absent(),
             Value<DateTime?> lastAccrualDate = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<String?> deletedBy = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               MtfPositionsCompanion.insert(
@@ -19376,6 +20220,8 @@ class $$MtfPositionsTableTableManager extends RootTableManager<
             lastSyncedAt: lastSyncedAt,
             deviceId: deviceId,
             lastAccrualDate: lastAccrualDate,
+            deletedAt: deletedAt,
+            deletedBy: deletedBy,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -19449,6 +20295,8 @@ typedef $$SipsTableCreateCompanionBuilder = SipsCompanion Function({
   Value<String> syncStatus,
   Value<DateTime?> lastSyncedAt,
   Value<String?> deviceId,
+  Value<DateTime?> deletedAt,
+  Value<String?> deletedBy,
   Value<int> rowid,
 });
 typedef $$SipsTableUpdateCompanionBuilder = SipsCompanion Function({
@@ -19466,6 +20314,8 @@ typedef $$SipsTableUpdateCompanionBuilder = SipsCompanion Function({
   Value<String> syncStatus,
   Value<DateTime?> lastSyncedAt,
   Value<String?> deviceId,
+  Value<DateTime?> deletedAt,
+  Value<String?> deletedBy,
   Value<int> rowid,
 });
 
@@ -19536,6 +20386,12 @@ class $$SipsTableFilterComposer extends Composer<_$AppDatabase, $SipsTable> {
   ColumnFilters<String> get deviceId => $composableBuilder(
       column: $table.deviceId, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get deletedBy => $composableBuilder(
+      column: $table.deletedBy, builder: (column) => ColumnFilters(column));
+
   $$InvestmentsTableFilterComposer get investmentId {
     final $$InvestmentsTableFilterComposer composer = $composerBuilder(
         composer: this,
@@ -19604,6 +20460,12 @@ class $$SipsTableOrderingComposer extends Composer<_$AppDatabase, $SipsTable> {
 
   ColumnOrderings<String> get deviceId => $composableBuilder(
       column: $table.deviceId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+      column: $table.deletedAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get deletedBy => $composableBuilder(
+      column: $table.deletedBy, builder: (column) => ColumnOrderings(column));
 
   $$InvestmentsTableOrderingComposer get investmentId {
     final $$InvestmentsTableOrderingComposer composer = $composerBuilder(
@@ -19674,6 +20536,12 @@ class $$SipsTableAnnotationComposer
   GeneratedColumn<String> get deviceId =>
       $composableBuilder(column: $table.deviceId, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get deletedBy =>
+      $composableBuilder(column: $table.deletedBy, builder: (column) => column);
+
   $$InvestmentsTableAnnotationComposer get investmentId {
     final $$InvestmentsTableAnnotationComposer composer = $composerBuilder(
         composer: this,
@@ -19732,6 +20600,8 @@ class $$SipsTableTableManager extends RootTableManager<
             Value<String> syncStatus = const Value.absent(),
             Value<DateTime?> lastSyncedAt = const Value.absent(),
             Value<String?> deviceId = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<String?> deletedBy = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               SipsCompanion(
@@ -19749,6 +20619,8 @@ class $$SipsTableTableManager extends RootTableManager<
             syncStatus: syncStatus,
             lastSyncedAt: lastSyncedAt,
             deviceId: deviceId,
+            deletedAt: deletedAt,
+            deletedBy: deletedBy,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -19766,6 +20638,8 @@ class $$SipsTableTableManager extends RootTableManager<
             Value<String> syncStatus = const Value.absent(),
             Value<DateTime?> lastSyncedAt = const Value.absent(),
             Value<String?> deviceId = const Value.absent(),
+            Value<DateTime?> deletedAt = const Value.absent(),
+            Value<String?> deletedBy = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               SipsCompanion.insert(
@@ -19783,6 +20657,8 @@ class $$SipsTableTableManager extends RootTableManager<
             syncStatus: syncStatus,
             lastSyncedAt: lastSyncedAt,
             deviceId: deviceId,
+            deletedAt: deletedAt,
+            deletedBy: deletedBy,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0

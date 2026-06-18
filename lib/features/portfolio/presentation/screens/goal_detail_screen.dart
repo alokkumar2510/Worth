@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
+import 'package:collection/collection.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/glass_card.dart';
@@ -140,11 +141,9 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        
-        
         title: const Text('Delete Goal?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         content: const Text(
-          'This action cannot be undone.',
+          'Are you sure you want to delete this goal? You can undo this action immediately.',
           style: TextStyle(color: AppColors.grey400, fontSize: 13, height: 1.4),
         ),
         actions: [
@@ -153,12 +152,23 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
             child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
           ),
           ElevatedButton(
-            onPressed: () {
-              ref.read(mockDatabaseProvider.notifier).deleteGoal(goal.id);
+            onPressed: () async {
               Navigator.pop(context); // close dialog
+              final notifier = ref.read(mockDatabaseProvider.notifier);
+              await notifier.deleteGoalSoft(goal.id);
               context.pop(); // pop screen
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Goal "${goal.name}" deleted.')),
+                SnackBar(
+                  content: Text('Goal "${goal.name}" deleted.'),
+                  action: SnackBarAction(
+                    label: 'Undo',
+                    textColor: AppColors.darkPrimary,
+                    onPressed: () {
+                      notifier.restoreGoal(goal);
+                    },
+                  ),
+                  duration: const Duration(seconds: 5),
+                ),
               );
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkDanger, foregroundColor: Colors.white),
@@ -172,12 +182,23 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final dbState = ref.watch(mockDatabaseProvider);
-    final goal = dbState.goals.firstWhere((g) => g.id == widget.goalId);
+    final goal = dbState.goals.firstWhereOrNull((g) => g.id == widget.goalId);
+    
+    if (goal == null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: const Center(child: Text('Goal not found.', style: TextStyle(color: Colors.white))),
+      );
+    }
+
     final currency = dbState.currency;
     final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
 
     final progress = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) : 0.0;
     final percent = (progress * 100).clamp(0, 100).toStringAsFixed(1);
+
+    final createdStr = DateFormat('dd MMM yyyy, hh:mm a').format(goal.createdAt.toLocal());
+    final updatedStr = DateFormat('dd MMM yyyy, hh:mm a').format(goal.updatedAt.toLocal());
 
     return Scaffold(
       appBar: AppBar(
@@ -192,8 +213,18 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
             onSelected: (value) {
               if (value == 'edit') {
                 _showEditGoalDialog(goal);
+              } else if (value == 'duplicate') {
+                ref.read(mockDatabaseProvider.notifier).duplicateGoal(goal.id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Goal "${goal.name}" duplicated.')),
+                );
               } else if (value == 'archive') {
                 _handleArchiveGoal(goal);
+              } else if (value == 'restore') {
+                ref.read(mockDatabaseProvider.notifier).unarchiveGoal(goal.id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Goal "${goal.name}" unarchived successfully.')),
+                );
               } else if (value == 'delete') {
                 _handleDeleteGoal(goal);
               }
@@ -201,11 +232,15 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
             itemBuilder: (context) => [
               const PopupMenuItem(
                 value: 'edit',
-                child: Text('Edit', style: TextStyle(color: Colors.white)),
+                child: Text('Edit Details', style: TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
-                value: 'archive',
-                child: Text('Archive', style: TextStyle(color: Colors.white)),
+                value: 'duplicate',
+                child: Text('Duplicate', style: TextStyle(color: Colors.white)),
+              ),
+              PopupMenuItem(
+                value: goal.isArchived == 1 ? 'restore' : 'archive',
+                child: Text(goal.isArchived == 1 ? 'Restore from Archive' : 'Archive', style: const TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
                 value: 'delete',
@@ -305,7 +340,37 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
+              GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'AUDIT LOG INFORMATION',
+                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Created At', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                          Text(createdStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Last Edited', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                          Text(updatedStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),

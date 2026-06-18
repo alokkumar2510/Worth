@@ -15,11 +15,11 @@ class BalanceCacheService {
     // 1. Handle Account Balance Cache Updates
     if (tx.fromAccountId != null) {
       // Outflow from fromAccount
-      await _applyOutflow(tx.fromAccountId!, amount, tx.id, now);
+      await _applyOutflow(tx.fromAccountId!, amount, tx.type, tx.id, now);
     }
     if (tx.toAccountId != null) {
       // Inflow to toAccount
-      await _applyInflow(tx.toAccountId!, amount, tx.id, now);
+      await _applyInflow(tx.toAccountId!, amount, tx.type, tx.id, now);
     }
 
     // 2. Handle Person Balance Cache Updates
@@ -103,17 +103,21 @@ class BalanceCacheService {
   }
 
   // Helper methods for Account Caches
-  Future<void> _applyInflow(String accountId, double amount, String txId, DateTime now) async {
+  Future<void> _applyInflow(String accountId, double amount, String txType, String txId, DateTime now) async {
     final account = await (_db.select(_db.accounts)..where((tbl) => tbl.id.equals(accountId))).getSingleOrNull();
     final isCredit = account?.type == 'credit';
     if (isCredit) {
-      await _updateAccountCache(accountId, 0.0, -amount, txId, now);
+      if (txType == 'borrow_money' || txType == 'interest_accrued') {
+        await _updateAccountCache(accountId, 0.0, amount, txId, now);
+      } else {
+        await _updateAccountCache(accountId, 0.0, -amount, txId, now);
+      }
     } else {
       await _updateAccountCache(accountId, amount, 0.0, txId, now);
     }
   }
 
-  Future<void> _applyOutflow(String accountId, double amount, String txId, DateTime now) async {
+  Future<void> _applyOutflow(String accountId, double amount, String txType, String txId, DateTime now) async {
     final account = await (_db.select(_db.accounts)..where((tbl) => tbl.id.equals(accountId))).getSingleOrNull();
     final isCredit = account?.type == 'credit';
     if (isCredit) {

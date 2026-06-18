@@ -265,6 +265,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     onTap: () => context.push('/definitions'),
                   ),
                   const Divider(color: AppColors.glassBorder, height: 1),
+                  _buildSettingsTile(
+                    icon: Icons.label_outline_rounded,
+                    title: 'Categories & Custom Labels',
+                    value: 'Configure transaction labels',
+                    onTap: () => context.push('/settings/categories_labels'),
+                  ),
+                  const Divider(color: AppColors.glassBorder, height: 1),
                   SwitchListTile(
                     title: const Text('Biometric / PIN App Lock', style: TextStyle(color: Colors.white, fontSize: 14)),
                     secondary: const Icon(Icons.lock_outline, color: AppColors.darkPrimary),
@@ -285,12 +292,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             content: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Image.asset(
-                                  AssetPaths.appLock,
-                                  height: 120,
-                                  semanticLabel: AssetConstants.appLockLabel,
-                                ),
-                                const SizedBox(height: 16),
                                 const Text(
                                   'Your local database key is now encrypted and protected by your device\'s hardware biometrics / PIN.',
                                   textAlign: TextAlign.center,
@@ -409,6 +410,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     title: 'IPO History Archive',
                     value: 'Timeline & statistics of listed pools',
                     onTap: () => context.push('/settings/ipo_pool/archive'),
+                  ),
+                  const Divider(color: AppColors.glassBorder, height: 1),
+                  _buildSettingsTile(
+                    icon: Icons.archive_outlined,
+                    title: 'Archived Portfolio Center',
+                    value: 'View and restore archived items',
+                    onTap: () => context.push('/settings/archive_center'),
                   ),
                 ],
               ),

@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:math';
+import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/glass_card.dart';
@@ -82,6 +83,9 @@ class _IpoSettlementCenterTabState extends ConsumerState<IpoSettlementCenterTab>
       final double out = (splits[c.id]?['outstanding'] as num?)?.toDouble() ?? 0.0;
       return out > 0.01;
     }).toList();
+
+    DateTime selectedDate = DateTime.now();
+    TimeOfDay selectedTime = TimeOfDay.now();
 
     setState(() {
       _selectedContributorId = outstandingContribs.isNotEmpty ? outstandingContribs.first.id : (widget.pool.contributors.isNotEmpty ? widget.pool.contributors.first.id : null);
@@ -233,6 +237,45 @@ class _IpoSettlementCenterTabState extends ConsumerState<IpoSettlementCenterTab>
                     labelStyle: TextStyle(color: AppColors.grey500),
                   ),
                 ),
+                const SizedBox(height: 16),
+
+                // Date Picker
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Payout Date: ${DateFormat('dd MMM yyyy').format(selectedDate)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  trailing: const Icon(Icons.calendar_today, color: AppColors.darkPrimary, size: 18),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) {
+                      setSheetState(() => selectedDate = picked);
+                    }
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Payout Time: ${selectedTime.format(context)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  trailing: const Icon(Icons.access_time, color: AppColors.darkPrimary, size: 18),
+                  onTap: () async {
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: selectedTime,
+                    );
+                    if (picked != null) {
+                      setSheetState(() => selectedTime = picked);
+                    }
+                  },
+                ),
                 const SizedBox(height: 28),
 
                 ElevatedButton(
@@ -247,6 +290,14 @@ class _IpoSettlementCenterTabState extends ConsumerState<IpoSettlementCenterTab>
 
                     final contrib = widget.pool.contributors.firstWhere((c) => c.id == _selectedContributorId);
                     
+                    final txDateTime = DateTime(
+                      selectedDate.year,
+                      selectedDate.month,
+                      selectedDate.day,
+                      selectedTime.hour,
+                      selectedTime.minute,
+                    );
+
                     // Create Settlement record
                     final record = SettlementRecord(
                       id: const Uuid().v4(),
@@ -257,7 +308,7 @@ class _IpoSettlementCenterTabState extends ConsumerState<IpoSettlementCenterTab>
                       transactionId: _payoutTxIdController.text.trim(),
                       referenceNumber: _payoutRefNumController.text.trim(),
                       notes: _payoutNotesController.text.trim(),
-                      date: DateTime.now(),
+                      date: txDateTime,
                     );
 
                     // Add to system audit trail
@@ -266,7 +317,7 @@ class _IpoSettlementCenterTabState extends ConsumerState<IpoSettlementCenterTab>
                         id: const Uuid().v4(),
                         type: 'settlement_payout',
                         description: 'Recorded settlement payout of ${widget.currency}${amt.toStringAsFixed(0)} to ${contrib.name} via $_settlementMethod',
-                        timestamp: DateTime.now(),
+                        timestamp: txDateTime,
                         userId: 'Me',
                       ));
 
@@ -318,6 +369,254 @@ class _IpoSettlementCenterTabState extends ConsumerState<IpoSettlementCenterTab>
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showEditSettlementDialog(SettlementRecord rec) {
+    final amtController = TextEditingController(text: rec.amount.toString());
+    String method = rec.method;
+    final txIdController = TextEditingController(text: rec.transactionId);
+    final refNumController = TextEditingController(text: rec.referenceNumber);
+    final notesController = TextEditingController(text: rec.notes);
+    DateTime selectedDate = rec.date;
+    TimeOfDay selectedTime = TimeOfDay.fromDateTime(rec.date);
+
+    showDialog<void>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Edit Settlement Payout', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Contributor: ${rec.contributorName}', style: const TextStyle(color: AppColors.grey400, fontSize: 13)),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: amtController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Payout Amount', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: method,
+                  dropdownColor: AppColors.layer2,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Settlement Method'),
+                  items: const [
+                    DropdownMenuItem(value: 'UPI', child: Text('UPI')),
+                    DropdownMenuItem(value: 'Bank Transfer', child: Text('Bank Transfer')),
+                    DropdownMenuItem(value: 'Cash', child: Text('Cash')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      setDialogState(() => method = val);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: txIdController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Transaction ID / Reference', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: refNumController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Ref Number / Check Number', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Notes', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Payout Date: ${DateFormat('dd MMM yyyy').format(selectedDate)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  trailing: const Icon(Icons.calendar_today, color: AppColors.darkPrimary, size: 18),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) {
+                      setDialogState(() => selectedDate = picked);
+                    }
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Payout Time: ${selectedTime.format(context)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  trailing: const Icon(Icons.access_time, color: AppColors.darkPrimary, size: 18),
+                  onTap: () async {
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: selectedTime,
+                    );
+                    if (picked != null) {
+                      setDialogState(() => selectedTime = picked);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _confirmDeleteSettlement(rec);
+              },
+              child: const Text('Delete Payout', style: TextStyle(color: AppColors.darkDanger)),
+            ),
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final amt = double.tryParse(amtController.text.trim()) ?? 0.0;
+                if (amt <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a valid amount')),
+                  );
+                  return;
+                }
+
+                final txDateTime = DateTime(
+                  selectedDate.year,
+                  selectedDate.month,
+                  selectedDate.day,
+                  selectedTime.hour,
+                  selectedTime.minute,
+                );
+
+                final updatedRecord = rec.copyWith(
+                  amount: amt,
+                  method: method,
+                  transactionId: txIdController.text.trim(),
+                  referenceNumber: refNumController.text.trim(),
+                  notes: notesController.text.trim(),
+                  date: txDateTime,
+                );
+
+                final updatedSettlements = widget.pool.settlements.map((s) => s.id == rec.id ? updatedRecord : s).toList();
+
+                final updatedActivities = List<PoolActivity>.from(widget.pool.activities)
+                  ..add(PoolActivity(
+                    id: const Uuid().v4(),
+                    type: 'settlement_edited',
+                    description: 'Updated settlement payout of ${widget.currency}${amt.toStringAsFixed(0)} to ${rec.contributorName} via $method',
+                    timestamp: DateTime.now(),
+                    userId: 'Me',
+                  ));
+
+                final newSplits = _calculateSettlementSplit(widget.pool.copyWith(settlements: updatedSettlements));
+                double netOutstanding = 0.0;
+                newSplits.forEach((key, val) {
+                  netOutstanding += (val['outstanding'] as double);
+                });
+
+                String poolSettleStatus = 'Partially Settled';
+                if (netOutstanding < 1.0) {
+                  poolSettleStatus = 'Settled';
+                } else {
+                  final totalPaid = updatedSettlements.fold(0.0, (sum, s) => sum + s.amount);
+                  if (totalPaid == 0) poolSettleStatus = 'Pending';
+                }
+
+                final updatedPool = widget.pool.copyWith(
+                  settlements: updatedSettlements,
+                  settlementStatus: poolSettleStatus,
+                  activities: updatedActivities,
+                );
+
+                ref.read(mockDatabaseProvider.notifier).updateIpoPool(updatedPool);
+                Navigator.pop(context);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Payout updated successfully')),
+                );
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
+              child: const Text('Save', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeleteSettlement(SettlementRecord rec) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Payout?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Text('Are you sure you want to delete the settlement payout of ${widget.currency}${rec.amount.toStringAsFixed(0)} to ${rec.contributorName}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final updatedSettlements = widget.pool.settlements.where((s) => s.id != rec.id).toList();
+
+              final updatedActivities = List<PoolActivity>.from(widget.pool.activities)
+                ..add(PoolActivity(
+                  id: const Uuid().v4(),
+                  type: 'settlement_deleted',
+                  description: 'Deleted settlement payout of ${widget.currency}${rec.amount.toStringAsFixed(0)} to ${rec.contributorName}',
+                  timestamp: DateTime.now(),
+                  userId: 'Me',
+                ));
+
+              final newSplits = _calculateSettlementSplit(widget.pool.copyWith(settlements: updatedSettlements));
+              double netOutstanding = 0.0;
+              newSplits.forEach((key, val) {
+                netOutstanding += (val['outstanding'] as double);
+              });
+
+              String poolSettleStatus = 'Partially Settled';
+              if (netOutstanding < 1.0) {
+                poolSettleStatus = 'Settled';
+              } else {
+                final totalPaid = updatedSettlements.fold(0.0, (sum, s) => sum + s.amount);
+                if (totalPaid == 0) poolSettleStatus = 'Pending';
+              }
+
+              final updatedPool = widget.pool.copyWith(
+                settlements: updatedSettlements,
+                settlementStatus: poolSettleStatus,
+                activities: updatedActivities,
+              );
+
+              ref.read(mockDatabaseProvider.notifier).updateIpoPool(updatedPool);
+              Navigator.pop(context);
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Payout deleted successfully')),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkDanger),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
@@ -886,6 +1185,7 @@ class _IpoSettlementCenterTabState extends ConsumerState<IpoSettlementCenterTab>
       margin: const EdgeInsets.only(bottom: 10),
       child: GlassCard(
         padding: const EdgeInsets.all(12),
+        onTap: () => _showEditSettlementDialog(rec),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [

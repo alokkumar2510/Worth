@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/glass_card.dart';
@@ -392,6 +393,53 @@ class _IpoNotesActivityCenterState extends ConsumerState<IpoNotesActivityCenter>
     ref.read(mockDatabaseProvider.notifier).updateIpoPool(updatedPool);
   }
 
+  Widget _buildAuditLogPanel(IpoPool pool) {
+    DateTime lastEdited = pool.createdAt;
+    if (pool.activities.isNotEmpty) {
+      final activityTimes = pool.activities.map((a) => a.timestamp);
+      lastEdited = activityTimes.reduce((a, b) => a.isAfter(b) ? a : b);
+    }
+    final createdStr = DateFormat('dd MMM yyyy, hh:mm a').format(pool.createdAt.toLocal());
+    final updatedStr = DateFormat('dd MMM yyyy, hh:mm a').format(lastEdited.toLocal());
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 24.0, bottom: 32.0),
+      child: GlassCard(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'AUDIT LOG INFORMATION',
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: AppColors.grey500,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Created At', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                Text(createdStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Last Edited', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                Text(updatedStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final pool = widget.pool;
@@ -412,21 +460,34 @@ class _IpoNotesActivityCenterState extends ConsumerState<IpoNotesActivityCenter>
         // Timeline Feed
         Expanded(
           child: feed.isEmpty
-              ? EmptyStateWidget(
-                  icon: Icons.history_edu_outlined,
-                  title: 'No Activity Found',
-                  description: 'Unified notes and logs will appear here. Tap Add Note to log messages.',
-                  action: ElevatedButton.icon(
-                    onPressed: () => _showNoteSheet(),
-                    icon: const Icon(Icons.add, color: Colors.white),
-                    label: const Text('Add Note', style: TextStyle(color: Colors.white)),
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
+              ? SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 32),
+                      EmptyStateWidget(
+                        icon: Icons.history_edu_outlined,
+                        title: 'No Activity Found',
+                        description: 'Unified notes and logs will appear here. Tap Add Note to log messages.',
+                        action: ElevatedButton.icon(
+                          onPressed: () => _showNoteSheet(),
+                          icon: const Icon(Icons.add, color: Colors.white),
+                          label: const Text('Add Note', style: TextStyle(color: Colors.white)),
+                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildAuditLogPanel(pool),
+                    ],
                   ),
                 )
               : ListView.builder(
                   padding: const EdgeInsets.only(left: 20, right: 16, top: 12, bottom: 32),
-                  itemCount: feed.length,
+                  itemCount: feed.length + 1,
                   itemBuilder: (context, index) {
+                    if (index == feed.length) {
+                      return _buildAuditLogPanel(pool);
+                    }
                     final item = feed[index];
                     if (item is PoolNote) {
                       return _buildTimelineNoteRow(item, index == feed.length - 1);

@@ -434,11 +434,11 @@ final wealthIntelligenceProvider = Provider<WealthIntelligenceData>((ref) {
   final List<FlSpot> trendSpots = [];
   final List<String> trendDates = [];
   for (int i = 0; i < sortedSnaps.length; i++) {
-    trendSpots.add(FlSpot(i.toDouble(), sortedSnaps[i].netWorth));
+    trendSpots.add(FlSpot(sortedSnaps[i].snapshotDate.millisecondsSinceEpoch.toDouble(), sortedSnaps[i].netWorth));
     trendDates.add(DateFormat('MMM yy').format(sortedSnaps[i].snapshotDate.toLocal()));
   }
   // Add current net worth as the final curve spot
-  trendSpots.add(FlSpot(trendSpots.length.toDouble(), currentNetWorth));
+  trendSpots.add(FlSpot(now.millisecondsSinceEpoch.toDouble(), currentNetWorth));
   trendDates.add(DateFormat('MMM yy').format(now.toLocal()));
 
   // 9. Growth History

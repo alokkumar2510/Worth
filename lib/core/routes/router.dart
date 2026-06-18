@@ -40,6 +40,9 @@ import '../../features/achievements/presentation/screens/achievements_screen.dar
 import '../../features/portfolio/presentation/screens/sip_dashboard_screen.dart';
 import '../../features/checkins/presentation/screens/check_in_settings_screen.dart';
 import '../../features/spending/presentation/screens/spending_screen.dart';
+import '../../features/portfolio/presentation/screens/mtf_detail_screen.dart';
+import '../../features/settings/presentation/screens/categories_labels_screen.dart';
+import '../../features/settings/presentation/screens/archive_center_screen.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -529,6 +532,17 @@ final routerProvider = Provider<GoRouter>((ref) {
                       );
                     },
                   ),
+                  GoRoute(
+                    path: 'mtf/:id',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return buildPremiumTransitionPage(
+                        state: state,
+                        child: MtfDetailScreen(mtfPositionId: id),
+                      );
+                    },
+                  ),
                 ],
               ),
             ],
@@ -575,6 +589,22 @@ final routerProvider = Provider<GoRouter>((ref) {
                     pageBuilder: (context, state) => buildPremiumTransitionPage(
                       state: state,
                       child: const CheckInSettingsScreen(),
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'categories_labels',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) => buildPremiumTransitionPage(
+                      state: state,
+                      child: const CategoriesLabelsScreen(),
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'archive_center',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) => buildPremiumTransitionPage(
+                      state: state,
+                      child: const ArchiveCenterScreen(),
                     ),
                   ),
                   GoRoute(

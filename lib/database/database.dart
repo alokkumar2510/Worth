@@ -59,7 +59,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 11; // Bumping version for MTF Date fixes
+  int get schemaVersion => 12; // Bumping version for soft delete columns
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -158,6 +158,32 @@ class AppDatabase extends _$AppDatabase {
           if (from < 11) {
             await m.addColumn(mtfPositions, mtfPositions.purchaseDate);
             await m.addColumn(mtfPositions, mtfPositions.purchaseTime);
+          }
+          if (from < 12) {
+            // Accounts
+            await m.addColumn(accounts, accounts.deletedAt);
+            await m.addColumn(accounts, accounts.deletedBy);
+            // People
+            await m.addColumn(people, people.deletedAt);
+            await m.addColumn(people, people.deletedBy);
+            // Investments
+            await m.addColumn(investments, investments.deletedAt);
+            await m.addColumn(investments, investments.deletedBy);
+            // MtfPositions
+            await m.addColumn(mtfPositions, mtfPositions.deletedAt);
+            await m.addColumn(mtfPositions, mtfPositions.deletedBy);
+            // ExpectedIncomes
+            await m.addColumn(expectedIncomes, expectedIncomes.deletedAt);
+            await m.addColumn(expectedIncomes, expectedIncomes.deletedBy);
+            // Goals
+            await m.addColumn(goals, goals.deletedAt);
+            await m.addColumn(goals, goals.deletedBy);
+            // Transactions
+            await m.addColumn(transactions, transactions.deletedAt);
+            await m.addColumn(transactions, transactions.deletedBy);
+            // Sips
+            await m.addColumn(sips, sips.deletedAt);
+            await m.addColumn(sips, sips.deletedBy);
           }
         },
       );

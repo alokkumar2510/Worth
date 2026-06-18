@@ -83,6 +83,16 @@ class AuthRepositoryImpl implements AuthRepository {
     await _firebaseAuth.signOut();
   }
 
+  @override
+  Future<void> updateDisplayName(String name) async {
+    final user = _firebaseAuth.currentUser;
+    if (user != null) {
+      await user.updateDisplayName(name);
+      await _updateUserProfile(user, displayName: name);
+      await user.reload();
+    }
+  }
+
   Future<void> _updateUserProfile(User user, {String? displayName}) async {
     final userRef = _firestore.collection('users').doc(user.uid);
     await userRef.set({

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:collection/collection.dart';
 
+import '../../../../core/widgets/calculation_audit_panel.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/providers/mock_database.dart';
@@ -271,11 +272,9 @@ class _ExpectedIncomeDetailScreenState extends ConsumerState<ExpectedIncomeDetai
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        
-        
         title: const Text('Delete Expected Income?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         content: const Text(
-          'This action cannot be undone.',
+          'Are you sure you want to delete this expected income? This will hide it from all views and calculations. You can undo this action immediately.',
           style: TextStyle(color: AppColors.grey400, fontSize: 13, height: 1.4),
         ),
         actions: [
@@ -285,11 +284,22 @@ class _ExpectedIncomeDetailScreenState extends ConsumerState<ExpectedIncomeDetai
           ),
           ElevatedButton(
             onPressed: () async {
-              await ref.read(mockDatabaseProvider.notifier).deleteExpectedIncome(item.id);
-              Navigator.pop(context);
-              context.pop();
+              Navigator.pop(context); // close dialog
+              final notifier = ref.read(mockDatabaseProvider.notifier);
+              await notifier.deleteExpectedIncomeSoft(item.id);
+              context.pop(); // pop details screen
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Expected income "${item.source}" deleted.')),
+                SnackBar(
+                  content: Text('Expected income "${item.source}" deleted.'),
+                  action: SnackBarAction(
+                    label: 'Undo',
+                    textColor: AppColors.darkPrimary,
+                    onPressed: () {
+                      notifier.restoreExpectedIncome(item);
+                    },
+                  ),
+                  duration: const Duration(seconds: 5),
+                ),
               );
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkDanger, foregroundColor: Colors.white),
@@ -321,6 +331,9 @@ class _ExpectedIncomeDetailScreenState extends ConsumerState<ExpectedIncomeDetai
     if (inc.status == 'received') statusColor = AppColors.darkSuccess;
     if (inc.status == 'expired') statusColor = AppColors.grey500;
 
+    final createdStr = DateFormat('dd MMM yyyy, hh:mm a').format(inc.createdAt.toLocal());
+    final updatedStr = DateFormat('dd MMM yyyy, hh:mm a').format(inc.updatedAt.toLocal());
+
     return Scaffold(
       appBar: AppBar(
         title: Text(inc.source, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
@@ -335,9 +348,10 @@ class _ExpectedIncomeDetailScreenState extends ConsumerState<ExpectedIncomeDetai
                 _showAdjustAmountDialog(context, inc, dbState.getExpectedIncomeAmount(inc.id));
               } else if (value == 'view_history') {
                 showAdjustmentHistorySheet(context, inc.id, 'expected_income', inc.source);
-              } else if (value == 'archive') {
+              } else if (value == 'duplicate') {
+                ref.read(mockDatabaseProvider.notifier).duplicateExpectedIncome(inc.id);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Expected income cannot be archived.')),
+                  SnackBar(content: Text('Expected income "${inc.source}" duplicated.')),
                 );
               } else if (value == 'delete') {
                 _confirmDeleteExpectedIncome(context, inc);
@@ -357,8 +371,8 @@ class _ExpectedIncomeDetailScreenState extends ConsumerState<ExpectedIncomeDetai
                 child: Text('View History', style: TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
-                value: 'archive',
-                child: Text('Archive', style: TextStyle(color: Colors.white)),
+                value: 'duplicate',
+                child: Text('Duplicate', style: TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
                 value: 'delete',
@@ -425,6 +439,32 @@ class _ExpectedIncomeDetailScreenState extends ConsumerState<ExpectedIncomeDetai
               ),
               const SizedBox(height: 24),
 
+              Builder(
+                builder: (context) {
+                  final double original = inc.amount;
+                  final double adjs = dbState.adjustments
+                      .where((a) => a.entityId == inc.id && a.entityType == 'expected_income')
+                      .fold(0.0, (sum, a) => sum + a.adjustedAmount);
+                  final double expectedTotal = dbState.getExpectedIncomeAmount(inc.id);
+
+                  return CalculationAuditPanel(
+                    title: 'Verify Expected Income Calculation',
+                    formula: 'Expected Value = Original Expected Amount + Adjustments',
+                    inputs: {
+                      'Original Amount': format.format(original),
+                      'Adjustments': format.format(adjs),
+                    },
+                    output: format.format(expectedTotal),
+                    steps: [
+                      'Retrieve the original expected income amount: ${format.format(original)}.',
+                      'Sum all adjustments applied to this expected income: ${format.format(adjs)}.',
+                      'Calculate final expected value: Original (${format.format(original)}) + Adjustments (${format.format(adjs)}) = ${format.format(expectedTotal)}.',
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+
               if (inc.notes != null) ...[
                 Text(
                   'Notes',
@@ -463,6 +503,37 @@ class _ExpectedIncomeDetailScreenState extends ConsumerState<ExpectedIncomeDetai
                   ),
                 ),
               ],
+              const SizedBox(height: 24),
+              GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'AUDIT LOG INFORMATION',
+                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Created At', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                          Text(createdStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Last Edited', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                          Text(updatedStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),

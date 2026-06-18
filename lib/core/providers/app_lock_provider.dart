@@ -37,23 +37,12 @@ class AppLockNotifier extends StateNotifier<AppLockState> {
   bool _hasAttemptedStartupLock = false;
 
   AppLockNotifier(this._ref)
-      : super(AppLockState(lockState: LockState.unlocked)) {
-    // Listen to mockDatabaseProvider to check if app lock is enabled on startup (cold start)
-    _ref.listen<MockDatabaseState>(
-      mockDatabaseProvider,
-      (previous, next) {
-        if (!_hasAttemptedStartupLock) {
-          if (next.appLockEnabled) {
-            state = state.copyWith(lockState: LockState.locked);
-            _hasAttemptedStartupLock = true;
-          } else if (previous != null) {
-            // Database loaded and appLockEnabled is false
-            _hasAttemptedStartupLock = true;
-          }
-        }
-      },
-      fireImmediately: true,
-    );
+      : super(AppLockState(lockState: LockState.unlocked));
+
+  bool get hasAttemptedStartupLock => _hasAttemptedStartupLock;
+
+  void markStartupLockAttempted() {
+    _hasAttemptedStartupLock = true;
   }
 
   void lockImmediately() {

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:collection/collection.dart';
 
+import '../../../../core/widgets/calculation_audit_panel.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/providers/mock_database.dart';
@@ -262,11 +263,9 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        
-        
         title: const Text('Delete Investment?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         content: const Text(
-          'This action cannot be undone.',
+          'Are you sure you want to delete this investment? This will hide it from all views and calculations. You can undo this action immediately.',
           style: TextStyle(color: AppColors.grey400, fontSize: 13, height: 1.4),
         ),
         actions: [
@@ -276,26 +275,23 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
           ),
           ElevatedButton(
             onPressed: () async {
-              final success = await ref.read(mockDatabaseProvider.notifier).deleteInvestment(inv.id);
-              Navigator.pop(context);
-              if (success) {
-                context.pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Investment "${inv.name}" deleted.')),
-                );
-              } else {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    
-                    title: const Text('Cannot Delete Investment', style: TextStyle(color: Colors.white)),
-                    content: const Text('This investment has transaction lots associated with it. Please delete transactions or archive the investment.', style: TextStyle(color: AppColors.grey400)),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK', style: TextStyle(color: AppColors.darkPrimary))),
-                    ],
+              Navigator.pop(context); // close dialog
+              final notifier = ref.read(mockDatabaseProvider.notifier);
+              await notifier.deleteInvestmentSoft(inv.id);
+              context.pop(); // pop details screen
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Investment "${inv.name}" deleted.'),
+                  action: SnackBarAction(
+                    label: 'Undo',
+                    textColor: AppColors.darkPrimary,
+                    onPressed: () {
+                      notifier.restoreInvestment(inv);
+                    },
                   ),
-                );
-              }
+                  duration: const Duration(seconds: 5),
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkDanger, foregroundColor: Colors.white),
             child: const Text('Delete'),
@@ -622,6 +618,9 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
     final lots = dbState.investmentLots.where((l) => l.investmentId == inv.id).toList();
     final txs = dbState.transactions.where((t) => t.investmentId == inv.id && t.voidedTransactionId == null).toList();
 
+    final createdStr = DateFormat('dd MMM yyyy, hh:mm a').format(inv.createdAt.toLocal());
+    final updatedStr = DateFormat('dd MMM yyyy, hh:mm a').format(inv.updatedAt.toLocal());
+
     return Scaffold(
       appBar: AppBar(
         title: Text(inv.name, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
@@ -638,11 +637,21 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                 _showChooseAdjustmentTypeDialog(context, ref, inv, cap, value);
               } else if (menuVal == 'view_history') {
                 showAdjustmentHistorySheet(context, inv.id, 'investment', inv.name);
+              } else if (menuVal == 'duplicate') {
+                ref.read(mockDatabaseProvider.notifier).duplicateInvestment(inv.id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Investment "${inv.name}" duplicated.')),
+                );
               } else if (menuVal == 'archive') {
                 ref.read(mockDatabaseProvider.notifier).archiveInvestment(inv.id);
                 context.pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Investment "${inv.name}" archived.')),
+                );
+              } else if (menuVal == 'restore') {
+                ref.read(mockDatabaseProvider.notifier).unarchiveInvestment(inv.id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Investment "${inv.name}" unarchived successfully.')),
                 );
               } else if (menuVal == 'delete') {
                 _confirmDeleteInvestment(inv);
@@ -666,8 +675,12 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                 child: Text('View History', style: TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
-                value: 'archive',
-                child: Text('Archive', style: TextStyle(color: Colors.white)),
+                value: 'duplicate',
+                child: Text('Duplicate', style: TextStyle(color: Colors.white)),
+              ),
+              PopupMenuItem(
+                value: inv.isArchived == 1 ? 'restore' : 'archive',
+                child: Text(inv.isArchived == 1 ? 'Restore from Archive' : 'Archive', style: const TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
                 value: 'delete',
@@ -779,6 +792,43 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                 ],
               ),
               const SizedBox(height: 20),
+
+              Builder(
+                builder: (context) {
+                  final double mvAdjs = dbState.adjustments
+                      .where((a) => a.entityId == inv.id && a.entityType == 'investment_market_value')
+                      .fold(0.0, (sum, a) => sum + a.adjustedAmount);
+                  final double capAdjs = dbState.adjustments
+                      .where((a) => a.entityId == inv.id && a.entityType == 'investment_capital')
+                      .fold(0.0, (sum, a) => sum + a.adjustedAmount);
+
+                  return CalculationAuditPanel(
+                    title: 'Verify Investment Calculations',
+                    formula: 'Market Value = (Live Price * Units Held) + MV Adjustments\n'
+                        'Invested Capital = Sum(lot.unitsRemaining * lot.costPerUnit) + Capital Adjustments\n'
+                        'Unrealized Gain = Market Value - Invested Capital',
+                    inputs: {
+                      'Live Price / Unit': format.format(inv.marketValue ?? 0.0),
+                      'Units Held': units.toStringAsFixed(4),
+                      'Market Value Adjustments': format.format(mvAdjs),
+                      'Capital Adjustments': format.format(capAdjs),
+                      'Computed Market Value': format.format(value),
+                      'Computed Invested Capital': format.format(cap),
+                    },
+                    output: 'Unrealized Gain: ${format.format(unrealized)}',
+                    steps: [
+                      'Get the current price per unit: ${format.format(inv.marketValue ?? 0.0)}.',
+                      'Calculate current units held by summing remaining lots: ${units.toStringAsFixed(4)} units.',
+                      'Calculate initial market value: Price * Units = ${format.format((inv.marketValue ?? 0.0) * units)}.',
+                      'Apply market value adjustments (${format.format(mvAdjs)}) to get final Market Value: ${format.format(value)}.',
+                      'Sum cost basis of remaining lots plus capital adjustments (${format.format(capAdjs)}) to get Invested Capital: ${format.format(cap)}.',
+                      'Calculate Unrealized Gain: Market Value (${format.format(value)}) - Invested Capital (${format.format(cap)}) = ${format.format(unrealized)}.',
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+
               _buildSipSection(inv, currency, sip),
               const SizedBox(height: 28),
 
@@ -883,6 +933,37 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                     );
                   },
                 ),
+              const SizedBox(height: 24),
+              GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'AUDIT LOG INFORMATION',
+                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Created At', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                          Text(createdStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Last Edited', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                          Text(updatedStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),

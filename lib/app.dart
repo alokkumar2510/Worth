@@ -63,6 +63,9 @@ class _WorthAppState extends ConsumerState<WorthApp> {
       final db = ref.read(realDatabaseProvider);
       await seedDatabaseIfEmpty(db);
 
+      // Request notifications permission on startup
+      await ref.read(realNotificationServiceProvider).requestPermissions();
+
       // Start background reminder scheduler
       ref.read(realReminderSchedulerProvider).start();
 

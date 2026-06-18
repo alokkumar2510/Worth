@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:collection/collection.dart';
 
+import '../../../../core/widgets/calculation_audit_panel.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/providers/mock_database.dart';
@@ -245,15 +246,13 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
     }
   }
 
-  void _confirmDeleteLiability(BuildContext context, bool isAccount, String cleanId, String name) {
+  void _confirmDeleteLiability(BuildContext context, bool isAccount, dynamic originalItem, String name) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        
-        
         title: const Text('Delete Liability?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         content: const Text(
-          'This action cannot be undone.',
+          'Are you sure you want to delete this liability? This will hide it from all views and calculations. You can undo this action immediately.',
           style: TextStyle(color: AppColors.grey400, fontSize: 13, height: 1.4),
         ),
         actions: [
@@ -263,32 +262,31 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
+              Navigator.pop(context); // close dialog
               final notifier = ref.read(mockDatabaseProvider.notifier);
-              bool success = false;
               if (isAccount) {
-                success = await notifier.deleteAccountEmpty(cleanId);
+                await notifier.deleteAccountSoft(originalItem.id);
               } else {
-                success = await notifier.deletePerson(cleanId);
+                await notifier.deletePersonSoft(originalItem.id);
               }
-              Navigator.pop(context);
-              if (success) {
-                context.pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Liability "$name" deleted.')),
-                );
-              } else {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    
-                    title: const Text('Cannot Delete Liability', style: TextStyle(color: Colors.white)),
-                    content: const Text('This liability contains active transactions. Please delete transactions or archive the liability instead.', style: TextStyle(color: AppColors.grey400)),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK', style: TextStyle(color: AppColors.darkPrimary))),
-                    ],
+              context.pop(); // pop details screen
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Liability "$name" deleted.'),
+                  action: SnackBarAction(
+                    label: 'Undo',
+                    textColor: AppColors.darkPrimary,
+                    onPressed: () {
+                      if (isAccount) {
+                        ref.read(mockDatabaseProvider.notifier).restoreAccount(originalItem);
+                      } else {
+                        ref.read(mockDatabaseProvider.notifier).restorePerson(originalItem);
+                      }
+                    },
                   ),
-                );
-              }
+                  duration: const Duration(seconds: 5),
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkDanger, foregroundColor: Colors.white),
             child: const Text('Delete'),
@@ -311,6 +309,10 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
     String? notes;
     double outstanding = 0.0;
     List<Transaction> txs = [];
+    int isArchived = 0;
+    DateTime createdAt = DateTime.now();
+    DateTime updatedAt = DateTime.now();
+    dynamic originalItem;
 
     if (isAccount) {
       final acc = dbState.accounts.firstWhereOrNull((a) => a.id == cleanId);
@@ -320,6 +322,10 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
         notes = acc.notes;
         outstanding = dbState.getAccountLiabilityBalance(cleanId);
         txs = dbState.transactions.where((t) => (t.fromAccountId == cleanId || t.toAccountId == cleanId) && t.voidedTransactionId == null).toList();
+        isArchived = acc.isArchived;
+        createdAt = acc.createdAt;
+        updatedAt = acc.updatedAt;
+        originalItem = acc;
       }
     } else {
       final person = dbState.people.firstWhereOrNull((p) => p.id == cleanId);
@@ -329,16 +335,22 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
         notes = person.notes;
         outstanding = dbState.getPersonLiabilityBalance(cleanId);
         txs = dbState.transactions.where((t) => t.personId == cleanId && t.voidedTransactionId == null && (t.type == 'borrow_money' || t.type == 'repay_money')).toList();
+        isArchived = person.isArchived;
+        createdAt = person.createdAt;
+        updatedAt = person.updatedAt;
+        originalItem = person;
       }
     }
 
-    if (name.isEmpty) {
+    if (name.isEmpty || originalItem == null) {
       return Scaffold(
         appBar: AppBar(),
         body: const Center(child: Text('Liability not found.', style: TextStyle(color: Colors.white))),
       );
     }
 
+    final createdStr = DateFormat('dd MMM yyyy, hh:mm a').format(createdAt.toLocal());
+    final updatedStr = DateFormat('dd MMM yyyy, hh:mm a').format(updatedAt.toLocal());
     final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
 
     return Scaffold(
@@ -360,6 +372,15 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
                   isAccount ? 'account' : 'person_liability',
                   name,
                 );
+              } else if (value == 'duplicate') {
+                if (isAccount) {
+                  ref.read(mockDatabaseProvider.notifier).duplicateAccount(cleanId);
+                } else {
+                  ref.read(mockDatabaseProvider.notifier).duplicatePerson(cleanId);
+                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Liability "$name" duplicated.')),
+                );
               } else if (value == 'archive') {
                 final notifier = ref.read(mockDatabaseProvider.notifier);
                 if (isAccount) {
@@ -371,8 +392,18 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Liability "$name" archived.')),
                 );
+              } else if (value == 'restore') {
+                final notifier = ref.read(mockDatabaseProvider.notifier);
+                if (isAccount) {
+                  notifier.unarchiveAccount(cleanId);
+                } else {
+                  notifier.unarchivePerson(cleanId);
+                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Liability "$name" unarchived successfully.')),
+                );
               } else if (value == 'delete') {
-                _confirmDeleteLiability(context, isAccount, cleanId, name);
+                _confirmDeleteLiability(context, isAccount, originalItem, name);
               }
             },
             itemBuilder: (context) => [
@@ -389,8 +420,12 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
                 child: Text('View History', style: TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
-                value: 'archive',
-                child: Text('Archive', style: TextStyle(color: Colors.white)),
+                value: 'duplicate',
+                child: Text('Duplicate', style: TextStyle(color: Colors.white)),
+              ),
+              PopupMenuItem(
+                value: isArchived == 1 ? 'restore' : 'archive',
+                child: Text(isArchived == 1 ? 'Restore from Archive' : 'Archive', style: const TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
                 value: 'delete',
@@ -442,6 +477,77 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
                 ),
               const SizedBox(height: 24),
 
+              Builder(
+                builder: (context) {
+                  if (isAccount) {
+                    final double openingBalance = txs
+                        .where((t) => t.toAccountId == cleanId && t.voidedTransactionId == null && t.type == 'borrow_money')
+                        .fold(0.0, (sum, t) => sum + t.amount);
+                    final double purchases = txs
+                        .where((t) => t.fromAccountId == cleanId && t.voidedTransactionId == null && t.type != 'void')
+                        .fold(0.0, (sum, t) => sum + t.amount);
+                    final double interest = txs
+                        .where((t) => t.toAccountId == cleanId && t.voidedTransactionId == null && t.type == 'interest_accrued')
+                        .fold(0.0, (sum, t) => sum + t.amount);
+                    final double payments = txs
+                        .where((t) => t.toAccountId == cleanId && t.voidedTransactionId == null && t.type != 'borrow_money' && t.type != 'interest_accrued' && t.type != 'void')
+                        .fold(0.0, (sum, t) => sum + t.amount);
+                    final double adjs = dbState.adjustments
+                        .where((a) => a.entityId == cleanId && a.entityType == 'account')
+                        .fold(0.0, (sum, a) => sum + a.adjustedAmount);
+
+                    return CalculationAuditPanel(
+                      title: 'Verify Liability Calculation',
+                      formula: 'Outstanding Balance = Opening Balance + Purchases + Interest - Payments + Adjustments',
+                      inputs: {
+                        'Opening Balance': format.format(openingBalance),
+                        'Purchases / Spending': format.format(purchases),
+                        'Interest Accrued': format.format(interest),
+                        'Payments / Credits': format.format(payments),
+                        'Adjustments': format.format(adjs),
+                      },
+                      output: format.format(outstanding),
+                      steps: [
+                        'Start with opening balance (borrowings): ${format.format(openingBalance)}.',
+                        'Add purchases / spending on credit card: ${format.format(purchases)}.',
+                        'Add interest accrued: ${format.format(interest)}.',
+                        'Subtract payments and other credits received: ${format.format(payments)}.',
+                        'Add applied balance adjustments: ${format.format(adjs)}.',
+                        'Compute outstanding amount: Opening Balance (${format.format(openingBalance)}) + Purchases (${format.format(purchases)}) + Interest (${format.format(interest)}) - Payments (${format.format(payments)}) + Adjustments (${format.format(adjs)}) = ${format.format(outstanding)}.',
+                      ],
+                    );
+                  } else {
+                    final double borrowed = txs
+                        .where((t) => t.personId == cleanId && t.voidedTransactionId == null && t.type == 'borrow_money')
+                        .fold(0.0, (sum, t) => sum + t.amount);
+                    final double repayments = txs
+                        .where((t) => t.personId == cleanId && t.voidedTransactionId == null && t.type == 'repay_money')
+                        .fold(0.0, (sum, t) => sum + t.amount);
+                    final double adjs = dbState.adjustments
+                        .where((a) => a.entityId == cleanId && a.entityType == 'person_liability')
+                        .fold(0.0, (sum, a) => sum + a.adjustedAmount);
+
+                    return CalculationAuditPanel(
+                      title: 'Verify Loan Calculation',
+                      formula: 'Outstanding Balance = Borrowed - Repayments + Adjustments',
+                      inputs: {
+                        'Total Borrowed': format.format(borrowed),
+                        'Total Repayments': format.format(repayments),
+                        'Adjustments': format.format(adjs),
+                      },
+                      output: format.format(outstanding),
+                      steps: [
+                        'Sum all funds borrowed from this individual: ${format.format(borrowed)}.',
+                        'Sum all repayments made to this individual: ${format.format(repayments)}.',
+                        'Sum all adjustments applied to this liability: ${format.format(adjs)}.',
+                        'Calculate outstanding balance: Borrowed (${format.format(borrowed)}) - Repayments (${format.format(repayments)}) + Adjustments (${format.format(adjs)}) = ${format.format(outstanding)}.',
+                      ],
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: 24),
+
               if (notes != null) ...[
                 Text(
                   'Notes',
@@ -476,9 +582,9 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
                   itemBuilder: (context, index) {
                     final tx = txs[index];
                     final isVoided = tx.voidedTransactionId != null || tx.type == 'void';
-                    
+
                     final isRepayment = tx.type == 'repay_money' || (isAccount && tx.toAccountId == cleanId);
-                    
+
                     final color = isRepayment ? AppColors.darkSuccess : AppColors.darkDanger;
                     final prefix = isRepayment ? '-' : '+';
 
@@ -519,6 +625,37 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
                     );
                   },
                 ),
+              const SizedBox(height: 24),
+              GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'AUDIT LOG INFORMATION',
+                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Created At', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                          Text(createdStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Last Edited', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                          Text(updatedStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -550,7 +687,7 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
             onPressed: () async {
               final newAmt = double.tryParse(controller.text.trim());
               if (newAmt == null) return;
-              
+
               Navigator.pop(context); // close input dialog
 
               // 1. Show Warning

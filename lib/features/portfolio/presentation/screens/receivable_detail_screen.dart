@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:collection/collection.dart';
 
+import '../../../../core/widgets/calculation_audit_panel.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/providers/mock_database.dart';
@@ -173,11 +174,9 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        
-        
         title: const Text('Delete Receivable?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         content: const Text(
-          'This action cannot be undone.',
+          'Are you sure you want to delete this receivable? This will hide it from all views and calculations. You can undo this action immediately.',
           style: TextStyle(color: AppColors.grey400, fontSize: 13, height: 1.4),
         ),
         actions: [
@@ -187,26 +186,23 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
           ),
           ElevatedButton(
             onPressed: () async {
-              final success = await ref.read(mockDatabaseProvider.notifier).deletePerson(person.id);
-              Navigator.pop(context);
-              if (success) {
-                context.pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Receivable "${person.name}" deleted.')),
-                );
-              } else {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    
-                    title: const Text('Cannot Delete Receivable', style: TextStyle(color: Colors.white)),
-                    content: const Text('This receivable has transaction logs. Please delete transactions or archive it instead.', style: TextStyle(color: AppColors.grey400)),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK', style: TextStyle(color: AppColors.darkPrimary))),
-                    ],
+              Navigator.pop(context); // close dialog
+              final notifier = ref.read(mockDatabaseProvider.notifier);
+              await notifier.deletePersonSoft(person.id);
+              context.pop(); // pop details screen
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Receivable "${person.name}" deleted.'),
+                  action: SnackBarAction(
+                    label: 'Undo',
+                    textColor: AppColors.darkPrimary,
+                    onPressed: () {
+                      notifier.restorePerson(person);
+                    },
                   ),
-                );
-              }
+                  duration: const Duration(seconds: 5),
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkDanger, foregroundColor: Colors.white),
             child: const Text('Delete'),
@@ -234,6 +230,8 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
     final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
     
     final txs = dbState.transactions.where((t) => t.personId == person.id && t.voidedTransactionId == null && (t.type == 'lend_money' || t.type == 'recover_money')).toList();
+    final createdStr = DateFormat('dd MMM yyyy, hh:mm a').format(person.createdAt.toLocal());
+    final updatedStr = DateFormat('dd MMM yyyy, hh:mm a').format(person.updatedAt.toLocal());
 
     return Scaffold(
       appBar: AppBar(
@@ -249,11 +247,21 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
                 _showAdjustAmountDialog(context, ref, person, outstanding);
               } else if (value == 'view_history') {
                 showAdjustmentHistorySheet(context, person.id, 'person_receivable', person.name);
+              } else if (value == 'duplicate') {
+                ref.read(mockDatabaseProvider.notifier).duplicatePerson(person.id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Receivable "${person.name}" duplicated.')),
+                );
               } else if (value == 'archive') {
                 ref.read(mockDatabaseProvider.notifier).archivePerson(person.id);
                 context.pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Receivable "${person.name}" archived.')),
+                );
+              } else if (value == 'restore') {
+                ref.read(mockDatabaseProvider.notifier).unarchivePerson(person.id);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Receivable "${person.name}" unarchived successfully.')),
                 );
               } else if (value == 'delete') {
                 _confirmDeleteReceivable(context, person);
@@ -273,8 +281,12 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
                 child: Text('View History', style: TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
-                value: 'archive',
-                child: Text('Archive', style: TextStyle(color: Colors.white)),
+                value: 'duplicate',
+                child: Text('Duplicate', style: TextStyle(color: Colors.white)),
+              ),
+              PopupMenuItem(
+                value: person.isArchived == 1 ? 'restore' : 'archive',
+                child: Text(person.isArchived == 1 ? 'Restore from Archive' : 'Archive', style: const TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
                 value: 'delete',
@@ -341,6 +353,38 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
                 const SizedBox(height: 24),
               ],
 
+              Builder(
+                builder: (context) {
+                  final double lent = txs
+                      .where((t) => t.personId == person.id && t.voidedTransactionId == null && t.type == 'lend_money')
+                      .fold(0.0, (sum, t) => sum + t.amount);
+                  final double recoveries = txs
+                      .where((t) => t.personId == person.id && t.voidedTransactionId == null && t.type == 'recover_money')
+                      .fold(0.0, (sum, t) => sum + t.amount);
+                  final double adjs = dbState.adjustments
+                      .where((a) => a.entityId == person.id && a.entityType == 'person_receivable')
+                      .fold(0.0, (sum, a) => sum + a.adjustedAmount);
+
+                  return CalculationAuditPanel(
+                    title: 'Verify Receivable Calculation',
+                    formula: 'Outstanding Balance = Lent - Recoveries + Adjustments',
+                    inputs: {
+                      'Total Lent': format.format(lent),
+                      'Total Recovered': format.format(recoveries),
+                      'Adjustments': format.format(adjs),
+                    },
+                    output: format.format(outstanding),
+                    steps: [
+                      'Sum all funds lent to this individual: ${format.format(lent)}.',
+                      'Sum all recoveries received from this individual: ${format.format(recoveries)}.',
+                      'Sum all adjustments applied to this receivable: ${format.format(adjs)}.',
+                      'Calculate outstanding balance: Lent (${format.format(lent)}) - Recoveries (${format.format(recoveries)}) + Adjustments (${format.format(adjs)}) = ${format.format(outstanding)}.',
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+
               if (person.notes != null) ...[
                 Text(
                   'Notes',
@@ -375,7 +419,7 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
                   itemBuilder: (context, index) {
                     final tx = txs[index];
                     final isVoided = tx.voidedTransactionId != null || tx.type == 'void';
-                    
+
                     final isRecovery = tx.type == 'recover_money';
                     final color = isRecovery ? AppColors.darkSuccess : AppColors.darkDanger;
                     final prefix = isRecovery ? '-' : '+';
@@ -417,6 +461,37 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
                     );
                   },
                 ),
+              const SizedBox(height: 24),
+              GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'AUDIT LOG INFORMATION',
+                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Created At', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                          Text(createdStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Last Edited', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                          Text(updatedStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),

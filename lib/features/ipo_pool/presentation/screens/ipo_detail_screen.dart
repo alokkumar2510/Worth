@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import 'package:collection/collection.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/glass_card.dart';
@@ -63,6 +64,9 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
     _contribPhoneController.clear();
     _contribNotesController.clear();
 
+    DateTime selectedDate = DateTime.now();
+    TimeOfDay selectedTime = TimeOfDay.now();
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -70,142 +74,190 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF13131F),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          border: Border(top: BorderSide(color: AppColors.glassBorder, width: 1.5)),
-        ),
-        padding: EdgeInsets.only(
-          top: 24,
-          left: 24,
-          right: 24,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(color: AppColors.grey700, borderRadius: BorderRadius.circular(2)),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF13131F),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border(top: BorderSide(color: AppColors.glassBorder, width: 1.5)),
+          ),
+          padding: EdgeInsets.only(
+            top: 24,
+            left: 24,
+            right: 24,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(color: AppColors.grey700, borderRadius: BorderRadius.circular(2)),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Add Contributor',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _contribNameController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'Contributor Name',
-                  hintText: 'e.g. Rajesh',
-                  labelStyle: TextStyle(color: AppColors.grey500),
+                const SizedBox(height: 16),
+                Text(
+                  'Add Contributor',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _contribAmountController,
-                style: const TextStyle(color: Colors.white),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Contribution Amount (₹)',
-                  hintText: 'e.g. 30000',
-                  labelStyle: TextStyle(color: AppColors.grey500),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _contribNameController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Contributor Name',
+                    hintText: 'e.g. Rajesh',
+                    labelStyle: TextStyle(color: AppColors.grey500),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _contribPhoneController,
-                style: const TextStyle(color: Colors.white),
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number',
-                  hintText: 'e.g. +91 9876543210',
-                  labelStyle: TextStyle(color: AppColors.grey500),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _contribAmountController,
+                  style: const TextStyle(color: Colors.white),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Contribution Amount (₹)',
+                    hintText: 'e.g. 30000',
+                    labelStyle: TextStyle(color: AppColors.grey500),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _contribNotesController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'Notes',
-                  hintText: 'Any payment reference or remarks',
-                  labelStyle: TextStyle(color: AppColors.grey500),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _contribPhoneController,
+                  style: const TextStyle(color: Colors.white),
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number',
+                    hintText: 'e.g. +91 9876543210',
+                    labelStyle: TextStyle(color: AppColors.grey500),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  final name = _contribNameController.text.trim();
-                  final amount = double.tryParse(_contribAmountController.text.trim()) ?? 0.0;
-                  final phone = _contribPhoneController.text.trim();
-                  final notes = _contribNotesController.text.trim();
-
-                  if (name.isEmpty || amount <= 0) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please enter name and valid contribution amount')),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _contribNotesController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Notes',
+                    hintText: 'Any payment reference or remarks',
+                    labelStyle: TextStyle(color: AppColors.grey500),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Contribution Date: ${DateFormat('dd MMM yyyy').format(selectedDate)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  trailing: const Icon(Icons.calendar_today, color: AppColors.darkPrimary, size: 18),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
                     );
-                    return;
-                  }
-
-                  final newContrib = IpoContributor(
-                    id: const Uuid().v4(),
-                    name: name,
-                    contribution: amount,
-                    phone: phone,
-                    notes: notes,
-                  );
-
-                  final newVerification = PaymentVerification(
-                    id: const Uuid().v4(),
-                    contributorId: newContrib.id,
-                    contributorName: newContrib.name,
-                    expectedAmount: newContrib.contribution,
-                    receivedAmount: 0.0,
-                    status: 'Pending',
-                    paymentMethod: 'UPI',
-                    transactionRef: '',
-                    upiRef: '',
-                    screenshot: '',
-                    verificationDate: null,
-                    verifiedBy: '',
-                  );
-
-                  final updatedActivities = List<PoolActivity>.from(pool.activities)
-                    ..add(PoolActivity(
-                      id: const Uuid().v4(),
-                      type: 'contrib_added',
-                      description: 'Added contributor ${newContrib.name} with ₹${newContrib.contribution.toStringAsFixed(0)}',
-                      timestamp: DateTime.now(),
-                      userId: 'Me',
-                    ));
-
-                  final updatedPool = pool.copyWith(
-                    contributors: [...pool.contributors, newContrib],
-                    verifications: [...pool.verifications, newVerification],
-                    activities: updatedActivities,
-                  );
-
-                  ref.read(mockDatabaseProvider.notifier).updateIpoPool(updatedPool);
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.darkPrimary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    if (picked != null) {
+                      setState(() => selectedDate = picked);
+                    }
+                  },
                 ),
-                child: const Text('Add to Pool', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Contribution Time: ${selectedTime.format(context)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  trailing: const Icon(Icons.access_time, color: AppColors.darkPrimary, size: 18),
+                  onTap: () async {
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: selectedTime,
+                    );
+                    if (picked != null) {
+                      setState(() => selectedTime = picked);
+                    }
+                  },
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () {
+                    final name = _contribNameController.text.trim();
+                    final amount = double.tryParse(_contribAmountController.text.trim()) ?? 0.0;
+                    final phone = _contribPhoneController.text.trim();
+                    final notes = _contribNotesController.text.trim();
+
+                    if (name.isEmpty || amount <= 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please enter name and valid contribution amount')),
+                      );
+                      return;
+                    }
+
+                    final txDateTime = DateTime(
+                      selectedDate.year,
+                      selectedDate.month,
+                      selectedDate.day,
+                      selectedTime.hour,
+                      selectedTime.minute,
+                    );
+
+                    final newContrib = IpoContributor(
+                      id: const Uuid().v4(),
+                      name: name,
+                      contribution: amount,
+                      phone: phone,
+                      notes: notes,
+                      createdAt: txDateTime,
+                    );
+
+                    final newVerification = PaymentVerification(
+                      id: const Uuid().v4(),
+                      contributorId: newContrib.id,
+                      contributorName: newContrib.name,
+                      expectedAmount: newContrib.contribution,
+                      receivedAmount: 0.0,
+                      status: 'Pending',
+                      paymentMethod: 'UPI',
+                      transactionRef: '',
+                      upiRef: '',
+                      screenshot: '',
+                      verificationDate: null,
+                      verifiedBy: '',
+                    );
+
+                    final updatedActivities = List<PoolActivity>.from(pool.activities)
+                      ..add(PoolActivity(
+                        id: const Uuid().v4(),
+                        type: 'contrib_added',
+                        description: 'Added contributor ${newContrib.name} with ₹${newContrib.contribution.toStringAsFixed(0)}',
+                        timestamp: txDateTime,
+                        userId: 'Me',
+                      ));
+
+                    final updatedPool = pool.copyWith(
+                      contributors: [...pool.contributors, newContrib],
+                      verifications: [...pool.verifications, newVerification],
+                      activities: updatedActivities,
+                    );
+
+                    ref.read(mockDatabaseProvider.notifier).updateIpoPool(updatedPool);
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.darkPrimary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Add to Pool', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -218,6 +270,9 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
     _contribPhoneController.text = contributor.phone;
     _contribNotesController.text = contributor.notes;
 
+    DateTime selectedDate = contributor.createdAt ?? DateTime.now();
+    TimeOfDay selectedTime = TimeOfDay.fromDateTime(selectedDate);
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -225,124 +280,172 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF13131F),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          border: Border(top: BorderSide(color: AppColors.glassBorder, width: 1.5)),
-        ),
-        padding: EdgeInsets.only(
-          top: 24,
-          left: 24,
-          right: 24,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(color: AppColors.grey700, borderRadius: BorderRadius.circular(2)),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF13131F),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            border: Border(top: BorderSide(color: AppColors.glassBorder, width: 1.5)),
+          ),
+          padding: EdgeInsets.only(
+            top: 24,
+            left: 24,
+            right: 24,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(color: AppColors.grey700, borderRadius: BorderRadius.circular(2)),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Edit Contributor',
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _contribNameController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'Contributor Name',
-                  labelStyle: TextStyle(color: AppColors.grey500),
+                const SizedBox(height: 16),
+                Text(
+                  'Edit Contributor',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _contribAmountController,
-                style: const TextStyle(color: Colors.white),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: 'Contribution Amount (₹)',
-                  labelStyle: TextStyle(color: AppColors.grey500),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _contribNameController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Contributor Name',
+                    labelStyle: TextStyle(color: AppColors.grey500),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _contribPhoneController,
-                style: const TextStyle(color: Colors.white),
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number',
-                  labelStyle: TextStyle(color: AppColors.grey500),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _contribAmountController,
+                  style: const TextStyle(color: Colors.white),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Contribution Amount (₹)',
+                    labelStyle: TextStyle(color: AppColors.grey500),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _contribNotesController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'Notes',
-                  labelStyle: TextStyle(color: AppColors.grey500),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _contribPhoneController,
+                  style: const TextStyle(color: Colors.white),
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number',
+                    labelStyle: TextStyle(color: AppColors.grey500),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  final name = _contribNameController.text.trim();
-                  final amount = double.tryParse(_contribAmountController.text.trim()) ?? 0.0;
-                  final phone = _contribPhoneController.text.trim();
-                  final notes = _contribNotesController.text.trim();
-
-                  if (name.isEmpty || amount <= 0) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please enter name and valid contribution amount')),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _contribNotesController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: 'Notes',
+                    labelStyle: TextStyle(color: AppColors.grey500),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Contribution Date: ${DateFormat('dd MMM yyyy').format(selectedDate)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  trailing: const Icon(Icons.calendar_today, color: AppColors.darkPrimary, size: 18),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
                     );
-                    return;
-                  }
-
-                  final updatedContributors = pool.contributors.map((c) {
-                    if (c.id == contributor.id) {
-                      return c.copyWith(
-                        name: name,
-                        contribution: amount,
-                        phone: phone,
-                        notes: notes,
-                      );
+                    if (picked != null) {
+                      setState(() => selectedDate = picked);
                     }
-                    return c;
-                  }).toList();
-
-                  final updatedActivities = List<PoolActivity>.from(pool.activities)
-                    ..add(PoolActivity(
-                      id: const Uuid().v4(),
-                      type: 'contrib_edited',
-                      description: 'Updated contributor ${contributor.name}',
-                      timestamp: DateTime.now(),
-                      userId: 'Me',
-                    ));
-                  final updatedPool = pool.copyWith(
-                    contributors: updatedContributors,
-                    activities: updatedActivities,
-                  );
-                  ref.read(mockDatabaseProvider.notifier).updateIpoPool(updatedPool);
-                  Navigator.pop(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.darkPrimary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  },
                 ),
-                child: const Text('Update Contributor', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Contribution Time: ${selectedTime.format(context)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  trailing: const Icon(Icons.access_time, color: AppColors.darkPrimary, size: 18),
+                  onTap: () async {
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: selectedTime,
+                    );
+                    if (picked != null) {
+                      setState(() => selectedTime = picked);
+                    }
+                  },
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () {
+                    final name = _contribNameController.text.trim();
+                    final amount = double.tryParse(_contribAmountController.text.trim()) ?? 0.0;
+                    final phone = _contribPhoneController.text.trim();
+                    final notes = _contribNotesController.text.trim();
+
+                    if (name.isEmpty || amount <= 0) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please enter name and valid contribution amount')),
+                      );
+                      return;
+                    }
+
+                    final txDateTime = DateTime(
+                      selectedDate.year,
+                      selectedDate.month,
+                      selectedDate.day,
+                      selectedTime.hour,
+                      selectedTime.minute,
+                    );
+
+                    final updatedContributors = pool.contributors.map((c) {
+                      if (c.id == contributor.id) {
+                        return c.copyWith(
+                          name: name,
+                          contribution: amount,
+                          phone: phone,
+                          notes: notes,
+                          createdAt: txDateTime,
+                        );
+                      }
+                      return c;
+                    }).toList();
+
+                    final updatedActivities = List<PoolActivity>.from(pool.activities)
+                      ..add(PoolActivity(
+                        id: const Uuid().v4(),
+                        type: 'contrib_edited',
+                        description: 'Updated contributor ${contributor.name}',
+                        timestamp: txDateTime,
+                        userId: 'Me',
+                      ));
+                    final updatedPool = pool.copyWith(
+                      contributors: updatedContributors,
+                      activities: updatedActivities,
+                    );
+                    ref.read(mockDatabaseProvider.notifier).updateIpoPool(updatedPool);
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.darkPrimary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Update Contributor', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -536,24 +639,39 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete IPO Pool?', style: TextStyle(color: Colors.white)),
-        content: const Text('This action cannot be undone.', style: TextStyle(color: AppColors.grey400)),
+        title: const Text('Delete IPO Pool?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: const Text(
+          'Are you sure you want to delete this IPO pool? This will hide it from all views. You can undo this action immediately.',
+          style: TextStyle(color: AppColors.grey400, fontSize: 13, height: 1.4),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
           ),
           ElevatedButton(
-            onPressed: () {
-              ref.read(mockDatabaseProvider.notifier).deleteIpoPool(pool.id);
+            onPressed: () async {
               Navigator.pop(context); // close dialog
-              context.pop(); // pop screen
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Deleted IPO pool successfully')),
-              );
+              await ref.read(mockDatabaseProvider.notifier).deleteIpoPool(pool.id);
+              if (mounted) {
+                context.pop(); // pop screen
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('IPO Pool "${pool.name}" deleted.'),
+                    action: SnackBarAction(
+                      label: 'Undo',
+                      textColor: AppColors.darkPrimary,
+                      onPressed: () {
+                        ref.read(mockDatabaseProvider.notifier).restoreIpoPool(pool);
+                      },
+                    ),
+                    duration: const Duration(seconds: 5),
+                  ),
+                );
+              }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkDanger),
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkDanger, foregroundColor: Colors.white),
+            child: const Text('Delete'),
           ),
         ],
       ),
@@ -748,6 +866,12 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
             onSelected: (value) {
               if (value == 'edit') {
                 _showEditPoolSheet(pool);
+              } else if (value == 'duplicate') {
+                ref.read(mockDatabaseProvider.notifier).duplicateIpoPool(pool.id);
+                context.pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('IPO Pool "${pool.name}" duplicated.')),
+                );
               } else if (value == 'archive') {
                 _archivePool(pool);
               } else if (value == 'delete') {
@@ -762,6 +886,16 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
                     Icon(Icons.edit_outlined, color: AppColors.darkPrimary, size: 18),
                     SizedBox(width: 8),
                     Text('Edit Pool', style: TextStyle(color: Colors.white)),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'duplicate',
+                child: Row(
+                  children: [
+                    Icon(Icons.copy_outlined, color: AppColors.darkSecondary, size: 18),
+                    SizedBox(width: 8),
+                    Text('Duplicate Pool', style: TextStyle(color: Colors.white)),
                   ],
                 ),
               ),

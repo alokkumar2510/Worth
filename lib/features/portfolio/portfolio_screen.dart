@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:collection/collection.dart';
 import 'package:drift/drift.dart' show Value;
 
+import '../../core/widgets/calculation_audit_panel.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../core/providers/mock_database.dart';
@@ -107,62 +108,125 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
   void _showAddAccountDialog() {
     final nameController = TextEditingController();
     final balanceController = TextEditingController(text: '0');
+    final notesController = TextEditingController();
     String type = 'bank';
+    DateTime selectedDate = DateTime.now();
+    TimeOfDay selectedTime = TimeOfDay.now();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        
-        title: const Text('Add Account', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Account Name', labelStyle: TextStyle(color: AppColors.grey500)),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              value: type,
-              dropdownColor: AppColors.layer1,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Type', labelStyle: TextStyle(color: AppColors.grey500)),
-              items: const [
-                DropdownMenuItem(value: 'bank', child: Text('Bank Account')),
-                DropdownMenuItem(value: 'cash', child: Text('Cash Wallet')),
-                DropdownMenuItem(value: 'wallet', child: Text('Digital Wallet')),
-                DropdownMenuItem(value: 'credit', child: Text('Credit Card Dues')),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Add Account', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Account Name', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: type,
+                  dropdownColor: AppColors.layer1,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Type', labelStyle: TextStyle(color: AppColors.grey500)),
+                  items: const [
+                    DropdownMenuItem(value: 'bank', child: Text('Bank Account')),
+                    DropdownMenuItem(value: 'cash', child: Text('Cash Wallet')),
+                    DropdownMenuItem(value: 'wallet', child: Text('Digital Wallet')),
+                    DropdownMenuItem(value: 'credit', child: Text('Credit Card Dues')),
+                  ],
+                  onChanged: (val) => setState(() => type = val!),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: balanceController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Opening Balance', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Notes', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Opening Date: ${DateFormat('dd MMM yyyy').format(selectedDate)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  trailing: const Icon(Icons.calendar_today, color: AppColors.darkPrimary, size: 18),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) {
+                      setState(() => selectedDate = picked);
+                    }
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Opening Time: ${selectedTime.format(context)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  trailing: const Icon(Icons.access_time, color: AppColors.darkPrimary, size: 18),
+                  onTap: () async {
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: selectedTime,
+                    );
+                    if (picked != null) {
+                      setState(() => selectedTime = picked);
+                    }
+                  },
+                ),
               ],
-              onChanged: (val) => type = val!,
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: balanceController,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Opening Balance', labelStyle: TextStyle(color: AppColors.grey500)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final name = nameController.text.trim();
+                final balance = double.tryParse(balanceController.text.trim()) ?? 0.0;
+                final notes = notesController.text.trim();
+                if (name.isNotEmpty) {
+                  final openingDateTime = DateTime(
+                    selectedDate.year,
+                    selectedDate.month,
+                    selectedDate.day,
+                    selectedTime.hour,
+                    selectedTime.minute,
+                  );
+                  ref.read(mockDatabaseProvider.notifier).addAccount(
+                    name,
+                    type,
+                    notes.isNotEmpty ? notes : 'Initial deposit',
+                    balance,
+                    openingDate: openingDateTime,
+                  );
+                  Navigator.pop(context);
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
+              child: const Text('Save', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final name = nameController.text.trim();
-              final balance = double.tryParse(balanceController.text.trim()) ?? 0.0;
-              if (name.isNotEmpty) {
-                ref.read(mockDatabaseProvider.notifier).addAccount(name, type, 'Manual creation', balance);
-                Navigator.pop(context);
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
-            child: const Text('Save', style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }
@@ -171,61 +235,109 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     final nameController = TextEditingController();
     final amountController = TextEditingController();
     final notesController = TextEditingController();
+    DateTime selectedDate = DateTime.now();
+    TimeOfDay selectedTime = TimeOfDay.now();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        
-        title: Text(isLending ? 'Add Receivable' : 'Add Liability', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Name', labelStyle: TextStyle(color: AppColors.grey500)),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(isLending ? 'Add Receivable' : 'Add Liability', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Name', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: amountController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Outstanding Amount', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Notes', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Transaction Date: ${DateFormat('dd MMM yyyy').format(selectedDate)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  trailing: const Icon(Icons.calendar_today, color: AppColors.darkPrimary, size: 18),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) {
+                      setState(() => selectedDate = picked);
+                    }
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Transaction Time: ${selectedTime.format(context)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  trailing: const Icon(Icons.access_time, color: AppColors.darkPrimary, size: 18),
+                  onTap: () async {
+                    final picked = await showTimePicker(
+                      context: context,
+                      initialTime: selectedTime,
+                    );
+                    if (picked != null) {
+                      setState(() => selectedTime = picked);
+                    }
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: amountController,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Outstanding Amount', labelStyle: TextStyle(color: AppColors.grey500)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: notesController,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Notes', labelStyle: TextStyle(color: AppColors.grey500)),
+            ElevatedButton(
+              onPressed: () {
+                final name = nameController.text.trim();
+                final amount = double.tryParse(amountController.text.trim()) ?? 0.0;
+                final notes = notesController.text.trim();
+                if (name.isNotEmpty) {
+                  final notifier = ref.read(mockDatabaseProvider.notifier);
+                  final person = notifier.addPerson(name, null, notes.isNotEmpty ? notes : null);
+                  final txDateTime = DateTime(
+                    selectedDate.year,
+                    selectedDate.month,
+                    selectedDate.day,
+                    selectedTime.hour,
+                    selectedTime.minute,
+                  );
+                  if (isLending) {
+                    notifier.addLendTransaction(person.id, 'acc_primary_bank_uuid', amount, notes.isNotEmpty ? notes : 'Initial lend', txDateTime);
+                  } else {
+                    notifier.addBorrowTransaction(person.id, 'acc_primary_bank_uuid', amount, notes.isNotEmpty ? notes : 'Initial borrow', txDateTime);
+                  }
+                  Navigator.pop(context);
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
+              child: const Text('Save', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final name = nameController.text.trim();
-              final amount = double.tryParse(amountController.text.trim()) ?? 0.0;
-              final notes = notesController.text.trim();
-              if (name.isNotEmpty) {
-                final notifier = ref.read(mockDatabaseProvider.notifier);
-                final person = notifier.addPerson(name, null, notes.isNotEmpty ? notes : null);
-                
-                if (isLending) {
-                  notifier.addLendTransaction(person.id, 'acc_primary_bank_uuid', amount, 'Initial lend', DateTime.now().toUtc());
-                } else {
-                  notifier.addBorrowTransaction(person.id, 'acc_primary_bank_uuid', amount, 'Initial borrow', DateTime.now().toUtc());
-                }
-                Navigator.pop(context);
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
-            child: const Text('Save', style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }
@@ -240,6 +352,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     final brokerController = TextEditingController();
     final ownCapitalController = TextEditingController();
     final interestRateController = TextEditingController();
+    final notesController = TextEditingController();
     bool isMtf = false;
     String type = 'mutual_fund';
     DateTime openingDate = DateTime.now();
@@ -370,6 +483,15 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                       labelStyle: TextStyle(color: AppColors.grey500),
                       hintText: 'HH:MM or standard format',
                       hintStyle: const TextStyle(color: AppColors.grey500, fontSize: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: notesController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Notes',
+                      labelStyle: TextStyle(color: AppColors.grey500),
                     ),
                   ),
                   if (showMtfSwitch) ...[
@@ -541,6 +663,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         ? purchaseTimeController.text.trim()
                         : null;
 
+                    final userNotes = notesController.text.trim();
                     if (isMtf) {
                       final broker = brokerController.text.trim();
                       final ownCap = double.tryParse(ownCapitalController.text.trim()) ?? (unitsVal * priceVal * 0.5);
@@ -559,18 +682,19 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         interestStartDate: interestStartDate,
                         purchaseDate: finalPurchaseDate,
                         purchaseTime: purchaseTimeStr,
+                        notes: userNotes.isNotEmpty ? userNotes : null,
                       );
                     } else {
                       final inv = notifier.addInvestment(
                         name,
                         type,
                         symbol.isNotEmpty ? symbol : null,
-                        'Manual creation',
+                        userNotes.isNotEmpty ? userNotes : 'Manual creation',
                         priceVal,
                         purchaseDate: finalPurchaseDate,
                         purchaseTime: purchaseTimeStr,
                       );
-                      notifier.buyInvestment(inv.id, 'acc_primary_bank_uuid', unitsVal, priceVal, 'Opening Buy', finalPurchaseDate);
+                      notifier.buyInvestment(inv.id, 'acc_primary_bank_uuid', unitsVal, priceVal, userNotes.isNotEmpty ? userNotes : 'Opening Buy', finalPurchaseDate);
                     }
                     if (context.mounted) {
                       Navigator.pop(context);
@@ -591,54 +715,104 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     final sourceController = TextEditingController();
     final amountController = TextEditingController();
     final notesController = TextEditingController();
+    DateTime expectedDate = DateTime.now().add(const Duration(days: 10));
+    DateTime transactionDate = DateTime.now();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        
-        title: const Text('Add Expected Income', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: sourceController,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Source Name', labelStyle: TextStyle(color: AppColors.grey500)),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Add Expected Income', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: sourceController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Source Name', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: amountController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Expected Amount', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Notes', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Expected Date: ${DateFormat('dd MMM yyyy').format(expectedDate)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  trailing: const Icon(Icons.calendar_today, color: AppColors.darkPrimary, size: 18),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: expectedDate,
+                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                      lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+                    );
+                    if (picked != null) {
+                      setState(() => expectedDate = picked);
+                    }
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Record Date: ${DateFormat('dd MMM yyyy').format(transactionDate)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                  trailing: const Icon(Icons.history, color: AppColors.darkPrimary, size: 18),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: transactionDate,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) {
+                      setState(() => transactionDate = picked);
+                    }
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: amountController,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Expected Amount', labelStyle: TextStyle(color: AppColors.grey500)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: notesController,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Notes', labelStyle: TextStyle(color: AppColors.grey500)),
+            ElevatedButton(
+              onPressed: () {
+                final src = sourceController.text.trim();
+                final amount = double.tryParse(amountController.text.trim()) ?? 0.0;
+                final notes = notesController.text.trim();
+                if (src.isNotEmpty && amount > 0) {
+                  ref.read(mockDatabaseProvider.notifier).addExpectedIncome(
+                    src,
+                    amount,
+                    expectedDate,
+                    notes.isNotEmpty ? notes : null,
+                    createdAt: transactionDate,
+                  );
+                  Navigator.pop(context);
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
+              child: const Text('Save', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final src = sourceController.text.trim();
-              final amount = double.tryParse(amountController.text.trim()) ?? 0.0;
-              final notes = notesController.text.trim();
-              if (src.isNotEmpty && amount > 0) {
-                ref.read(mockDatabaseProvider.notifier).addExpectedIncome(src, amount, DateTime.now().toUtc().add(const Duration(days: 10)), notes.isNotEmpty ? notes : null);
-                Navigator.pop(context);
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
-            child: const Text('Save', style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }
@@ -655,51 +829,53 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
         builder: (context, setState) => AlertDialog(
           
           title: const Text('Add Goal', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Goal Name', labelStyle: TextStyle(color: AppColors.grey500)),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: targetController,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Target Amount', labelStyle: TextStyle(color: AppColors.grey500)),
-              ),
-              const SizedBox(height: 12),
-              ListTile(
-                title: Text(
-                  selectedDeadline == null
-                      ? 'Select Deadline'
-                      : 'Deadline: ${DateFormat('yyyy-MM-dd').format(selectedDeadline!)}',
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Goal Name', labelStyle: TextStyle(color: AppColors.grey500)),
                 ),
-                trailing: const Icon(Icons.calendar_today, color: AppColors.darkPrimary),
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now().add(const Duration(days: 30)),
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
-                  );
-                  if (picked != null) {
-                    setState(() {
-                      selectedDeadline = picked;
-                    });
-                  }
-                },
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: notesController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(labelText: 'Notes', labelStyle: TextStyle(color: AppColors.grey500)),
-              ),
-            ],
+                const SizedBox(height: 12),
+                TextField(
+                  controller: targetController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Target Amount', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  title: Text(
+                    selectedDeadline == null
+                        ? 'Select Deadline'
+                        : 'Deadline: ${DateFormat('yyyy-MM-dd').format(selectedDeadline!)}',
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                  ),
+                  trailing: const Icon(Icons.calendar_today, color: AppColors.darkPrimary),
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now().add(const Duration(days: 30)),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+                    );
+                    if (picked != null) {
+                      setState(() {
+                        selectedDeadline = picked;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Notes', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -1313,14 +1489,17 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         children: [
                           Text(acc.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                           const SizedBox(height: 4),
-                          Text(acc.type.toUpperCase(), style: const TextStyle(fontSize: 11, color: AppColors.grey500, fontWeight: FontWeight.bold)),
+                          Text('${acc.type.toUpperCase()} • Tap to view details', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
                       format.format(bal),
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
                     ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
                   ],
                 ),
               ),
@@ -1404,14 +1583,17 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                           children: [
                             Text(acc.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                             const SizedBox(height: 4),
-                            const Text('CREDIT CARD LINE', style: TextStyle(fontSize: 11, color: AppColors.grey500, fontWeight: FontWeight.bold)),
+                            const Text('CREDIT CARD LINE • Tap to view details', style: TextStyle(fontSize: 11, color: AppColors.grey500)),
                           ],
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         format.format(bal),
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.darkDanger),
                       ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
                     ],
                   ),
                 ),
@@ -1460,14 +1642,17 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                           children: [
                             Text(person.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                             const SizedBox(height: 4),
-                            Text(person.notes ?? 'LOAN FROM PERSON', style: const TextStyle(fontSize: 11, color: AppColors.grey500, fontWeight: FontWeight.bold)),
+                            Text('${person.notes ?? "LOAN FROM PERSON"} • Tap to view details', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
                           ],
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         format.format(bal),
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.darkDanger),
                       ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
                     ],
                   ),
                 ),
@@ -1550,7 +1735,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                             children: [
                               Text(inv.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                               const SizedBox(height: 4),
-                              Text(inv.symbol ?? inv.type.toUpperCase(), style: const TextStyle(fontSize: 11, color: AppColors.grey500, fontWeight: FontWeight.bold)),
+                              Text('${inv.symbol ?? inv.type.toUpperCase()} • Tap to view details', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
                             ],
                           ),
                         ),
@@ -1569,6 +1754,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                             ),
                           ],
                         ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
                       ],
                     ),
                   ],
@@ -1649,14 +1836,17 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         children: [
                           Text(person.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                           const SizedBox(height: 4),
-                          Text(person.notes ?? 'OUTSTANDING DEBT', style: const TextStyle(fontSize: 11, color: AppColors.grey500, fontWeight: FontWeight.bold)),
+                          Text('${person.notes ?? "OUTSTANDING DEBT"} • Tap to view details', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
                       format.format(bal),
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.darkSuccess),
                     ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
                   ],
                 ),
               ),
@@ -1736,12 +1926,13 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            inc.status.toUpperCase(),
+                            '${inc.status.toUpperCase()} • Tap to view details',
                             style: TextStyle(fontSize: 10, color: statusColor, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8),
                     Text(
                       format.format(inc.amount),
                       style: TextStyle(
@@ -1751,6 +1942,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         decoration: inc.status == 'expired' ? TextDecoration.lineThrough : null,
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
                   ],
                 ),
               ),
@@ -1821,9 +2014,9 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                               const SizedBox(height: 4),
                               Text(
                                 goal.deadline != null
-                                    ? 'DEADLINE: ${DateFormat('yyyy-MM-dd').format(goal.deadline!)}'
-                                    : 'NO DEADLINE',
-                                style: const TextStyle(fontSize: 10, color: AppColors.grey500, fontWeight: FontWeight.bold),
+                                    ? 'DEADLINE: ${DateFormat('yyyy-MM-dd').format(goal.deadline!)} • Tap to view details'
+                                    : 'NO DEADLINE • Tap to view details',
+                                style: const TextStyle(fontSize: 10, color: AppColors.grey500),
                               ),
                             ],
                           ),
@@ -1839,6 +2032,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                             ),
                           ],
                         ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -2035,6 +2230,30 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
             ),
             const SizedBox(height: 20),
 
+            CalculationAuditPanel(
+              title: 'Verify MTF Total Exposure Calculations',
+              formula: 'Total Borrowed = Sum(pos.borrowedCapital)\n'
+                  'Total Own Capital = Sum(pos.ownCapital)\n'
+                  'Total Market Value = Sum(pos.units * currentPrice)\n'
+                  'Average LTV = (Total Borrowed / Total Market Value) * 100\n'
+                  'Total Accrued Interest = Sum(dailyInterest * daysHeld)',
+              inputs: {
+                'Total Borrowed Capital': format.format(totalBorrowed),
+                'Total Own Capital': format.format(totalOwn),
+                'Total Market Value': format.format(totalValue),
+                'Accrued Interest': format.format(totalInterestAccrued),
+              },
+              output: 'Average LTV Ratio: ${avgLtv.toStringAsFixed(1)}%',
+              steps: [
+                'Sum all borrowed capital across active positions: ${format.format(totalBorrowed)}.',
+                'Sum own capital invested across active positions: ${format.format(totalOwn)}.',
+                'Sum current market value of all positions: ${format.format(totalValue)}.',
+                'Calculate accrued interest on borrowed capital: ${format.format(totalInterestAccrued)}.',
+                'Compute average LTV (Loan-to-Value) ratio: (Total Borrowed / Total Market Value) * 100 = ${avgLtv.toStringAsFixed(1)}%.',
+              ],
+            ),
+            const SizedBox(height: 20),
+
             // Interest Reports Card
             GlassCard(
               padding: const EdgeInsets.all(16),
@@ -2116,132 +2335,41 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
               child: GlassCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                onTap: () => context.push('/portfolio/mtf/${pos.id}'),
+                child: Row(
                   children: [
-                    // Top header row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(pos.instrument, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-                              const SizedBox(height: 2),
-                              Text('${pos.broker} • Open: ${DateFormat('dd MMM yyyy').format(pos.openingDate)}', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
-                            ],
-                          ),
-                        ),
-                        PopupMenuButton<String>(
-                          icon: const Icon(Icons.more_vert, color: Colors.white),
-                          color: AppColors.layer1,
-                          onSelected: (val) {
-                            if (val == 'edit') {
-                              _showEditMtfDialog(pos);
-                            } else if (val == 'close') {
-                              _showCloseMtfDialog(pos);
-                            } else if (val == 'delete') {
-                              _showDeleteMtfConfirmDialog(pos);
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            const PopupMenuItem(value: 'edit', child: Text('Edit Interest/Broker', style: TextStyle(color: Colors.white))),
-                            const PopupMenuItem(value: 'close', child: Text('Close (Sell Position)', style: TextStyle(color: AppColors.glow))),
-                            const PopupMenuItem(value: 'delete', child: Text('Delete / Force Close', style: TextStyle(color: AppColors.darkDanger))),
-                          ],
-                        ),
-                      ],
+                    CircleAvatar(
+                      backgroundColor: AppColors.darkPrimary.withOpacity(0.12),
+                      child: const Icon(Icons.show_chart, color: AppColors.darkPrimary),
                     ),
-                    const Divider(color: AppColors.grey700, height: 20),
-                    
-                    // Stats grid
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildMtfStat('Units Held', pos.units.toStringAsFixed(2)),
-                        _buildMtfStat('Avg Price', formatDec.format(pos.averagePrice)),
-                        _buildMtfStat('Current Price', formatDec.format(currentPrice)),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildMtfStat('Own Capital', format.format(pos.ownCapital)),
-                        _buildMtfStat('Borrowed Amount', format.format(pos.borrowedCapital)),
-                        _buildMtfStat('LTV Ratio', '${ltv.toStringAsFixed(1)}%', valueColor: posRiskColor),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildMtfStat('Interest Rate', '${pos.interestRate.toStringAsFixed(1)}% p.a.'),
-                        _buildMtfStat('Days Held', '$daysHeld Days'),
-                        _buildMtfStat('Daily Interest', formatDec.format(dailyInterest)),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _buildMtfStat('Interest Start Date', DateFormat('dd MMM yyyy').format(pos.interestStartDate)),
-                        _buildMtfStat('Total Interest Till Today', formatDec.format(totalInterestTillToday)),
-                        _buildMtfStat(
-                          'Net Profit', 
-                          '${netProfit >= 0 ? '+' : ''}${format.format(netProfit)}', 
-                          valueColor: netProfit >= 0 ? AppColors.darkSuccess : AppColors.darkDanger
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Return on Own Capital (ROI):', style: TextStyle(color: AppColors.grey500, fontSize: 12)),
-                        Text(
-                          '${netRoi >= 0 ? '+' : ''}${netRoi.toStringAsFixed(2)}%',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: netRoi >= 0 ? AppColors.darkSuccess : AppColors.darkDanger,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Divider(color: AppColors.grey700, height: 24),
-                    // Expandable Interest Timeline
-                    Theme(
-                      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                      child: ExpansionTile(
-                        title: const Text('Interest Timeline', style: TextStyle(color: AppColors.glow, fontSize: 12, fontWeight: FontWeight.bold)),
-                        iconColor: AppColors.glow,
-                        collapsedIconColor: AppColors.glow,
-                        tilePadding: EdgeInsets.zero,
-                        childrenPadding: EdgeInsets.zero,
-                        children: daysHeld == 0
-                            ? [
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                                  child: Text('No interest accrued yet (0 days held)', style: TextStyle(color: AppColors.grey500, fontSize: 12)),
-                                )
-                              ]
-                            : List.generate(daysHeld, (i) {
-                                final date = DateTime(pos.interestStartDate.year, pos.interestStartDate.month, pos.interestStartDate.day).add(Duration(days: i));
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 4.0),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(DateFormat('dd MMM yyyy').format(date), style: const TextStyle(color: AppColors.grey400, fontSize: 12)),
-                                      Text('Interest $currency${dailyInterest.toStringAsFixed(2)}', style: const TextStyle(color: Colors.white, fontSize: 12)),
-                                    ],
-                                  ),
-                                );
-                              }).reversed.toList(),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(pos.instrument, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                          const SizedBox(height: 4),
+                          Text('${pos.broker} • Tap to view details', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
+                        ],
                       ),
                     ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(format.format(pos.borrowedCapital), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.darkDanger)),
+                        const SizedBox(height: 4),
+                        Text(
+                          'LTV: ${ltv.toStringAsFixed(1)}%',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: posRiskColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
                   ],
                 ),
               ),
@@ -2339,13 +2467,28 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
   }
 
   Widget _buildMtfStat(String label, String value, {Color? valueColor}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(color: AppColors.grey500, fontSize: 11)),
-        const SizedBox(height: 4),
-        Text(value, style: TextStyle(color: valueColor ?? Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-      ],
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(color: AppColors.grey500, fontSize: 11),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: TextStyle(color: valueColor ?? Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
