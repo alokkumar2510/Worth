@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'dart:convert';
 import 'package:go_router/go_router.dart';
 import 'package:collection/collection.dart';
 
@@ -423,7 +424,7 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                   final purchaseTimeStr = purchaseTimeController.text.trim();
                   final notes = purchaseTimeStr.isNotEmpty ? 'Purchase at $purchaseTimeStr' : null;
 
-                  ref.read(mockDatabaseProvider.notifier).buyInvestment(
+                  await ref.read(mockDatabaseProvider.notifier).buyInvestment(
                     inv.id,
                     'acc_primary_bank_uuid',
                     units,
@@ -558,8 +559,8 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                 ElevatedButton(
                   onPressed: (unitsToSell <= 0 || salePrice <= 0 || !hasSufficientUnits) 
                       ? null 
-                      : () {
-                          ref.read(mockDatabaseProvider.notifier).sellInvestment(
+                      : () async {
+                          await ref.read(mockDatabaseProvider.notifier).sellInvestment(
                             inv.id,
                             'acc_primary_bank_uuid',
                             unitsToSell,
@@ -628,7 +629,7 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
             color: AppColors.layer1,
-            onSelected: (menuVal) {
+            onSelected: (menuVal) async {
               if (menuVal == 'edit') {
                 _showEditInvestmentDialog(inv);
               } else if (menuVal == 'update_price') {
@@ -638,21 +639,25 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
               } else if (menuVal == 'view_history') {
                 showAdjustmentHistorySheet(context, inv.id, 'investment', inv.name);
               } else if (menuVal == 'duplicate') {
-                ref.read(mockDatabaseProvider.notifier).duplicateInvestment(inv.id);
+                await ref.read(mockDatabaseProvider.notifier).duplicateInvestment(inv.id);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Investment "${inv.name}" duplicated.')),
                 );
               } else if (menuVal == 'archive') {
-                ref.read(mockDatabaseProvider.notifier).archiveInvestment(inv.id);
-                context.pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Investment "${inv.name}" archived.')),
-                );
+                await ref.read(mockDatabaseProvider.notifier).archiveInvestment(inv.id);
+                if (context.mounted) {
+                  context.pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Investment "${inv.name}" archived.')),
+                  );
+                }
               } else if (menuVal == 'restore') {
-                ref.read(mockDatabaseProvider.notifier).unarchiveInvestment(inv.id);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Investment "${inv.name}" unarchived successfully.')),
-                );
+                await ref.read(mockDatabaseProvider.notifier).unarchiveInvestment(inv.id);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Investment "${inv.name}" unarchived successfully.')),
+                  );
+                }
               } else if (menuVal == 'delete') {
                 _confirmDeleteInvestment(inv);
               }
@@ -731,7 +736,6 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
@@ -753,6 +757,8 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
+              _buildFundingDetailsCard(inv, dbState),
               const SizedBox(height: 12),
               Center(
                 child: Text(
@@ -997,6 +1003,145 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFundingDetailsCard(Investment inv, MockDatabaseState dbState) {
+    final source = inv.fundingSource ?? 'existing_cash';
+    final sourceNames = {
+      'existing_cash': 'Existing Cash',
+      'salary_income': 'Salary Income',
+      'business_income': 'Business Income',
+      'receivable_collected': 'Receivables Collected',
+      'liability_borrowed': 'Liability / Borrowed Money',
+      'mixed_sources': 'Mixed Sources',
+    };
+    
+    final sourceName = sourceNames[source] ?? source;
+    
+    // Find linked liability name if applicable
+    String? linkedLiabilityName;
+    if (inv.fundingLiabilityId != null) {
+      final account = dbState.accounts.firstWhereOrNull((a) => a.id == inv.fundingLiabilityId);
+      if (account != null) {
+        linkedLiabilityName = '${account.name} (Credit Account)';
+      } else {
+        final person = dbState.people.firstWhereOrNull((p) => p.id == inv.fundingLiabilityId);
+        if (person != null) {
+          linkedLiabilityName = '${person.name} (Person Creditor)';
+        }
+      }
+    }
+
+    // Determine debt percentage or description
+    String debtInfo = '0% (Self-Funded)';
+    if (source == 'liability_borrowed') {
+      debtInfo = '100% (Debt-Funded)';
+    } else if (source == 'mixed_sources') {
+      if (inv.fundingDetails != null && inv.fundingDetails!.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(inv.fundingDetails!);
+          if (decoded is Map<String, dynamic>) {
+            if (decoded.containsKey('debt_pct')) {
+              debtInfo = '${decoded['debt_pct']}% Debt / ${100 - (decoded['debt_pct'] as num)}% Self';
+            } else {
+              debtInfo = inv.fundingDetails!;
+            }
+          }
+        } catch (e) {
+          debtInfo = inv.fundingDetails!;
+        }
+      } else {
+        debtInfo = '50% Debt (Estimated Mixed)';
+      }
+    }
+
+    return GlassCard(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+      borderColor: source == 'liability_borrowed' 
+          ? AppColors.darkDanger.withOpacity(0.3) 
+          : source == 'mixed_sources'
+              ? AppColors.darkWarning.withOpacity(0.3)
+              : AppColors.darkSuccess.withOpacity(0.15),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                source == 'liability_borrowed' 
+                    ? Icons.trending_down_outlined 
+                    : Icons.account_balance_wallet_outlined,
+                color: source == 'liability_borrowed' 
+                    ? AppColors.darkDanger 
+                    : AppColors.darkSuccess,
+                size: 16,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'FUNDING SOURCE & DEBT STATUS',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.grey500,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Source', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+              Text(
+                sourceName,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Debt Ratio / Details', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+              Text(
+                debtInfo,
+                style: TextStyle(
+                  color: source == 'liability_borrowed' 
+                      ? AppColors.darkDanger 
+                      : source == 'mixed_sources' 
+                          ? AppColors.darkWarning 
+                          : AppColors.darkSuccess,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          if (linkedLiabilityName != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Linked Liability', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                Text(
+                  linkedLiabilityName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

@@ -128,7 +128,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     ).toUtc();
 
     if (finalType == 'income') {
-      notifier.addTransaction(
+      await notifier.addTransaction(
         type: 'income',
         amount: amount,
         category: _category,
@@ -137,7 +137,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         date: txDateTime,
       );
     } else if (finalType == 'expense') {
-      notifier.addTransaction(
+      await notifier.addTransaction(
         type: 'expense',
         amount: amount,
         category: _category,
@@ -146,7 +146,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         date: txDateTime,
       );
     } else if (finalType == 'transfer') {
-      notifier.addTransaction(
+      await notifier.addTransaction(
         type: 'transfer',
         amount: amount,
         fromAccountId: _selectedFromAccountId,
@@ -156,19 +156,19 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       );
     } else if (finalType == 'borrow_money') {
       if (_selectedPersonId != null) {
-        notifier.addBorrowTransaction(_selectedPersonId!, _selectedToAccountId ?? 'acc_primary_bank_uuid', amount, notes, txDateTime);
+        await notifier.addBorrowTransaction(_selectedPersonId!, _selectedToAccountId ?? 'acc_primary_bank_uuid', amount, notes, txDateTime);
       }
     } else if (finalType == 'repay_money') {
       if (_selectedPersonId != null) {
-        notifier.addRepayTransaction(_selectedPersonId!, _selectedFromAccountId ?? 'acc_primary_bank_uuid', amount, notes, txDateTime);
+        await notifier.addRepayTransaction(_selectedPersonId!, _selectedFromAccountId ?? 'acc_primary_bank_uuid', amount, notes, txDateTime);
       }
     } else if (finalType == 'lend_money') {
       if (_selectedPersonId != null) {
-        notifier.addLendTransaction(_selectedPersonId!, _selectedFromAccountId ?? 'acc_primary_bank_uuid', amount, notes, txDateTime);
+        await notifier.addLendTransaction(_selectedPersonId!, _selectedFromAccountId ?? 'acc_primary_bank_uuid', amount, notes, txDateTime);
       }
     } else if (finalType == 'recover_money') {
       if (_selectedPersonId != null) {
-        notifier.addRecoverTransaction(_selectedPersonId!, _selectedToAccountId ?? 'acc_primary_bank_uuid', amount, notes, txDateTime);
+        await notifier.addRecoverTransaction(_selectedPersonId!, _selectedToAccountId ?? 'acc_primary_bank_uuid', amount, notes, txDateTime);
       }
     } else if (finalType == 'investment_buy') {
       final units = double.tryParse(_unitsController.text.trim()) ?? 0.0;
@@ -202,18 +202,18 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
             notes: notes,
           );
         } else {
-          notifier.buyInvestment(_selectedInvestmentId!, _selectedFromAccountId ?? 'acc_primary_bank_uuid', units, price, notes, finalPurchaseDate);
+          await notifier.buyInvestment(_selectedInvestmentId!, _selectedFromAccountId ?? 'acc_primary_bank_uuid', units, price, notes, finalPurchaseDate);
         }
       }
     } else if (finalType == 'investment_sell') {
       final units = double.tryParse(_unitsController.text.trim()) ?? 0.0;
       final price = double.tryParse(_priceController.text.trim()) ?? 0.0;
       if (_selectedInvestmentId != null && units > 0 && price > 0) {
-        notifier.sellInvestment(_selectedInvestmentId!, _selectedToAccountId ?? 'acc_primary_bank_uuid', units, price, notes, txDateTime);
+        await notifier.sellInvestment(_selectedInvestmentId!, _selectedToAccountId ?? 'acc_primary_bank_uuid', units, price, notes, txDateTime);
       }
     } else if (finalType == 'expected_income_received') {
       if (_selectedExpectedIncomeId != null) {
-        notifier.markExpectedIncomeReceived(_selectedExpectedIncomeId!, _selectedToAccountId ?? 'acc_primary_bank_uuid');
+        await notifier.markExpectedIncomeReceived(_selectedExpectedIncomeId!, _selectedToAccountId ?? 'acc_primary_bank_uuid');
       }
     }
 

@@ -189,7 +189,7 @@ class AssetDetailScreen extends ConsumerWidget {
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
             color: AppColors.layer1,
-            onSelected: (value) {
+            onSelected: (value) async {
               if (value == 'edit') {
                 _showEditAccountDialog(context, ref, account);
               } else if (value == 'adjust_amount') {
@@ -197,21 +197,27 @@ class AssetDetailScreen extends ConsumerWidget {
               } else if (value == 'view_history') {
                 showAdjustmentHistorySheet(context, account.id, 'account', account.name);
               } else if (value == 'duplicate') {
-                ref.read(mockDatabaseProvider.notifier).duplicateAccount(account.id);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Account "${account.name}" duplicated.')),
-                );
+                await ref.read(mockDatabaseProvider.notifier).duplicateAccount(account.id);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Account "${account.name}" duplicated.')),
+                  );
+                }
               } else if (value == 'archive') {
-                ref.read(mockDatabaseProvider.notifier).archiveAccount(accountId);
-                context.pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('${account.name} archived successfully.')),
-                );
+                await ref.read(mockDatabaseProvider.notifier).archiveAccount(accountId);
+                if (context.mounted) {
+                  context.pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${account.name} archived successfully.')),
+                  );
+                }
               } else if (value == 'restore') {
-                ref.read(mockDatabaseProvider.notifier).unarchiveAccount(accountId);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('${account.name} unarchived successfully.')),
-                );
+                await ref.read(mockDatabaseProvider.notifier).unarchiveAccount(accountId);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${account.name} unarchived successfully.')),
+                  );
+                }
               } else if (value == 'delete') {
                 _confirmDeleteAccount(context, ref, account);
               }

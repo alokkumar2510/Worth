@@ -21,6 +21,7 @@ import '../../features/reports/presentation/screens/snapshot_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/settings/presentation/screens/profile_screen.dart';
 import '../../features/settings/presentation/screens/advanced_settings_screen.dart';
+import '../../features/settings/presentation/screens/founder_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/ipo_pool/presentation/screens/ipo_dashboard_screen.dart';
 import '../../features/ipo_pool/presentation/screens/ipo_detail_screen.dart';
@@ -597,6 +598,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                     pageBuilder: (context, state) => buildPremiumTransitionPage(
                       state: state,
                       child: const AdvancedSettingsScreen(),
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'founder',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) => buildPremiumTransitionPage(
+                      state: state,
+                      child: const FounderScreen(),
                     ),
                   ),
                   GoRoute(

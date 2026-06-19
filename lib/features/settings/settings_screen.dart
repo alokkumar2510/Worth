@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/asset_paths.dart';
@@ -85,6 +86,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         Navigator.pop(context);
       },
     );
+  }
+
+  Future<void> _launchEmailSupport(BuildContext context) async {
+    final Uri emailLaunchUri = Uri(
+      scheme: 'mailto',
+      path: 'alok.vssut28@gmail.com',
+      query: 'subject=Worth%20App%20Support%20Request',
+    );
+    try {
+      if (await canLaunchUrl(emailLaunchUri)) {
+        await launchUrl(emailLaunchUri, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Could not launch email app';
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open mail client. Support: alok.vssut28@gmail.com'),
+            backgroundColor: AppColors.darkDanger,
+          ),
+        );
+      }
+    }
   }
 
   void _handleRecalculate() {
@@ -469,18 +494,41 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const SizedBox(height: 8),
 
             GlassCard(
+              padding: EdgeInsets.zero,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildInfoRow('Version', '1.0.0 (Build 26)'),
-                  const SizedBox(height: 12),
-                  _buildInfoRow('Database Model', 'FIFO Lot Ledger (Drift/Encrypted)'),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: () {
-                      ref.read(authRepositoryProvider).signOut();
-                    },
-                    child: const Text('Log Out of Worth', style: TextStyle(color: AppColors.darkDanger, fontWeight: FontWeight.bold)),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: _buildInfoRow('Version', '1.7.4 (Build 8)'),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                    child: _buildInfoRow('Database Model', 'FIFO Lot Ledger (Drift/Encrypted)'),
+                  ),
+                  const Divider(color: AppColors.glassBorder, height: 1),
+                  _buildSettingsTile(
+                    icon: Icons.person_outline_rounded,
+                    title: 'Meet the Founder',
+                    value: 'Socials & follow Alok',
+                    onTap: () => context.push('/settings/founder'),
+                  ),
+                  const Divider(color: AppColors.glassBorder, height: 1),
+                  _buildSettingsTile(
+                    icon: Icons.support_agent_rounded,
+                    title: 'Contact Support',
+                    value: 'Email alok.vssut28@gmail.com',
+                    onTap: () => _launchEmailSupport(context),
+                  ),
+                  const Divider(color: AppColors.glassBorder, height: 1),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: TextButton(
+                      onPressed: () {
+                        ref.read(authRepositoryProvider).signOut();
+                      },
+                      child: const Text('Log Out of Worth', style: TextStyle(color: AppColors.darkDanger, fontWeight: FontWeight.bold)),
+                    ),
                   ),
                 ],
               ),

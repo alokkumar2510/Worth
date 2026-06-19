@@ -31,6 +31,17 @@ class ImportService {
       await _db.delete(_db.investments).go();
       await _db.delete(_db.settings).go();
       await _db.delete(_db.definitions).go();
+      await _db.delete(_db.adjustments).go();
+      await _db.delete(_db.milestones).go();
+      await _db.delete(_db.achievementProgress).go();
+      await _db.delete(_db.achievements).go();
+      await _db.delete(_db.mtfPositions).go();
+      await _db.delete(_db.sips).go();
+      await _db.delete(_db.dailyCheckIns).go();
+      await _db.delete(_db.portfolioHistories).go();
+      await _db.delete(_db.portfolioSnapshots).go();
+      await _db.delete(_db.recoveryAllocations).go();
+      await _db.delete(_db.recoveryDestinations).go();
 
       // 2. Insert records sequentially to satisfy foreign key constraints
 
@@ -108,6 +119,83 @@ class ImportService {
       if (data['definitions'] != null) {
         for (final item in data['definitions'] as List) {
           await _db.into(_db.definitions).insert(db.Definition.fromJson(item as Map<String, dynamic>));
+        }
+      }
+
+      // Adjustments
+      if (data['adjustments'] != null) {
+        for (final item in data['adjustments'] as List) {
+          await _db.into(_db.adjustments).insert(db.Adjustment.fromJson(item as Map<String, dynamic>));
+        }
+      }
+
+      // Milestones
+      if (data['milestones'] != null) {
+        for (final item in data['milestones'] as List) {
+          await _db.into(_db.milestones).insert(db.Milestone.fromJson(item as Map<String, dynamic>));
+        }
+      }
+
+      // Achievements
+      if (data['achievements'] != null) {
+        for (final item in data['achievements'] as List) {
+          await _db.into(_db.achievements).insert(db.Achievement.fromJson(item as Map<String, dynamic>));
+        }
+      }
+
+      // Achievement Progress
+      if (data['achievement_progress'] != null) {
+        for (final item in data['achievement_progress'] as List) {
+          await _db.into(_db.achievementProgress).insert(db.AchievementProgressData.fromJson(item as Map<String, dynamic>));
+        }
+      }
+
+      // MTF Positions
+      if (data['mtf_positions'] != null) {
+        for (final item in data['mtf_positions'] as List) {
+          await _db.into(_db.mtfPositions).insert(db.MtfPosition.fromJson(item as Map<String, dynamic>));
+        }
+      }
+
+      // Sips
+      if (data['sips'] != null) {
+        for (final item in data['sips'] as List) {
+          await _db.into(_db.sips).insert(db.Sip.fromJson(item as Map<String, dynamic>));
+        }
+      }
+
+      // Daily Check Ins
+      if (data['daily_check_ins'] != null) {
+        for (final item in data['daily_check_ins'] as List) {
+          await _db.into(_db.dailyCheckIns).insert(db.DailyCheckIn.fromJson(item as Map<String, dynamic>));
+        }
+      }
+
+      // Portfolio Histories
+      if (data['portfolio_histories'] != null) {
+        for (final item in data['portfolio_histories'] as List) {
+          await _db.into(_db.portfolioHistories).insert(db.PortfolioHistory.fromJson(item as Map<String, dynamic>));
+        }
+      }
+
+      // Portfolio Snapshots
+      if (data['portfolio_snapshots'] != null) {
+        for (final item in data['portfolio_snapshots'] as List) {
+          await _db.into(_db.portfolioSnapshots).insert(db.PortfolioSnapshot.fromJson(item as Map<String, dynamic>));
+        }
+      }
+
+      // Recovery Allocations
+      if (data['recovery_allocations'] != null) {
+        for (final item in data['recovery_allocations'] as List) {
+          await _db.into(_db.recoveryAllocations).insert(db.RecoveryAllocation.fromJson(item as Map<String, dynamic>));
+        }
+      }
+
+      // Recovery Destinations
+      if (data['recovery_destinations'] != null) {
+        for (final item in data['recovery_destinations'] as List) {
+          await _db.into(_db.recoveryDestinations).insert(db.RecoveryDestination.fromJson(item as Map<String, dynamic>));
         }
       }
     });

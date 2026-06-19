@@ -13,6 +13,9 @@ class InvestmentLots extends Table {
   TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
   DateTimeColumn get lastSyncedAt => dateTime().nullable()();
   TextColumn get deviceId => text().nullable()();
+  TextColumn get fundingSource => text().nullable()();
+  TextColumn get fundingLiabilityId => text().nullable()();
+  TextColumn get fundingDetails => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

@@ -217,6 +217,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                   const SizedBox(height: 24),
 
+                  // Funding & Debt Analysis Card
+                  netWorthAsync.when(
+                    data: (data) => _buildFundingDebtAnalysisCard(data, currency),
+                    loading: () => const SizedBox.shrink(),
+                    error: (e, s) => const SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: 24),
+
                   // 3. Trend Chart
                   snapshotsAsync.when(
                     data: (snapshots) => _buildTrendChartCard(snapshots, currency),
@@ -795,6 +803,193 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               letterSpacing: -0.2,
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFundingDebtAnalysisCard(dynamic data, String currency) {
+    final double totalAssets = (data.assets as num?)?.toDouble() ?? 0.0;
+    final double debtFunded = (data.debtFundedAssets as num?)?.toDouble() ?? 0.0;
+    final double selfFunded = (data.selfFundedAssets as num?)?.toDouble() ?? 0.0;
+    final double debtPct = totalAssets > 0 ? (debtFunded / totalAssets) * 100 : 0.0;
+    final double selfPct = totalAssets > 0 ? (selfFunded / totalAssets) * 100 : 0.0;
+    
+    final breakdown = data.fundingSourceBreakdown as Map<String, double>;
+    
+    final sourceNames = {
+      'existing_cash': 'Existing Cash',
+      'salary_income': 'Salary Income',
+      'business_income': 'Business Income',
+      'receivable_collected': 'Receivables Collected',
+      'liability_borrowed': 'Liability / Borrowed',
+      'mixed_sources': 'Mixed Sources',
+    };
+    
+    final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
+
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.pie_chart_outline_rounded, size: 20, color: AppColors.glow),
+              const SizedBox(width: 8),
+              Text(
+                'Funding & Debt Analysis',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Debt-Funded vs Self-Funded details
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'SELF-FUNDED ASSETS',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.grey500,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${format.format(selfFunded)} (${selfPct.toStringAsFixed(1)}%)',
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF00E676),
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'DEBT-FUNDED ASSETS',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.grey500,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${format.format(debtFunded)} (${debtPct.toStringAsFixed(1)}%)',
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.darkDanger,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Progress Bar for Ratio
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: SizedBox(
+              height: 8,
+              child: LinearProgressIndicator(
+                value: totalAssets > 0 ? selfFunded / totalAssets : 1.0,
+                backgroundColor: AppColors.darkDanger,
+                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF00E676)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Divider(color: Colors.white10, height: 1),
+          const SizedBox(height: 16),
+          Text(
+            'FUNDING SOURCES BREAKDOWN',
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: AppColors.grey500,
+              letterSpacing: 1.0,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...breakdown.entries
+              .where((entry) => entry.value > 0)
+              .map((entry) {
+            final name = sourceNames[entry.key] ?? entry.key;
+            final val = entry.value;
+            final pct = totalAssets > 0 ? (val / totalAssets) * 100 : 0.0;
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        name,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        '${format.format(val)} (${pct.toStringAsFixed(1)}%)',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(
+                      value: totalAssets > 0 ? val / totalAssets : 0.0,
+                      backgroundColor: Colors.white.withOpacity(0.06),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        entry.key == 'liability_borrowed'
+                            ? AppColors.darkDanger
+                            : entry.key == 'mixed_sources'
+                                ? AppColors.darkWarning
+                                : AppColors.darkPrimary,
+                      ),
+                      minHeight: 3,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+          if (breakdown.values.every((v) => v == 0))
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12.0),
+              child: Center(
+                child: Text(
+                  'No assets recorded to analyze',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: AppColors.grey500,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

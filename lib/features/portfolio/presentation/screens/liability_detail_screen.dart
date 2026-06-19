@@ -66,12 +66,12 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
             child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final amount = double.tryParse(_repayController.text.trim()) ?? 0.0;
               if (amount > 0) {
                 final notifier = ref.read(mockDatabaseProvider.notifier);
                 if (isAccount) {
-                  notifier.addTransaction(
+                  await notifier.addTransaction(
                     type: 'repay_money',
                     amount: amount,
                     fromAccountId: 'acc_primary_bank_uuid',
@@ -80,13 +80,15 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
                     date: DateTime.now().toUtc(),
                   );
                 } else {
-                  notifier.addRepayTransaction(cleanId, 'acc_primary_bank_uuid', amount, 'Repaid loan amount', DateTime.now().toUtc());
+                  await notifier.addRepayTransaction(cleanId, 'acc_primary_bank_uuid', amount, 'Repaid loan amount', DateTime.now().toUtc());
                 }
                 _repayController.clear();
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Repayment of $currency$amount recorded successfully.')),
-                );
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Repayment of $currency$amount recorded successfully.')),
+                  );
+                }
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
@@ -97,7 +99,7 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
     );
   }
 
-  void _markClosed(BuildContext context, String cleanId, bool isAccount, String name, double outstanding) {
+  Future<void> _markClosed(BuildContext context, String cleanId, bool isAccount, String name, double outstanding) async {
     if (outstanding <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Liability is already closed.')),
@@ -106,7 +108,7 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
     }
     final notifier = ref.read(mockDatabaseProvider.notifier);
     if (isAccount) {
-      notifier.addTransaction(
+      await notifier.addTransaction(
         type: 'repay_money',
         amount: outstanding,
         fromAccountId: 'acc_primary_bank_uuid',
@@ -115,11 +117,13 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
         date: DateTime.now().toUtc(),
       );
     } else {
-      notifier.addRepayTransaction(cleanId, 'acc_primary_bank_uuid', outstanding, 'Repaid loan amount (Closed)', DateTime.now().toUtc());
+      await notifier.addRepayTransaction(cleanId, 'acc_primary_bank_uuid', outstanding, 'Repaid loan amount (Closed)', DateTime.now().toUtc());
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Liability "$name" marked as closed by paying outstanding balance.')),
-    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Liability "$name" marked as closed by paying outstanding balance.')),
+      );
+    }
   }
 
   void _showEditDialog(BuildContext context, bool isAccount, String cleanId) {
@@ -360,7 +364,7 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
             color: AppColors.layer1,
-            onSelected: (value) {
+            onSelected: (value) async {
               if (value == 'edit') {
                 _showEditDialog(context, isAccount, cleanId);
               } else if (value == 'adjust_amount') {
@@ -374,34 +378,40 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
                 );
               } else if (value == 'duplicate') {
                 if (isAccount) {
-                  ref.read(mockDatabaseProvider.notifier).duplicateAccount(cleanId);
+                  await ref.read(mockDatabaseProvider.notifier).duplicateAccount(cleanId);
                 } else {
-                  ref.read(mockDatabaseProvider.notifier).duplicatePerson(cleanId);
+                  await ref.read(mockDatabaseProvider.notifier).duplicatePerson(cleanId);
                 }
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Liability "$name" duplicated.')),
-                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Liability "$name" duplicated.')),
+                  );
+                }
               } else if (value == 'archive') {
                 final notifier = ref.read(mockDatabaseProvider.notifier);
                 if (isAccount) {
-                  notifier.archiveAccount(cleanId);
+                  await notifier.archiveAccount(cleanId);
                 } else {
-                  notifier.archivePerson(cleanId);
+                  await notifier.archivePerson(cleanId);
                 }
-                context.pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Liability "$name" archived.')),
-                );
+                if (context.mounted) {
+                  context.pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Liability "$name" archived.')),
+                  );
+                }
               } else if (value == 'restore') {
                 final notifier = ref.read(mockDatabaseProvider.notifier);
                 if (isAccount) {
-                  notifier.unarchiveAccount(cleanId);
+                  await notifier.unarchiveAccount(cleanId);
                 } else {
-                  notifier.unarchivePerson(cleanId);
+                  await notifier.unarchivePerson(cleanId);
                 }
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Liability "$name" unarchived successfully.')),
-                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Liability "$name" unarchived successfully.')),
+                  );
+                }
               } else if (value == 'delete') {
                 _confirmDeleteLiability(context, isAccount, originalItem, name);
               }

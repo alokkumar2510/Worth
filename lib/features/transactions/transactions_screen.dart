@@ -92,12 +92,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
           ),
           ElevatedButton(
-            onPressed: () {
-              ref.read(mockDatabaseProvider.notifier).voidTransaction(txId);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Transaction successfully voided.')),
-              );
+            onPressed: () async {
+              await ref.read(mockDatabaseProvider.notifier).voidTransaction(txId);
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Transaction successfully voided.')),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkDanger),
             child: const Text('Void', style: TextStyle(color: Colors.white)),
@@ -185,8 +187,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               onPressed: () => Navigator.pop(context),
               child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
             ),
-            ElevatedButton(
-              onPressed: () {
+             ElevatedButton(
+              onPressed: () async {
                 final amt = double.tryParse(amountController.text.trim()) ?? tx.amount;
                 final cat = selectedCategory;
                 final notes = notesController.text.trim();
@@ -210,11 +212,13 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                   syncStatus: 'pending',
                 );
 
-                ref.read(mockDatabaseProvider.notifier).editTransaction(updated);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Transaction updated successfully.')),
-                );
+                await ref.read(mockDatabaseProvider.notifier).editTransaction(updated);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Transaction updated successfully.')),
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
               child: const Text('Save', style: TextStyle(color: Colors.white)),
@@ -275,12 +279,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               ListTile(
                 leading: const Icon(Icons.copy_outlined, color: AppColors.darkSuccess),
                 title: const Text('Duplicate Transaction', style: TextStyle(color: Colors.white)),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(context);
-                  ref.read(mockDatabaseProvider.notifier).duplicateTransaction(tx.id);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Transaction duplicated.')),
-                  );
+                  await ref.read(mockDatabaseProvider.notifier).duplicateTransaction(tx.id);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Transaction duplicated.')),
+                    );
+                  }
                 },
               ),
               ListTile(
@@ -290,8 +296,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                   Navigator.pop(context);
                   final confirm = await _showDeleteConfirmDialog(context);
                   if (confirm == true) {
-                    ref.read(mockDatabaseProvider.notifier).deleteTransaction(tx.id);
-                    if (mounted) {
+                    await ref.read(mockDatabaseProvider.notifier).deleteTransaction(tx.id);
+                    if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Transaction deleted.')),
                       );
@@ -1205,7 +1211,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               } else {
                 final confirm = await _showDeleteConfirmDialog(context);
                 if (confirm == true) {
-                  ref.read(mockDatabaseProvider.notifier).deleteTransaction(tx.id);
+                  await ref.read(mockDatabaseProvider.notifier).deleteTransaction(tx.id);
                   return true;
                 }
                 return false;

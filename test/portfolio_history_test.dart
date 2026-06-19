@@ -53,12 +53,12 @@ void main() {
       expect(latestSnap.netWorth, greaterThanOrEqualTo(50000.0));
     });
 
-    test('Adding an Investment creates a history log entry', () {
+    test('Adding an Investment creates a history log entry', () async {
       final notifier = container.read(mockDatabaseProvider.notifier);
       final initialLength = container.read(mockDatabaseProvider).portfolioHistory.length;
 
       // Add a mock investment
-      final inv = notifier.addInvestment(
+      final inv = await notifier.addInvestment(
         'NIFTYBEES TEST',
         'mutual_fund',
         'NIFTYBEES',

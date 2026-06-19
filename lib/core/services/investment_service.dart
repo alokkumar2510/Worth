@@ -18,20 +18,26 @@ class InvestmentService {
 
   Future<void> buyInvestment({
     required String investmentId,
-    required String fromAccountId,
+    String? fromAccountId,
     required double units,
     required double pricePerUnit,
     String? notes,
     required DateTime date,
+    String? fundingSource,
+    String? fundingLiabilityId,
+    String? fundingDetails,
   }) async {
     if (_isMock) {
-      _ref.read(mockDatabaseProvider.notifier).buyInvestment(
+      await _ref.read(mockDatabaseProvider.notifier).buyInvestment(
         investmentId,
         fromAccountId,
         units,
         pricePerUnit,
         notes,
         date,
+        fundingSource: fundingSource,
+        fundingLiabilityId: fundingLiabilityId,
+        fundingDetails: fundingDetails,
       );
     } else {
       final totalAmount = units * pricePerUnit;
@@ -39,7 +45,7 @@ class InvestmentService {
         id: Value(_uuid.v4()),
         type: const Value('investment_buy'),
         amount: Value(totalAmount),
-        fromAccountId: Value(fromAccountId),
+        fromAccountId: fromAccountId != null && fromAccountId.isNotEmpty ? Value(fromAccountId) : const Value(null),
         investmentId: Value(investmentId),
         pricePerUnit: Value(pricePerUnit),
         units: Value(units),
@@ -47,6 +53,9 @@ class InvestmentService {
         transactionDate: Value(date),
         createdAt: Value(DateTime.now().toUtc()),
         updatedAt: Value(DateTime.now().toUtc()),
+        fundingSource: Value(fundingSource),
+        fundingLiabilityId: Value(fundingLiabilityId),
+        fundingDetails: Value(fundingDetails),
       );
       await _ref.read(realTransactionServiceProvider).createTransaction(companion);
       final txId = companion.id.value;
@@ -69,7 +78,7 @@ class InvestmentService {
     required DateTime date,
   }) async {
     if (_isMock) {
-      _ref.read(mockDatabaseProvider.notifier).sellInvestment(
+      await _ref.read(mockDatabaseProvider.notifier).sellInvestment(
         investmentId,
         toAccountId,
         unitsToSell,

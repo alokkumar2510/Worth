@@ -113,6 +113,10 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     DateTime selectedDate = DateTime.now();
     TimeOfDay selectedTime = TimeOfDay.now();
 
+    String fundingSource = 'existing_cash';
+    String? fundingLiabilityId;
+    final mixedDetailsController = TextEditingController();
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -154,6 +158,62 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(labelText: 'Notes', labelStyle: TextStyle(color: AppColors.grey500)),
                 ),
+                if (type != 'credit') ...[
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: fundingSource,
+                    dropdownColor: AppColors.layer1,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(labelText: 'Funding Source', labelStyle: TextStyle(color: AppColors.grey500)),
+                    items: const [
+                      DropdownMenuItem(value: 'existing_cash', child: Text('Existing Cash')),
+                      DropdownMenuItem(value: 'salary_income', child: Text('Salary Income')),
+                      DropdownMenuItem(value: 'business_income', child: Text('Business Income')),
+                      DropdownMenuItem(value: 'receivable_collected', child: Text('Receivable Collected')),
+                      DropdownMenuItem(value: 'liability_borrowed', child: Text('Liability / Borrowed Money')),
+                      DropdownMenuItem(value: 'mixed_sources', child: Text('Mixed Sources')),
+                    ],
+                    onChanged: (val) => setState(() => fundingSource = val!),
+                  ),
+                  if (fundingSource == 'liability_borrowed') ...[
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: fundingLiabilityId,
+                      dropdownColor: AppColors.layer1,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(labelText: 'Funding Liability', labelStyle: TextStyle(color: AppColors.grey500)),
+                      items: () {
+                        final dbState = ref.read(mockDatabaseProvider);
+                        final creditAccounts = dbState.accounts.where((a) => a.isArchived == 0 && a.type == 'credit').toList();
+                        final peopleLiabilities = dbState.people.where((p) => p.isArchived == 0 && dbState.getPersonLiabilityBalance(p.id) > 0).toList();
+
+                        final List<DropdownMenuItem<String>> items = [];
+                        for (final acc in creditAccounts) {
+                          items.add(DropdownMenuItem(value: 'acc_${acc.id}', child: Text('Credit Card: ${acc.name}')));
+                        }
+                        for (final person in peopleLiabilities) {
+                          items.add(DropdownMenuItem(value: 'person_${person.id}', child: Text('Lender: ${person.name}')));
+                        }
+                        if (items.isEmpty) {
+                          items.add(const DropdownMenuItem(value: 'none', child: Text('No Active Liabilities Found')));
+                        }
+                        return items;
+                      }(),
+                      onChanged: (val) => setState(() => fundingLiabilityId = val == 'none' ? null : val),
+                    ),
+                  ],
+                  if (fundingSource == 'mixed_sources') ...[
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: mixedDetailsController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Mixed Funding Details (e.g. 50% Cash, 50% Debt)',
+                        labelStyle: TextStyle(color: AppColors.grey500),
+                      ),
+                    ),
+                  ],
+                ],
                 const SizedBox(height: 12),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
@@ -200,7 +260,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
               child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 final name = nameController.text.trim();
                 final balance = double.tryParse(balanceController.text.trim()) ?? 0.0;
                 final notes = notesController.text.trim();
@@ -212,14 +272,19 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                     selectedTime.hour,
                     selectedTime.minute,
                   );
-                  ref.read(mockDatabaseProvider.notifier).addAccount(
+                  await ref.read(mockDatabaseProvider.notifier).addAccount(
                     name,
                     type,
                     notes.isNotEmpty ? notes : 'Initial deposit',
                     balance,
                     openingDate: openingDateTime,
+                    fundingSource: type == 'credit' ? null : fundingSource,
+                    fundingLiabilityId: type == 'credit' ? null : fundingLiabilityId,
+                    fundingDetails: type == 'credit' ? null : (fundingSource == 'mixed_sources' ? mixedDetailsController.text.trim() : null),
                   );
-                  Navigator.pop(context);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
                 }
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
@@ -311,13 +376,13 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
               child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 final name = nameController.text.trim();
                 final amount = double.tryParse(amountController.text.trim()) ?? 0.0;
                 final notes = notesController.text.trim();
                 if (name.isNotEmpty) {
                   final notifier = ref.read(mockDatabaseProvider.notifier);
-                  final person = notifier.addPerson(name, null, notes.isNotEmpty ? notes : null);
+                  final person = await notifier.addPerson(name, null, notes.isNotEmpty ? notes : null);
                   final txDateTime = DateTime(
                     selectedDate.year,
                     selectedDate.month,
@@ -326,11 +391,13 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                     selectedTime.minute,
                   );
                   if (isLending) {
-                    notifier.addLendTransaction(person.id, 'acc_primary_bank_uuid', amount, notes.isNotEmpty ? notes : 'Initial lend', txDateTime);
+                    await notifier.addLendTransaction(person.id, null, amount, notes.isNotEmpty ? notes : 'Initial lend', txDateTime);
                   } else {
-                    notifier.addBorrowTransaction(person.id, 'acc_primary_bank_uuid', amount, notes.isNotEmpty ? notes : 'Initial borrow', txDateTime);
+                    await notifier.addBorrowTransaction(person.id, null, amount, notes.isNotEmpty ? notes : 'Initial borrow', txDateTime);
                   }
-                  Navigator.pop(context);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
                 }
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
@@ -347,7 +414,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     final symbolController = TextEditingController();
     final unitsController = TextEditingController();
     final priceController = TextEditingController();
-    
+
     // MTF Fields
     final brokerController = TextEditingController();
     final ownCapitalController = TextEditingController();
@@ -359,6 +426,11 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     DateTime interestStartDate = DateTime.now();
     final purchaseTimeController = TextEditingController();
     DateTime? purchaseDate;
+
+    // Source of funds variables
+    String fundingSource = 'existing_cash';
+    String? fundingLiabilityId;
+    final mixedDetailsController = TextEditingController();
 
     showDialog(
       context: context,
@@ -372,7 +444,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
           final borrowedCapital = totalCost - ownCapital;
 
           return AlertDialog(
-            
+
             title: const Text('Add Investment', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             content: SingleChildScrollView(
               child: Column(
@@ -482,7 +554,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                       labelText: 'Purchase Time (Optional, e.g. 10:30 AM)',
                       labelStyle: TextStyle(color: AppColors.grey500),
                       hintText: 'HH:MM or standard format',
-                      hintStyle: const TextStyle(color: AppColors.grey500, fontSize: 12),
+                      hintStyle: TextStyle(color: AppColors.grey500, fontSize: 12),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -494,6 +566,60 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                       labelStyle: TextStyle(color: AppColors.grey500),
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: fundingSource,
+                    dropdownColor: AppColors.layer1,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(labelText: 'Funding Source', labelStyle: TextStyle(color: AppColors.grey500)),
+                    items: const [
+                      DropdownMenuItem(value: 'existing_cash', child: Text('Existing Cash')),
+                      DropdownMenuItem(value: 'salary_income', child: Text('Salary Income')),
+                      DropdownMenuItem(value: 'business_income', child: Text('Business Income')),
+                      DropdownMenuItem(value: 'receivable_collected', child: Text('Receivable Collected')),
+                      DropdownMenuItem(value: 'liability_borrowed', child: Text('Liability / Borrowed Money')),
+                      DropdownMenuItem(value: 'mixed_sources', child: Text('Mixed Sources')),
+                    ],
+                    onChanged: (val) => setDialogState(() => fundingSource = val!),
+                  ),
+                  if (fundingSource == 'liability_borrowed') ...[
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: fundingLiabilityId,
+                      dropdownColor: AppColors.layer1,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(labelText: 'Funding Liability', labelStyle: TextStyle(color: AppColors.grey500)),
+                      items: () {
+                        final dbState = ref.read(mockDatabaseProvider);
+                        final creditAccounts = dbState.accounts.where((a) => a.isArchived == 0 && a.type == 'credit').toList();
+                        final peopleLiabilities = dbState.people.where((p) => p.isArchived == 0 && dbState.getPersonLiabilityBalance(p.id) > 0).toList();
+
+                        final List<DropdownMenuItem<String>> items = [];
+                        for (final acc in creditAccounts) {
+                          items.add(DropdownMenuItem(value: 'acc_${acc.id}', child: Text('Credit Card: ${acc.name}')));
+                        }
+                        for (final person in peopleLiabilities) {
+                          items.add(DropdownMenuItem(value: 'person_${person.id}', child: Text('Lender: ${person.name}')));
+                        }
+                        if (items.isEmpty) {
+                          items.add(const DropdownMenuItem(value: 'none', child: Text('No Active Liabilities Found')));
+                        }
+                        return items;
+                      }(),
+                      onChanged: (val) => setDialogState(() => fundingLiabilityId = val == 'none' ? null : val),
+                    ),
+                  ],
+                  if (fundingSource == 'mixed_sources') ...[
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: mixedDetailsController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Mixed Funding Details (e.g. 50% Cash, 50% Debt)',
+                        labelStyle: TextStyle(color: AppColors.grey500),
+                      ),
+                    ),
+                  ],
                   if (showMtfSwitch) ...[
                     const SizedBox(height: 8),
                     SwitchListTile(
@@ -685,7 +811,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         notes: userNotes.isNotEmpty ? userNotes : null,
                       );
                     } else {
-                      final inv = notifier.addInvestment(
+                      final inv = await notifier.addInvestment(
                         name,
                         type,
                         symbol.isNotEmpty ? symbol : null,
@@ -693,8 +819,21 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         priceVal,
                         purchaseDate: finalPurchaseDate,
                         purchaseTime: purchaseTimeStr,
+                        fundingSource: fundingSource,
+                        fundingLiabilityId: fundingLiabilityId,
+                        fundingDetails: fundingSource == 'mixed_sources' ? mixedDetailsController.text.trim() : null,
                       );
-                      notifier.buyInvestment(inv.id, 'acc_primary_bank_uuid', unitsVal, priceVal, userNotes.isNotEmpty ? userNotes : 'Opening Buy', finalPurchaseDate);
+                      await notifier.buyInvestment(
+                        inv.id,
+                        null,
+                        unitsVal,
+                        priceVal,
+                        userNotes.isNotEmpty ? userNotes : 'Opening Buy',
+                        finalPurchaseDate,
+                        fundingSource: fundingSource,
+                        fundingLiabilityId: fundingLiabilityId,
+                        fundingDetails: fundingSource == 'mixed_sources' ? mixedDetailsController.text.trim() : null,
+                      );
                     }
                     if (context.mounted) {
                       Navigator.pop(context);
@@ -793,19 +932,21 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
               child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 final src = sourceController.text.trim();
                 final amount = double.tryParse(amountController.text.trim()) ?? 0.0;
                 final notes = notesController.text.trim();
                 if (src.isNotEmpty && amount > 0) {
-                  ref.read(mockDatabaseProvider.notifier).addExpectedIncome(
+                  await ref.read(mockDatabaseProvider.notifier).addExpectedIncome(
                     src,
                     amount,
                     expectedDate,
                     notes.isNotEmpty ? notes : null,
                     createdAt: transactionDate,
                   );
-                  Navigator.pop(context);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
                 }
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
@@ -883,18 +1024,20 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
               child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 final name = nameController.text.trim();
                 final target = double.tryParse(targetController.text.trim()) ?? 0.0;
                 final notes = notesController.text.trim();
                 if (name.isNotEmpty && target > 0) {
-                  ref.read(mockDatabaseProvider.notifier).addGoal(
+                  await ref.read(mockDatabaseProvider.notifier).addGoal(
                         name,
                         target,
                         selectedDeadline,
                         notes.isNotEmpty ? notes : null,
                       );
-                  Navigator.pop(context);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
                 }
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),

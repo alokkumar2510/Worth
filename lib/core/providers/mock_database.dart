@@ -407,6 +407,133 @@ class MockDatabaseState {
     return totalAssets - totalLiabilities;
   }
 
+  double get debtFundedAssets {
+    double total = 0.0;
+    
+    // 1. Accounts
+    for (final acc in accounts) {
+      if (acc.isArchived == 0 && acc.type != 'credit') {
+        final bal = getAccountCashBalance(acc.id);
+        total += _getDebtPortion(acc.fundingSource, acc.fundingDetails, bal);
+      }
+    }
+    
+    // 2. Receivables
+    for (final p in people) {
+      if (p.isArchived == 0) {
+        final bal = getPersonReceivableBalance(p.id);
+        final tx = transactions.firstWhereOrNull((t) => t.type == 'lend_money' && t.personId == p.id);
+        total += _getDebtPortion(tx?.fundingSource, tx?.fundingDetails, bal);
+      }
+    }
+    
+    // 3. Investments
+    for (final inv in investments) {
+      if (inv.isArchived == 0) {
+        final bal = getInvestmentInvestedCapital(inv.id);
+        total += _getDebtPortion(inv.fundingSource, inv.fundingDetails, bal);
+      }
+    }
+    
+    return total;
+  }
+
+  double get selfFundedAssets {
+    return totalAssets - debtFundedAssets;
+  }
+
+  Map<String, double> get fundingSourceBreakdown {
+    final Map<String, double> breakdown = {
+      'existing_cash': 0.0,
+      'salary_income': 0.0,
+      'business_income': 0.0,
+      'receivable_collected': 0.0,
+      'liability_borrowed': 0.0,
+      'mixed_sources': 0.0,
+    };
+    
+    // 1. Accounts
+    for (final acc in accounts) {
+      if (acc.isArchived == 0 && acc.type != 'credit') {
+        final bal = getAccountCashBalance(acc.id);
+        final source = acc.fundingSource ?? 'existing_cash';
+        breakdown[source] = (breakdown[source] ?? 0.0) + bal;
+      }
+    }
+    
+    // 2. Receivables
+    for (final p in people) {
+      if (p.isArchived == 0) {
+        final bal = getPersonReceivableBalance(p.id);
+        final tx = transactions.firstWhereOrNull((t) => t.type == 'lend_money' && t.personId == p.id);
+        final source = tx?.fundingSource ?? 'existing_cash';
+        breakdown[source] = (breakdown[source] ?? 0.0) + bal;
+      }
+    }
+    
+    // 3. Investments
+    for (final inv in investments) {
+      if (inv.isArchived == 0) {
+        final bal = getInvestmentInvestedCapital(inv.id);
+        final source = inv.fundingSource ?? 'existing_cash';
+        breakdown[source] = (breakdown[source] ?? 0.0) + bal;
+      }
+    }
+    
+    return breakdown;
+  }
+
+  double _getDebtPortion(String? fundingSource, String? fundingDetails, double assetValue) {
+    if (fundingSource == 'liability_borrowed') {
+      return assetValue;
+    }
+    if (fundingSource == 'mixed_sources') {
+      if (fundingDetails != null && fundingDetails.isNotEmpty) {
+        try {
+          final decoded = jsonDecode(fundingDetails);
+          if (decoded is Map<String, dynamic>) {
+            if (decoded.containsKey('debt_pct')) {
+              final pct = (decoded['debt_pct'] as num).toDouble();
+              return assetValue * (pct / 100.0);
+            }
+            if (decoded.containsKey('debt_ratio')) {
+              final ratio = (decoded['debt_ratio'] as num).toDouble();
+              return assetValue * ratio;
+            }
+            if (decoded.containsKey('debt_amount')) {
+              final debtAmt = (decoded['debt_amount'] as num).toDouble();
+              if (decoded.containsKey('total_amount')) {
+                final totalAmt = (decoded['total_amount'] as num).toDouble();
+                if (totalAmt > 0) {
+                  return assetValue * (debtAmt / totalAmt);
+                }
+              }
+              return debtAmt.clamp(0.0, assetValue);
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+        
+        final lowercase = fundingDetails.toLowerCase();
+        final regexPct = RegExp(r'(\d+)\s*%\s*debt');
+        final matchPct = regexPct.firstMatch(lowercase);
+        if (matchPct != null) {
+          final pct = double.tryParse(matchPct.group(1) ?? '0') ?? 0.0;
+          return assetValue * (pct / 100.0);
+        }
+        final regexAmt = RegExp(r'debt\s*[:=]\s*(\d+)');
+        final matchAmt = regexAmt.firstMatch(lowercase);
+        if (matchAmt != null) {
+          final amt = double.tryParse(matchAmt.group(1) ?? '0') ?? 0.0;
+          return amt.clamp(0.0, assetValue);
+        }
+      }
+      return assetValue * 0.5;
+    }
+    return 0.0;
+  }
+
   double get totalInvestedCapital {
     double total = 0.0;
     for (final inv in investments) {
@@ -1134,7 +1261,17 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
 
   // --- Database Mutations ---
 
-  Future<Account> addAccount(String name, String type, String? notes, double openingBalance, {String? id, DateTime? openingDate}) async {
+  Future<Account> addAccount(
+    String name,
+    String type,
+    String? notes,
+    double openingBalance, {
+    String? id,
+    DateTime? openingDate,
+    String? fundingSource,
+    String? fundingLiabilityId,
+    String? fundingDetails,
+  }) async {
     final actualId = id ?? _uuid.v4();
     final now = DateTime.now().toUtc();
     final creationDate = openingDate ?? now;
@@ -1147,6 +1284,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       createdAt: creationDate,
       updatedAt: now,
       syncStatus: 'pending',
+      fundingSource: fundingSource,
+      fundingLiabilityId: fundingLiabilityId,
+      fundingDetails: fundingDetails,
     );
 
     final isMock = _ref.read(mockModeProvider);
@@ -1165,6 +1305,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
             category: 'Opening Balance',
             notes: notes ?? 'Initial deposit',
             date: creationDate,
+            fundingSource: fundingSource,
+            fundingLiabilityId: fundingLiabilityId,
+            fundingDetails: fundingDetails,
           );
         }
       }
@@ -1191,6 +1334,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
             category: 'Opening Balance',
             notes: notes ?? 'Initial deposit',
             date: creationDate,
+            fundingSource: fundingSource,
+            fundingLiabilityId: fundingLiabilityId,
+            fundingDetails: fundingDetails,
           );
         }
       }
@@ -1208,13 +1354,13 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     return newAccount;
   }
 
-  void archiveAccount(String accountId) {
+  Future<void> archiveAccount(String accountId) async {
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
-      db.update(db.accounts)
+      await (db.update(db.accounts)
         ..where((tbl) => tbl.id.equals(accountId))
-        ..write(AccountsCompanion(isArchived: const Value(1), updatedAt: Value(DateTime.now().toUtc())));
+        ..write(AccountsCompanion(isArchived: const Value(1), updatedAt: Value(DateTime.now().toUtc()))));
       _queueSync('account', accountId, 'upsert');
     } else {
       state = state.copyWith(
@@ -1367,7 +1513,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     }
   }
 
-  Person addPerson(String name, String? phone, String? notes) {
+  Future<Person> addPerson(String name, String? phone, String? notes) async {
     final id = _uuid.v4();
     final now = DateTime.now().toUtc();
     final newPerson = Person(
@@ -1384,7 +1530,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
-      db.into(db.people).insert(newPerson);
+      await db.into(db.people).insert(newPerson);
       _queueSync('person', id, 'upsert');
     } else {
       state = state.copyWith(people: [...state.people, newPerson]);
@@ -1476,7 +1622,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     }
   }
 
-  Future<void> addLendTransaction(String personId, String fromAccountId, double amount, String? notes, DateTime date) async {
+  Future<void> addLendTransaction(String personId, String? fromAccountId, double amount, String? notes, DateTime date) async {
     await addTransaction(
       type: 'lend_money',
       amount: amount,
@@ -1487,7 +1633,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     );
   }
 
-  Future<void> addBorrowTransaction(String personId, String toAccountId, double amount, String? notes, DateTime date) async {
+  Future<void> addBorrowTransaction(String personId, String? toAccountId, double amount, String? notes, DateTime date) async {
     await addTransaction(
       type: 'borrow_money',
       amount: amount,
@@ -1498,7 +1644,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     );
   }
 
-  Future<void> addRepayTransaction(String personId, String fromAccountId, double amount, String? notes, DateTime date) async {
+  Future<void> addRepayTransaction(String personId, String? fromAccountId, double amount, String? notes, DateTime date) async {
     await addTransaction(
       type: 'repay_money',
       amount: amount,
@@ -1509,7 +1655,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     );
   }
 
-  Future<String> addRecoverTransaction(String personId, String toAccountId, double amount, String? notes, DateTime date) async {
+  Future<String> addRecoverTransaction(String personId, String? toAccountId, double amount, String? notes, DateTime date) async {
     final tx = await addTransaction(
       type: 'recover_money',
       amount: amount,
@@ -1657,7 +1803,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     );
   }
 
-  Investment addInvestment(
+  Future<Investment> addInvestment(
     String name,
     String type,
     String? symbol,
@@ -1665,7 +1811,10 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     double marketValue, {
     DateTime? purchaseDate,
     String? purchaseTime,
-  }) {
+    String? fundingSource,
+    String? fundingLiabilityId,
+    String? fundingDetails,
+  }) async {
     final id = _uuid.v4();
     final now = DateTime.now().toUtc();
     final newInvestment = Investment(
@@ -1682,17 +1831,20 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       createdAt: now,
       updatedAt: now,
       syncStatus: 'pending',
+      fundingSource: fundingSource,
+      fundingLiabilityId: fundingLiabilityId,
+      fundingDetails: fundingDetails,
     );
 
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
-      db.into(db.investments).insert(newInvestment);
+      await db.into(db.investments).insert(newInvestment);
       _queueSync('investment', id, 'upsert');
     } else {
       state = state.copyWith(investments: [...state.investments, newInvestment]);
     }
-    _logHistory(
+    await _logHistory(
       action: 'Added Investment',
       entityType: 'Investment',
       entityId: id,
@@ -1908,7 +2060,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       );
     }
     final investment = state.investments.firstWhere((i) => i.id == id);
-    _logHistory(
+    await _logHistory(
       action: 'Deleted Investment',
       entityType: 'Investment',
       entityId: id,
@@ -1917,16 +2069,29 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     );
   }
 
-  void buyInvestment(String investmentId, String fromAccountId, double units, double pricePerUnit, String? notes, DateTime date) {
+  Future<void> buyInvestment(
+    String investmentId,
+    String? fromAccountId,
+    double units,
+    double pricePerUnit,
+    String? notes,
+    DateTime date, {
+    String? fundingSource,
+    String? fundingLiabilityId,
+    String? fundingDetails,
+  }) async {
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
-      _ref.read(realInvestmentServiceProvider).buyInvestment(
+      await _ref.read(realInvestmentServiceProvider).buyInvestment(
         investmentId: investmentId,
         fromAccountId: fromAccountId,
         units: units,
         pricePerUnit: pricePerUnit,
         notes: notes,
         date: date,
+        fundingSource: fundingSource,
+        fundingLiabilityId: fundingLiabilityId,
+        fundingDetails: fundingDetails,
       );
     } else {
       final amount = units * pricePerUnit;
@@ -1937,6 +2102,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         investmentId: investmentId,
         notes: notes ?? 'Bought $units units @ ${state.currency} $pricePerUnit',
         date: date,
+        fundingSource: fundingSource,
+        fundingLiabilityId: fundingLiabilityId,
+        fundingDetails: fundingDetails,
       );
 
       final lotId = _uuid.v4();
@@ -1951,12 +2119,15 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         createdAt: DateTime.now().toUtc(),
         updatedAt: DateTime.now().toUtc(),
         syncStatus: 'pending',
+        fundingSource: fundingSource,
+        fundingLiabilityId: fundingLiabilityId,
+        fundingDetails: fundingDetails,
       );
 
       state = state.copyWith(investmentLots: [...state.investmentLots, newLot]);
     }
     final investment = state.investments.firstWhere((i) => i.id == investmentId);
-    _logHistory(
+    await _logHistory(
       action: 'Edited Investment',
       entityType: 'Investment',
       entityId: investmentId,
@@ -1965,10 +2136,10 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     );
   }
 
-  void sellInvestment(String investmentId, String toAccountId, double unitsToSell, double salePricePerUnit, String? notes, DateTime date) {
+  Future<void> sellInvestment(String investmentId, String toAccountId, double unitsToSell, double salePricePerUnit, String? notes, DateTime date) async {
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
-      _ref.read(realInvestmentServiceProvider).sellInvestment(
+      await _ref.read(realInvestmentServiceProvider).sellInvestment(
         investmentId: investmentId,
         toAccountId: toAccountId,
         unitsToSell: unitsToSell,
@@ -2043,7 +2214,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       );
     }
     final investment = state.investments.firstWhere((i) => i.id == investmentId);
-    _logHistory(
+    await _logHistory(
       action: 'Edited Investment',
       entityType: 'Investment',
       entityId: investmentId,
@@ -2052,12 +2223,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     );
   }
 
-  void addExpectedIncome(String source, double amount, DateTime? expectedDate, String? notes, {DateTime? createdAt}) {
+  Future<void> addExpectedIncome(String source, double amount, DateTime? expectedDate, String? notes, {DateTime? createdAt}) async {
     final isMock = _ref.read(mockModeProvider);
     final creationDate = createdAt ?? DateTime.now().toUtc();
     final id = _uuid.v4();
     if (!isMock) {
-      _ref.read(realExpectedIncomeServiceProvider).addExpectedIncome(
+      await _ref.read(realExpectedIncomeServiceProvider).addExpectedIncome(
         source: source,
         amount: amount,
         expectedDate: expectedDate,
@@ -2078,7 +2249,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
 
       state = state.copyWith(expectedIncomes: [...state.expectedIncomes, newInc]);
     }
-    _logHistory(
+    await _logHistory(
       action: 'Added Expected Income',
       entityType: 'Expected Income',
       entityId: id,
@@ -2088,10 +2259,10 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     );
   }
 
-  void markExpectedIncomeReceived(String incomeId, String destinationAccountId) {
+  Future<void> markExpectedIncomeReceived(String incomeId, String destinationAccountId) async {
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
-      _ref.read(realExpectedIncomeServiceProvider).markReceived(incomeId, destinationAccountId);
+      await _ref.read(realExpectedIncomeServiceProvider).markReceived(incomeId, destinationAccountId);
     } else {
       final inc = state.expectedIncomes.firstWhere((i) => i.id == incomeId);
       final tx = _createTransactionInternal(
@@ -2123,7 +2294,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       );
     }
     final inc = state.expectedIncomes.firstWhere((i) => i.id == incomeId);
-    _logHistory(
+    await _logHistory(
       action: 'Received Expected Income',
       entityType: 'Expected Income',
       entityId: incomeId,
@@ -2133,10 +2304,10 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     );
   }
 
-  void markExpectedIncomeExpired(String incomeId) {
+  Future<void> markExpectedIncomeExpired(String incomeId) async {
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
-      _ref.read(realExpectedIncomeServiceProvider).markExpired(incomeId);
+      await _ref.read(realExpectedIncomeServiceProvider).markExpired(incomeId);
     } else {
       state = state.copyWith(
         expectedIncomes: state.expectedIncomes.map((i) {
@@ -2198,11 +2369,11 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     }
   }
 
-  void addGoal(String name, double targetAmount, DateTime? deadline, String? notes) {
+  Future<void> addGoal(String name, double targetAmount, DateTime? deadline, String? notes) async {
     final isMock = _ref.read(mockModeProvider);
     final id = _uuid.v4();
     if (!isMock) {
-      _ref.read(realGoalServiceProvider).createGoal(
+      await _ref.read(realGoalServiceProvider).createGoal(
         name: name,
         targetAmount: targetAmount,
         targetDate: deadline,
@@ -2224,7 +2395,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
 
       state = state.copyWith(goals: [...state.goals, newGoal]);
     }
-    _logHistory(
+    await _logHistory(
       action: 'Added Goal',
       entityType: 'Goal',
       entityId: id,
@@ -2478,27 +2649,27 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       await db.into(db.settings).insertOnConflictUpdate(Setting(key: 'isLoggedIn', value: 'true'));
     }
     
-    addAccount(mockBankName1, 'bank', 'Main checking account', 250000.0, id: 'acc_primary_bank_uuid');
-    addAccount('Cash Wallet', 'cash', 'Physical cash', 5000.0, id: 'acc_cash_wallet_uuid');
-    addAccount(mockCreditCardName1, 'credit', 'Primary credit card', 15000.0, id: 'acc_cc_a_uuid');
+    await addAccount(mockBankName1, 'bank', 'Main checking account', 250000.0, id: 'acc_primary_bank_uuid');
+    await addAccount('Cash Wallet', 'cash', 'Physical cash', 5000.0, id: 'acc_cash_wallet_uuid');
+    await addAccount(mockCreditCardName1, 'credit', 'Primary credit card', 15000.0, id: 'acc_cc_a_uuid');
     
-    final p1 = addPerson(mockPersonName1, '+91 98765 43210', 'Friend from college');
-    final p2 = addPerson(mockPersonName2, '+91 99999 88888', 'Landlord');
+    final p1 = await addPerson(mockPersonName1, '+91 98765 43210', 'Friend from college');
+    final p2 = await addPerson(mockPersonName2, '+91 99999 88888', 'Landlord');
     
-    addLendTransaction(p1.id, 'acc_primary_bank_uuid', 10000.0, 'Lent for emergency', now.subtract(const Duration(days: 5)));
-    addBorrowTransaction(p2.id, 'acc_primary_bank_uuid', 5000.0, 'Borrowed for deposit', now.subtract(const Duration(days: 3)));
+    await addLendTransaction(p1.id, 'acc_primary_bank_uuid', 10000.0, 'Lent for emergency', now.subtract(const Duration(days: 5)));
+    await addBorrowTransaction(p2.id, 'acc_primary_bank_uuid', 5000.0, 'Borrowed for deposit', now.subtract(const Duration(days: 3)));
     
-    final inv1 = addInvestment(mockInvestmentName1, 'stock', 'INFY', 'Infosys shares', 1800.0);
-    final inv2 = addInvestment(mockInvestmentName2, 'mutual_fund', 'NIFTY50', 'Index Mutual Fund', 700.0);
+    final inv1 = await addInvestment(mockInvestmentName1, 'stock', 'INFY', 'Infosys shares', 1800.0);
+    final inv2 = await addInvestment(mockInvestmentName2, 'mutual_fund', 'NIFTY50', 'Index Mutual Fund', 700.0);
     
-    buyInvestment(inv1.id, 'acc_primary_bank_uuid', 30, 1800.0, 'Bought 30 units', now.subtract(const Duration(days: 10)));
-    buyInvestment(inv2.id, 'acc_primary_bank_uuid', 100, 700.0, 'Bought 100 units', now.subtract(const Duration(days: 15)));
+    await buyInvestment(inv1.id, 'acc_primary_bank_uuid', 30, 1800.0, 'Bought 30 units', now.subtract(const Duration(days: 10)));
+    await buyInvestment(inv2.id, 'acc_primary_bank_uuid', 100, 700.0, 'Bought 100 units', now.subtract(const Duration(days: 15)));
     
-    addExpectedIncome('Freelance Design', 25000.0, now.add(const Duration(days: 7)), 'Logo design project');
-    addExpectedIncome('Dividends', 1500.0, now.add(const Duration(days: 12)), 'INFY stock dividends');
+    await addExpectedIncome('Freelance Design', 25000.0, now.add(const Duration(days: 7)), 'Logo design project');
+    await addExpectedIncome('Dividends', 1500.0, now.add(const Duration(days: 12)), 'INFY stock dividends');
     
-    addGoal(mockGoalName1, 150000.0, now.add(const Duration(days: 180)), '6 months emergency fund');
-    addGoal(mockGoalName2, 300000.0, now.add(const Duration(days: 365)), 'Downpayment for car');
+    await addGoal(mockGoalName1, 150000.0, now.add(const Duration(days: 180)), '6 months emergency fund');
+    await addGoal(mockGoalName2, 300000.0, now.add(const Duration(days: 365)), 'Downpayment for car');
     
     if (!isMock) {
       await _ref.read(realBalanceCacheServiceProvider).rebuildCache();
@@ -2544,6 +2715,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     String? investmentId,
     String? notes,
     required DateTime date,
+    String? fundingSource,
+    String? fundingLiabilityId,
+    String? fundingDetails,
   }) async {
     final isMock = _ref.read(mockModeProvider);
     final Transaction tx;
@@ -2562,6 +2736,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         createdAt: DateTime.now().toUtc(),
         updatedAt: DateTime.now().toUtc(),
         syncStatus: 'pending',
+        fundingSource: fundingSource,
+        fundingLiabilityId: fundingLiabilityId,
+        fundingDetails: fundingDetails,
       );
       final companion = TransactionsCompanion.insert(
         id: tx.id,
@@ -2576,6 +2753,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         transactionDate: tx.transactionDate,
         createdAt: tx.createdAt,
         updatedAt: tx.updatedAt,
+        fundingSource: Value(tx.fundingSource),
+        fundingLiabilityId: Value(tx.fundingLiabilityId),
+        fundingDetails: Value(tx.fundingDetails),
       );
       await _ref.read(realTransactionServiceProvider).createTransaction(companion);
       _queueSync('transaction', tx.id, 'upsert');
@@ -2590,6 +2770,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         investmentId: investmentId,
         notes: notes,
         date: date,
+        fundingSource: fundingSource,
+        fundingLiabilityId: fundingLiabilityId,
+        fundingDetails: fundingDetails,
       );
     }
 
@@ -2656,10 +2839,10 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     return tx;
   }
 
-  void voidTransaction(String transactionId) {
+  Future<void> voidTransaction(String transactionId) async {
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
-      _ref.read(realTransactionServiceProvider).voidTransaction(transactionId);
+      await _ref.read(realTransactionServiceProvider).voidTransaction(transactionId);
       _queueSync('transaction', transactionId, 'upsert');
     } else {
       final orig = state.transactions.firstWhere((t) => t.id == transactionId);
@@ -2762,7 +2945,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
 
     final orig = state.transactions.firstWhereOrNull((t) => t.id == transactionId);
     if (orig != null) {
-      _logHistory(
+      await _logHistory(
         action: 'Voided Transaction',
         entityType: 'Transaction',
         entityId: transactionId,
@@ -2920,6 +3103,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     String? voidedTransactionId,
     String? notes,
     required DateTime date,
+    String? fundingSource,
+    String? fundingLiabilityId,
+    String? fundingDetails,
   }) {
     final newTx = Transaction(
       id: _uuid.v4(),
@@ -2936,6 +3122,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       createdAt: DateTime.now().toUtc(),
       updatedAt: DateTime.now().toUtc(),
       syncStatus: 'pending',
+      fundingSource: fundingSource,
+      fundingLiabilityId: fundingLiabilityId,
+      fundingDetails: fundingDetails,
     );
 
     state = state.copyWith(transactions: [newTx, ...state.transactions]);
@@ -3108,7 +3297,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     if (investmentId != null) {
       actualInvestmentId = investmentId;
     } else {
-      final inv = addInvestment(instrument, 'stock', null, notes ?? 'MTF Position: $broker', averagePrice);
+      final inv = await addInvestment(instrument, 'stock', null, notes ?? 'MTF Position: $broker', averagePrice);
       actualInvestmentId = inv.id;
     }
 
@@ -3163,12 +3352,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     state = state.copyWith(mtfPositions: [...state.mtfPositions, newPos]);
 
     // 3. Add Buy Transaction (decreases cash by units * averagePrice)
-    buyInvestment(actualInvestmentId, 'acc_primary_bank_uuid', units, averagePrice, notes ?? 'MTF Buy: $instrument', purchaseDate ?? openingDate);
+    await buyInvestment(actualInvestmentId, 'acc_primary_bank_uuid', units, averagePrice, notes ?? 'MTF Buy: $instrument', purchaseDate ?? openingDate);
 
     // 4. Add Borrow Transaction (deposits borrowedCapital back to offset cash)
     await addBorrowTransaction('person_broker_uuid_placeholder', 'acc_primary_bank_uuid', borrowedCapital, 'MTF Borrowed Funding for $instrument', openingDate);
 
-    _logHistory(
+    await _logHistory(
       action: 'MTF Positions',
       entityType: 'MTF Position',
       entityId: id,

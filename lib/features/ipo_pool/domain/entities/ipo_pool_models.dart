@@ -10,6 +10,9 @@ class IpoContributor {
   final double amountReceived; // Paid back to contributor
   final String upiId; // UPI ID for payments
   final DateTime? createdAt;
+  final String? fundingSource;
+  final String? fundingLiabilityId;
+  final String? fundingDetails;
 
   IpoContributor({
     required this.id,
@@ -20,6 +23,9 @@ class IpoContributor {
     this.amountReceived = 0.0,
     this.upiId = '',
     this.createdAt,
+    this.fundingSource,
+    this.fundingLiabilityId,
+    this.fundingDetails,
   });
 
   IpoContributor copyWith({
@@ -31,6 +37,9 @@ class IpoContributor {
     double? amountReceived,
     String? upiId,
     DateTime? createdAt,
+    String? fundingSource,
+    String? fundingLiabilityId,
+    String? fundingDetails,
   }) {
     return IpoContributor(
       id: id ?? this.id,
@@ -41,6 +50,9 @@ class IpoContributor {
       amountReceived: amountReceived ?? this.amountReceived,
       upiId: upiId ?? this.upiId,
       createdAt: createdAt ?? this.createdAt,
+      fundingSource: fundingSource ?? this.fundingSource,
+      fundingLiabilityId: fundingLiabilityId ?? this.fundingLiabilityId,
+      fundingDetails: fundingDetails ?? this.fundingDetails,
     );
   }
 
@@ -54,6 +66,9 @@ class IpoContributor {
       'amountReceived': amountReceived,
       'upiId': upiId,
       'createdAt': createdAt?.toIso8601String(),
+      'fundingSource': fundingSource,
+      'fundingLiabilityId': fundingLiabilityId,
+      'fundingDetails': fundingDetails,
     };
   }
 
@@ -67,6 +82,9 @@ class IpoContributor {
       amountReceived: (json['amountReceived'] as num?)?.toDouble() ?? 0.0,
       upiId: json['upiId'] as String? ?? '',
       createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,
+      fundingSource: json['fundingSource'] as String?,
+      fundingLiabilityId: json['fundingLiabilityId'] as String?,
+      fundingDetails: json['fundingDetails'] as String?,
     );
   }
 }
@@ -314,6 +332,10 @@ class IpoPool {
   final List<PaymentVerification> verifications;
   final List<SettlementRecord> settlements;
 
+  final String? fundingSource;
+  final String? fundingLiabilityId;
+  final String? fundingDetails;
+
   IpoPool({
     required this.id,
     required this.name,
@@ -334,6 +356,9 @@ class IpoPool {
     this.verifications = const [],
     this.settlements = const [],
     this.deletedAt,
+    this.fundingSource,
+    this.fundingLiabilityId,
+    this.fundingDetails,
   });
 
   // Verification Helpers
@@ -468,6 +493,9 @@ class IpoPool {
     List<PaymentVerification>? verifications,
     List<SettlementRecord>? settlements,
     DateTime? Function()? deletedAt,
+    String? fundingSource,
+    String? fundingLiabilityId,
+    String? fundingDetails,
   }) {
     return IpoPool(
       id: id ?? this.id,
@@ -489,6 +517,9 @@ class IpoPool {
       verifications: verifications ?? this.verifications,
       settlements: settlements ?? this.settlements,
       deletedAt: deletedAt != null ? deletedAt() : this.deletedAt,
+      fundingSource: fundingSource ?? this.fundingSource,
+      fundingLiabilityId: fundingLiabilityId ?? this.fundingLiabilityId,
+      fundingDetails: fundingDetails ?? this.fundingDetails,
     );
   }
 
@@ -513,6 +544,9 @@ class IpoPool {
       'verifications': verifications.map((v) => v.toJson()).toList(),
       'settlements': settlements.map((s) => s.toJson()).toList(),
       'deletedAt': deletedAt?.toIso8601String(),
+      'fundingSource': fundingSource,
+      'fundingLiabilityId': fundingLiabilityId,
+      'fundingDetails': fundingDetails,
     };
   }
 
@@ -555,6 +589,9 @@ class IpoPool {
               .toList() ??
           [],
       deletedAt: json['deletedAt'] != null ? DateTime.parse(json['deletedAt'] as String) : null,
+      fundingSource: json['fundingSource'] as String?,
+      fundingLiabilityId: json['fundingLiabilityId'] as String?,
+      fundingDetails: json['fundingDetails'] as String?,
     );
   }
 }

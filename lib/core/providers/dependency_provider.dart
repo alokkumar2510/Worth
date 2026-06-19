@@ -38,7 +38,7 @@ class MockAccountRepository {
   MockAccountRepository(this._ref);
 
   Future<void> insertAccount(db.AccountsCompanion companion) async {
-    _ref.read(mockDatabaseProvider.notifier).addAccount(
+    await _ref.read(mockDatabaseProvider.notifier).addAccount(
       companion.name.value,
       companion.type.value,
       companion.notes.value,
@@ -89,7 +89,7 @@ class MockTransactionService {
   }
 
   Future<void> voidTransaction(String id) async {
-    _ref.read(mockDatabaseProvider.notifier).voidTransaction(id);
+    await _ref.read(mockDatabaseProvider.notifier).voidTransaction(id);
   }
 }
 
@@ -109,11 +109,13 @@ final netWorthProvider = StreamProvider<NetWorthData>((ref) {
         liabilities: dbState.totalLiabilities,
         netWorth: dbState.netWorth,
         investedCapital: dbState.totalInvestedCapital,
+        debtFundedAssets: dbState.debtFundedAssets,
+        selfFundedAssets: dbState.selfFundedAssets,
+        fundingSourceBreakdown: dbState.fundingSourceBreakdown,
       ),
     );
   } else {
     final database = ref.watch(realDatabaseProvider);
-    final calc = ref.watch(realFinancialCalculatorServiceProvider);
     
     // Watch database updates for any table except 'snapshots' to avoid infinite recursive loop
     final dbUpdates = database.tableUpdates().where((updates) {
@@ -128,10 +130,7 @@ final netWorthProvider = StreamProvider<NetWorthData>((ref) {
     }
 
     return watchDatabaseChanges().asyncMap((_) async {
-      final assets = await calc.calculateAssets();
-      final liabilities = await calc.calculateLiabilities();
-      final netWorth = await calc.calculateNetWorth();
-      final invested = await calc.calculateInvestmentPrincipal();
+      final netWorthData = await NetWorthService(database).calculateNetWorth();
 
       // Automatically update today's snapshot in real SQLite database
       try {
@@ -153,11 +152,11 @@ final netWorthProvider = StreamProvider<NetWorthData>((ref) {
         final companion = db.SnapshotsCompanion(
           id: Value(snapshotId),
           snapshotDate: Value(todayMidnight),
-          netWorth: Value(netWorth),
-          assets: Value(assets),
-          liabilities: Value(liabilities),
+          netWorth: Value(netWorthData.netWorth),
+          assets: Value(netWorthData.assets),
+          liabilities: Value(netWorthData.liabilities),
           receivables: Value(receivables),
-          investedCapital: Value(invested),
+          investedCapital: Value(netWorthData.investedCapital),
           expectedIncome: Value(expectedIncomeVal),
           createdAt: Value(existing?.createdAt ?? now),
           updatedAt: Value(now),
@@ -173,12 +172,7 @@ final netWorthProvider = StreamProvider<NetWorthData>((ref) {
         // Safe-guard to avoid blocking the stream in case of any database exceptions
       }
 
-      return NetWorthData(
-        assets: assets,
-        liabilities: liabilities,
-        netWorth: netWorth,
-        investedCapital: invested,
-      );
+      return netWorthData;
     });
   }
 });

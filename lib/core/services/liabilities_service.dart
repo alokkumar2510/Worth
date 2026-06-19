@@ -30,10 +30,10 @@ class LiabilitiesService {
       );
 
       if (person == null) {
-        person = notifier.addPerson(creditor, null, notes);
+        person = await notifier.addPerson(creditor, null, notes);
       }
 
-      notifier.addBorrowTransaction(
+      await notifier.addBorrowTransaction(
         person.id,
         'acc_primary_bank_uuid', // default destination account
         originalAmount,
@@ -85,7 +85,7 @@ class LiabilitiesService {
     required DateTime date,
   }) async {
     if (_isMock) {
-      _ref.read(mockDatabaseProvider.notifier).addRepayTransaction(
+      await _ref.read(mockDatabaseProvider.notifier).addRepayTransaction(
         liabilityId,
         fromAccountId,
         amountPaid,

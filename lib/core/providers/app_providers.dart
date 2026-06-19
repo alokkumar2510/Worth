@@ -67,6 +67,7 @@ import '../services/reminder_scheduler.dart';
 import '../services/network_monitor.dart';
 import '../services/sync_service.dart';
 import '../services/cloudinary_service.dart';
+import '../services/pdf_export_service.dart';
 import '../../features/checkins/presentation/providers/check_in_providers.dart';
 
 import '../../features/dashboard/domain/repositories/dashboard_repository.dart';
@@ -298,6 +299,10 @@ final cloudinaryConfigProvider = Provider<CloudinaryConfig>((ref) {
 final cloudinaryServiceProvider = Provider<CloudinaryService>((ref) {
   final config = ref.watch(cloudinaryConfigProvider);
   return CloudinaryService(config);
+});
+
+final pdfExportServiceProvider = Provider<PdfExportService>((ref) {
+  return PdfExportService();
 });
 final syncServiceProvider = Provider<SyncService>((ref) {
   return SyncService(

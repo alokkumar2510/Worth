@@ -263,7 +263,7 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
             color: AppColors.layer1,
-            onSelected: (value) {
+            onSelected: (value) async {
               if (value == 'edit') {
                 _showEditDialog(context, person);
               } else if (value == 'adjust_amount') {
@@ -271,21 +271,27 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
               } else if (value == 'view_history') {
                 showAdjustmentHistorySheet(context, person.id, 'person_receivable', person.name);
               } else if (value == 'duplicate') {
-                ref.read(mockDatabaseProvider.notifier).duplicatePerson(person.id);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Receivable "${person.name}" duplicated.')),
-                );
+                await ref.read(mockDatabaseProvider.notifier).duplicatePerson(person.id);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Receivable "${person.name}" duplicated.')),
+                  );
+                }
               } else if (value == 'archive') {
-                ref.read(mockDatabaseProvider.notifier).archivePerson(person.id);
-                context.pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Receivable "${person.name}" archived.')),
-                );
+                await ref.read(mockDatabaseProvider.notifier).archivePerson(person.id);
+                if (context.mounted) {
+                  context.pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Receivable "${person.name}" archived.')),
+                  );
+                }
               } else if (value == 'restore') {
-                ref.read(mockDatabaseProvider.notifier).unarchivePerson(person.id);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Receivable "${person.name}" unarchived successfully.')),
-                );
+                await ref.read(mockDatabaseProvider.notifier).unarchivePerson(person.id);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Receivable "${person.name}" unarchived successfully.')),
+                  );
+                }
               } else if (value == 'delete') {
                 _confirmDeleteReceivable(context, person);
               }

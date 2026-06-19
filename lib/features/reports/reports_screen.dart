@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 
+import 'dart:io';
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../core/widgets/premium_chart.dart';
@@ -11,6 +12,9 @@ import '../../core/providers/dependency_provider.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/providers/mock_database.dart';
 import 'presentation/providers/wealth_intelligence_provider.dart';
+import 'presentation/widgets/export_success_sheet.dart';
+import 'presentation/widgets/export_failure_sheet.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -22,6 +26,190 @@ class ReportsScreen extends ConsumerStatefulWidget {
 class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   int _activeAllocationTab = 0; // 0: Assets, 1: Liabilities, 2: Investments
   bool _showGrowthChart = false;
+  bool _isExporting = false;
+
+  Future<void> _exportPdfReport(MockDatabaseState dbState, {bool forcePrivateDirectory = false}) async {
+    setState(() {
+      _isExporting = true;
+    });
+
+    try {
+      final pdfService = ref.read(pdfExportServiceProvider);
+      final pdfBytes = await pdfService.generateReportBytes(dbState);
+      final savedPath = await pdfService.savePdfToDownloads(pdfBytes, forcePrivateDirectory: forcePrivateDirectory);
+      final fileName = savedPath.split(Platform.pathSeparator).last;
+      
+      final file = File(savedPath);
+      final fileSize = await file.length();
+
+      setState(() {
+        _isExporting = false;
+      });
+
+      if (!mounted) return;
+
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        barrierColor: Colors.black.withOpacity(0.5),
+        builder: (context) => ExportSuccessSheet(
+          filePath: savedPath,
+          fileName: fileName,
+          pdfBytes: pdfBytes,
+          fileSizeInBytes: fileSize,
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _isExporting = false;
+      });
+      if (!mounted) return;
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        barrierColor: Colors.black.withOpacity(0.5),
+        builder: (context) => ExportFailureSheet(
+          errorMessage: e.toString(),
+          onRetry: () => _exportPdfReport(dbState, forcePrivateDirectory: false),
+          onSavePrivate: () => _exportPdfReport(dbState, forcePrivateDirectory: true),
+        ),
+      );
+    }
+  }
+
+  Widget _buildPdfExportCard(BuildContext context, MockDatabaseState dbState) {
+    final goldAccent = const Color(0xFFD4AF37);
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF0F112A),
+            Color(0xFF1B1D38),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: goldAccent.withOpacity(0.25),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: goldAccent.withOpacity(0.04),
+            blurRadius: 20,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _exportPdfReport(dbState),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: goldAccent.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: goldAccent.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.picture_as_pdf_outlined,
+                        color: goldAccent,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Worth Private Wealth Report',
+                            style: GoogleFonts.outfit(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'EXECUTIVE INTEL DOSSIER',
+                            style: GoogleFonts.inter(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: goldAccent,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Compile a comprehensive multi-page private PDF document detailing your net worth performance, asset allocation distributions, debt metrics, and systematic insights.',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: AppColors.grey400,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(
+                      colors: [goldAccent, const Color(0xFFB8860B)],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                  ),
+                  child: Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.insights_outlined,
+                          color: Colors.black,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Compile Private Report',
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -47,77 +235,121 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          // Elegant Header
-          SliverAppBar(
-            expandedHeight: 120.0,
-            floating: false,
-            pinned: true,
-            backgroundColor: Colors.black,
-            flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
-              title: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Wealth Intelligence',
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 22,
-                      color: Colors.white,
+      body: Stack(
+        children: [
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // Elegant Header
+              SliverAppBar(
+                expandedHeight: 120.0,
+                floating: false,
+                pinned: true,
+                backgroundColor: Colors.black,
+                flexibleSpace: FlexibleSpaceBar(
+                  titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
+                  title: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Wealth Intelligence',
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 22,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Understand how your financial position evolved.',
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          color: AppColors.grey500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Core Content
+              SliverPadding(
+                padding: const EdgeInsets.all(16.0),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    // SECTION 0: PREMIUM PDF DOSSIER EXPORT CARD
+                    _buildPdfExportCard(context, dbState),
+                    const SizedBox(height: 24),
+
+                    // SECTION 1: NET WORTH PERFORMANCE CARD
+                    _buildNetWorthPerformanceCard(data, format, currency),
+                    const SizedBox(height: 24),
+
+                    // SECTION 2: WEALTH BREAKDOWN & ALLOCATIONS
+                    _buildWealthBreakdownCard(data, format, currency),
+                    const SizedBox(height: 24),
+
+                    // SECTION 3: THIS MONTH SUMMARY
+                    _buildThisMonthSummary(data, format),
+                    const SizedBox(height: 24),
+
+                    // SECTION 5: BIGGEST CHANGES (Logical order before timeline)
+                    _buildBiggestChanges(data, format),
+                    const SizedBox(height: 24),
+
+                    // SECTION 6: AUTOMATIC INSIGHTS
+                    _buildInsightsCard(data),
+                    const SizedBox(height: 24),
+
+                    // SECTION 7: PORTFOLIO PERFORMANCE & METRICS
+                    _buildPortfolioMetricsCard(data, format, currency),
+                    const SizedBox(height: 24),
+
+                    // SECTION 4: WEALTH TIMELINE FEED
+                    _buildWealthTimeline(data, format),
+                    const SizedBox(height: 40),
+                  ]),
+                ),
+              ),
+            ],
+          ),
+          if (_isExporting)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withOpacity(0.75),
+                child: Center(
+                  child: GlassCard(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD4AF37)),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Assembling Intelligence...',
+                          style: GoogleFonts.outfit(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Compiling multi-page premium PDF dossier',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            color: AppColors.grey500,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Understand how your financial position evolved.',
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      color: AppColors.grey500,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-
-          // Core Content
-          SliverPadding(
-            padding: const EdgeInsets.all(16.0),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                // SECTION 1: NET WORTH PERFORMANCE CARD
-                _buildNetWorthPerformanceCard(data, format, currency),
-                const SizedBox(height: 24),
-
-                // SECTION 2: WEALTH BREAKDOWN & ALLOCATIONS
-                _buildWealthBreakdownCard(data, format, currency),
-                const SizedBox(height: 24),
-
-                // SECTION 3: THIS MONTH SUMMARY
-                _buildThisMonthSummary(data, format),
-                const SizedBox(height: 24),
-
-                // SECTION 5: BIGGEST CHANGES (Logical order before timeline)
-                _buildBiggestChanges(data, format),
-                const SizedBox(height: 24),
-
-                // SECTION 6: AUTOMATIC INSIGHTS
-                _buildInsightsCard(data),
-                const SizedBox(height: 24),
-
-                // SECTION 7: PORTFOLIO PERFORMANCE & METRICS
-                _buildPortfolioMetricsCard(data, format, currency),
-                const SizedBox(height: 24),
-
-                // SECTION 4: WEALTH TIMELINE FEED
-                _buildWealthTimeline(data, format),
-                const SizedBox(height: 40),
-              ]),
-            ),
-          ),
         ],
       ),
     );

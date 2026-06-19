@@ -67,7 +67,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 14; // Bumped for Recovery Allocation Engine tables
+  int get schemaVersion => 15; // Bumped for source-of-funds tracking
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -200,6 +200,23 @@ class AppDatabase extends _$AppDatabase {
           if (from < 14) {
             await m.createTable(recoveryAllocations);
             await m.createTable(recoveryDestinations);
+          }
+          if (from < 15) {
+            await m.addColumn(accounts, accounts.fundingSource);
+            await m.addColumn(accounts, accounts.fundingLiabilityId);
+            await m.addColumn(accounts, accounts.fundingDetails);
+
+            await m.addColumn(investments, investments.fundingSource);
+            await m.addColumn(investments, investments.fundingLiabilityId);
+            await m.addColumn(investments, investments.fundingDetails);
+
+            await m.addColumn(transactions, transactions.fundingSource);
+            await m.addColumn(transactions, transactions.fundingLiabilityId);
+            await m.addColumn(transactions, transactions.fundingDetails);
+
+            await m.addColumn(investmentLots, investmentLots.fundingSource);
+            await m.addColumn(investmentLots, investmentLots.fundingLiabilityId);
+            await m.addColumn(investmentLots, investmentLots.fundingDetails);
           }
         },
       );

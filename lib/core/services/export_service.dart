@@ -25,6 +25,17 @@ class ExportService {
       final settings = await _db.select(_db.settings).get();
       final goalMilestones = await _db.select(_db.goalMilestones).get();
       final definitions = await _db.select(_db.definitions).get();
+      final adjustments = await _db.select(_db.adjustments).get();
+      final milestones = await _db.select(_db.milestones).get();
+      final achievements = await _db.select(_db.achievements).get();
+      final achievementProgress = await _db.select(_db.achievementProgress).get();
+      final mtfPositions = await _db.select(_db.mtfPositions).get();
+      final sips = await _db.select(_db.sips).get();
+      final dailyCheckIns = await _db.select(_db.dailyCheckIns).get();
+      final portfolioHistories = await _db.select(_db.portfolioHistories).get();
+      final portfolioSnapshots = await _db.select(_db.portfolioSnapshots).get();
+      final recoveryAllocations = await _db.select(_db.recoveryAllocations).get();
+      final recoveryDestinations = await _db.select(_db.recoveryDestinations).get();
 
       backupData['accounts'] = accounts.map((r) => r.toJson()).toList();
       backupData['people'] = people.map((r) => r.toJson()).toList();
@@ -37,10 +48,21 @@ class ExportService {
       backupData['settings'] = settings.map((r) => r.toJson()).toList();
       backupData['goal_milestones'] = goalMilestones.map((r) => r.toJson()).toList();
       backupData['definitions'] = definitions.map((r) => r.toJson()).toList();
+      backupData['adjustments'] = adjustments.map((r) => r.toJson()).toList();
+      backupData['milestones'] = milestones.map((r) => r.toJson()).toList();
+      backupData['achievements'] = achievements.map((r) => r.toJson()).toList();
+      backupData['achievement_progress'] = achievementProgress.map((r) => r.toJson()).toList();
+      backupData['mtf_positions'] = mtfPositions.map((r) => r.toJson()).toList();
+      backupData['sips'] = sips.map((r) => r.toJson()).toList();
+      backupData['daily_check_ins'] = dailyCheckIns.map((r) => r.toJson()).toList();
+      backupData['portfolio_histories'] = portfolioHistories.map((r) => r.toJson()).toList();
+      backupData['portfolio_snapshots'] = portfolioSnapshots.map((r) => r.toJson()).toList();
+      backupData['recovery_allocations'] = recoveryAllocations.map((r) => r.toJson()).toList();
+      backupData['recovery_destinations'] = recoveryDestinations.map((r) => r.toJson()).toList();
     });
 
     return {
-      'version': 2,
+      'version': 3, // Bumped version to represent comprehensive backup payload
       'timestamp': DateTime.now().toIso8601String(),
       'data': backupData,
     };

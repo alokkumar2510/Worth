@@ -30,10 +30,10 @@ class ReceivablesService {
       );
       
       if (person == null) {
-        person = notifier.addPerson(personName, null, notes);
+        person = await notifier.addPerson(personName, null, notes);
       }
       
-      notifier.addLendTransaction(
+      await notifier.addLendTransaction(
         person.id,
         'acc_primary_bank_uuid', // default source account
         amountGiven,
@@ -85,7 +85,7 @@ class ReceivablesService {
     required DateTime date,
   }) async {
     if (_isMock) {
-      _ref.read(mockDatabaseProvider.notifier).addRecoverTransaction(
+      await _ref.read(mockDatabaseProvider.notifier).addRecoverTransaction(
         receivableId,
         toAccountId,
         amountRecovered,

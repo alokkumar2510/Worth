@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/glass_card.dart';
@@ -10,6 +11,10 @@ import '../../../../core/providers/mock_database.dart';
 import '../../../../core/providers/app_providers.dart';
 import '../../../../core/providers/dependency_provider.dart';
 import '../../../sync/presentation/providers/sync_status_provider.dart';
+import '../../../../core/services/backup_service.dart';
+import '../widgets/backup_success_sheet.dart';
+import '../widgets/backup_failure_sheet.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class AdvancedSettingsScreen extends ConsumerStatefulWidget {
   const AdvancedSettingsScreen({super.key});
@@ -92,46 +97,125 @@ class _AdvancedSettingsScreenState extends ConsumerState<AdvancedSettingsScreen>
     ref.read(syncStatusProvider.notifier).forceSync();
   }
 
-  void _handleExport() async {
+  void _handleExportOptions() {
+    bool compressZip = true;
+    bool encryptPayload = true;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final goldAccent = const Color(0xFFD4AF37);
+          return AlertDialog(
+            backgroundColor: const Color(0xFF111118),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(color: goldAccent.withOpacity(0.2), width: 1),
+            ),
+            title: Text(
+              'Export Backup Options',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ZIP format toggle
+                SwitchListTile(
+                  title: Text('Compress as ZIP', style: GoogleFonts.inter(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                  subtitle: Text('Creates a compressed .zip archive containing the JSON payload.', style: GoogleFonts.inter(color: AppColors.grey500, fontSize: 11)),
+                  value: compressZip,
+                  activeColor: goldAccent,
+                  onChanged: (val) => setDialogState(() => compressZip = val),
+                ),
+                const Divider(color: Colors.white10, height: 16),
+                // Encryption toggle
+                SwitchListTile(
+                  title: Text('Encrypt Backup', style: GoogleFonts.inter(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                  subtitle: Text('Protects database payload with AES passphrase encryption.', style: GoogleFonts.inter(color: AppColors.grey500, fontSize: 11)),
+                  value: encryptPayload,
+                  activeColor: goldAccent,
+                  onChanged: (val) => setDialogState(() => encryptPayload = val),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _runExport(compressZip: compressZip, encryptPayload: encryptPayload);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: goldAccent,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: Text('Export', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _runExport({
+    required bool compressZip,
+    required bool encryptPayload,
+    bool forcePrivateDirectory = false,
+  }) async {
     try {
       final backupService = ref.read(realBackupServiceProvider);
       final passphrase = ref.read(databasePassphraseProvider);
-      
-      // Show loading dialog
+
+      // Show progress overlay
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) => const AlertDialog(
+          backgroundColor: Color(0xFF0B0B0F),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(18)),
           ),
           content: Row(
             children: [
-              CircularProgressIndicator(color: AppColors.darkPrimary),
+              CircularProgressIndicator(color: Color(0xFFD4AF37)),
               SizedBox(width: 20),
-              Text('Exporting backup...', style: TextStyle(color: Colors.white)),
+              Text('Compiling Backup Payload...', style: TextStyle(color: Colors.white)),
             ],
           ),
         ),
       );
 
-      final encryptedJson = await backupService.exportBackup(passphrase);
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/worth_backup.json');
-      await file.writeAsString(encryptedJson);
+      final result = await backupService.exportBackupToDownloads(
+        passphrase: passphrase,
+        compressZip: compressZip,
+        encryptPayload: encryptPayload,
+        forcePrivateDirectory: forcePrivateDirectory,
+      );
 
       // Close loading dialog
       if (mounted) Navigator.pop(context);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Exported backup file to: ${file.path}'),
-            duration: const Duration(seconds: 8),
-            action: SnackBarAction(
-              label: 'DISMISS',
-              textColor: AppColors.darkPrimary,
-              onPressed: () {},
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          barrierColor: Colors.black.withOpacity(0.5),
+          builder: (context) => BackupSuccessSheet(
+            filePath: result.filePath,
+            fileName: result.fileName,
+            fileBytes: result.bytes,
+            fileSizeInBytes: result.fileSizeInBytes,
+            exportTime: result.exportTime,
+            onExportAgain: () => _runExport(
+              compressZip: compressZip,
+              encryptPayload: encryptPayload,
+              forcePrivateDirectory: forcePrivateDirectory,
             ),
           ),
         );
@@ -139,54 +223,209 @@ class _AdvancedSettingsScreenState extends ConsumerState<AdvancedSettingsScreen>
     } catch (e) {
       if (mounted) Navigator.pop(context); // Close loading if open
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to export backup: $e')),
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          barrierColor: Colors.black.withOpacity(0.5),
+          builder: (context) => BackupFailureSheet(
+            errorMessage: e.toString(),
+            onRetry: () => _runExport(
+              compressZip: compressZip,
+              encryptPayload: encryptPayload,
+              forcePrivateDirectory: false,
+            ),
+            onSavePrivate: () => _runExport(
+              compressZip: compressZip,
+              encryptPayload: encryptPayload,
+              forcePrivateDirectory: true,
+            ),
+          ),
         );
       }
     }
   }
 
-  void _handleImport() {
+  void _handleImport() async {
+    if (Platform.isAndroid) {
+      // Request standard storage permission
+      final status = await Permission.storage.status;
+      if (!status.isGranted) {
+        await Permission.storage.request();
+      }
+      // Request manage external storage permission for Android 11+
+      final manageStatus = await Permission.manageExternalStorage.status;
+      if (!manageStatus.isGranted) {
+        await Permission.manageExternalStorage.request();
+      }
+    }
+
+    final downloadsDir = Directory('/storage/emulated/0/Download/Worth');
+    List<File> backupFiles = [];
+
+    // Scan public Downloads/Worth directory
+    try {
+      if (await downloadsDir.exists()) {
+        final list = downloadsDir.listSync();
+        backupFiles.addAll(
+          list
+              .whereType<File>()
+              .where((f) => f.path.endsWith('.json') || f.path.endsWith('.zip')),
+        );
+      }
+    } catch (e) {
+      // ignore listing issues, we will fallback/combine with private storage
+    }
+
+    // Scan private app-specific external storage directory
+    try {
+      final externalDir = await getExternalStorageDirectory();
+      if (externalDir != null) {
+        final privateDir = Directory('${externalDir.path}/Worth');
+        if (await privateDir.exists()) {
+          final list = privateDir.listSync();
+          backupFiles.addAll(
+            list
+                .whereType<File>()
+                .where((f) => f.path.endsWith('.json') || f.path.endsWith('.zip')),
+          );
+        }
+      }
+    } catch (e) {
+      // ignore private directory issues
+    }
+
+    // Deduplicate backups by file path
+    final uniquePaths = <String>{};
+    backupFiles = backupFiles.where((file) => uniquePaths.add(file.path)).toList();
+
+    // Sort backups: newest modification date first
+    backupFiles.sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+
+    if (!mounted) return;
+
+    if (backupFiles.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF111118),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: const BorderSide(color: AppColors.glassBorder),
+          ),
+          title: Text('No Backups Found', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+          content: Text(
+            'No backup files (.json or .zip) were found in the public Download/Worth/ or app-private storage folder.\n\nPlease export a backup first or place a backup file in those directories to restore.',
+            style: GoogleFonts.inter(color: AppColors.grey400, fontSize: 13, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK', style: TextStyle(color: Color(0xFFD4AF37))),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // Show selection dialog
+    showDialog(
+      context: context,
+      builder: (context) {
+        final goldAccent = const Color(0xFFD4AF37);
+        return AlertDialog(
+          backgroundColor: const Color(0xFF111118),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: goldAccent.withOpacity(0.2), width: 1),
+          ),
+          title: Text(
+            'Select Backup to Restore',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: backupFiles.length,
+              itemBuilder: (context, index) {
+                final file = backupFiles[index];
+                final name = file.path.split(Platform.pathSeparator).last;
+                final modTime = file.lastModifiedSync();
+                final dateStr = DateFormat('dd MMM yyyy, hh:mm a').format(modTime);
+                final size = file.lengthSync();
+                final sizeStr = size < 1024
+                    ? '$size B'
+                    : size < 1024 * 1024
+                        ? '${(size / 1024).toStringAsFixed(1)} KB'
+                        : '${(size / (1024 * 1024)).toStringAsFixed(1)} MB';
+
+                final isPrivate = !file.path.contains('/Download/Worth');
+
+                return ListTile(
+                  leading: Icon(
+                    file.path.endsWith('.zip') ? Icons.archive_outlined : Icons.description_outlined,
+                    color: goldAccent,
+                  ),
+                  title: Text(
+                    name,
+                    style: GoogleFonts.inter(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    '$dateStr • $sizeStr${isPrivate ? " (Private)" : ""}',
+                    style: GoogleFonts.inter(color: AppColors.grey500, fontSize: 11),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _confirmRestore(file.path);
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _confirmRestore(String filePath) {
+    final name = filePath.split(Platform.pathSeparator).last;
     _showConfirmDialog(
-      title: 'Import Backup?',
-      content: 'Importing worth_backup.json will overwrite all local ledger history, lots, and details. This action cannot be undone.',
+      title: 'Import Selected Backup?',
+      content: 'Are you sure you want to restore the backup "$name"? This will overwrite all local ledger history, lots, and details. This action cannot be undone.',
       confirmText: 'Import',
       onConfirm: () async {
         try {
-          final dir = await getApplicationDocumentsDirectory();
-          final file = File('${dir.path}/worth_backup.json');
-          if (!await file.exists()) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('No backup file found at: ${file.path}')),
-              );
-            }
-            return;
-          }
-
-          // Show loading dialog
+          // Show progress dialog
           showDialog(
             context: context,
             barrierDismissible: false,
             builder: (context) => const AlertDialog(
+              backgroundColor: Color(0xFF0B0B0F),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.all(Radius.circular(18)),
               ),
               content: Row(
                 children: [
-                  CircularProgressIndicator(color: AppColors.darkPrimary),
+                  CircularProgressIndicator(color: Color(0xFFD4AF37)),
                   SizedBox(width: 20),
-                  Text('Importing backup...', style: TextStyle(color: Colors.white)),
+                  Text('Restoring Database Ledger...', style: TextStyle(color: Colors.white)),
                 ],
               ),
             ),
           );
 
-          final encryptedJson = await file.readAsString();
           final backupService = ref.read(realBackupServiceProvider);
           final passphrase = ref.read(databasePassphraseProvider);
 
-          await backupService.restoreBackup(encryptedJson, passphrase);
+          await backupService.restoreBackupFromFile(filePath, passphrase);
 
           // Rebuild caches and reload database state
           await ref.read(mockDatabaseProvider.notifier).loadStateFromDatabase();
@@ -204,7 +443,10 @@ class _AdvancedSettingsScreenState extends ConsumerState<AdvancedSettingsScreen>
           if (mounted) Navigator.pop(context); // Close loading if open
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to import backup: $e')),
+              SnackBar(
+                content: Text('Failed to import backup: $e'),
+                backgroundColor: AppColors.darkDanger,
+              ),
             );
           }
         }
@@ -391,7 +633,7 @@ class _AdvancedSettingsScreenState extends ConsumerState<AdvancedSettingsScreen>
                     icon: Icons.upload_file_outlined,
                     title: 'Export Backup',
                     subtitle: 'Generates a JSON file containing all ledger data.',
-                    onTap: _handleExport,
+                    onTap: _handleExportOptions,
                   ),
                   const Divider(color: AppColors.glassBorder, height: 1),
                   _buildActionTile(

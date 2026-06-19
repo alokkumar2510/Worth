@@ -18,6 +18,9 @@ class Investments extends Table {
   TextColumn get deviceId => text().nullable()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
   TextColumn get deletedBy => text().nullable()();
+  TextColumn get fundingSource => text().nullable()();
+  TextColumn get fundingLiabilityId => text().nullable()();
+  TextColumn get fundingDetails => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
