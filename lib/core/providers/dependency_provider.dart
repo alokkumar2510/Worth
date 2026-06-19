@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:drift/drift.dart';
 import '../../database/database.dart' as db;
 import '../calculation/net_worth_service.dart';
 import 'mock_database.dart';
@@ -111,15 +112,67 @@ final netWorthProvider = StreamProvider<NetWorthData>((ref) {
       ),
     );
   } else {
-    final db = ref.watch(realDatabaseProvider);
+    final database = ref.watch(realDatabaseProvider);
     final calc = ref.watch(realFinancialCalculatorServiceProvider);
     
-    // Reactive stream trigger: emit values whenever transaction log changes
-    return db.select(db.transactions).watch().asyncMap((_) async {
+    // Watch database updates for any table except 'snapshots' to avoid infinite recursive loop
+    final dbUpdates = database.tableUpdates().where((updates) {
+      return updates.any((update) => update.table != 'snapshots');
+    });
+
+    Stream<void> watchDatabaseChanges() async* {
+      yield null; // Initial emit
+      await for (final _ in dbUpdates) {
+        yield null;
+      }
+    }
+
+    return watchDatabaseChanges().asyncMap((_) async {
       final assets = await calc.calculateAssets();
       final liabilities = await calc.calculateLiabilities();
       final netWorth = await calc.calculateNetWorth();
       final invested = await calc.calculateInvestmentPrincipal();
+
+      // Automatically update today's snapshot in real SQLite database
+      try {
+        final now = DateTime.now();
+        final todayMidnight = DateTime(now.year, now.month, now.day);
+        
+        final pendingIncome = await (database.select(database.expectedIncomes)..where((tbl) => tbl.status.equals('pending'))).get();
+        final double expectedIncomeVal = pendingIncome.fold(0.0, (sum, inc) => sum + inc.amount);
+
+        final personBalances = await database.select(database.personBalanceCaches).get();
+        double receivables = 0.0;
+        for (final cache in personBalances) {
+          receivables += cache.receivableBalance;
+        }
+
+        final snapshotId = 'snapshot_today_${todayMidnight.year}_${todayMidnight.month}_${todayMidnight.day}';
+        final existing = await (database.select(database.snapshots)..where((tbl) => tbl.id.equals(snapshotId))).getSingleOrNull();
+
+        final companion = db.SnapshotsCompanion(
+          id: Value(snapshotId),
+          snapshotDate: Value(todayMidnight),
+          netWorth: Value(netWorth),
+          assets: Value(assets),
+          liabilities: Value(liabilities),
+          receivables: Value(receivables),
+          investedCapital: Value(invested),
+          expectedIncome: Value(expectedIncomeVal),
+          createdAt: Value(existing?.createdAt ?? now),
+          updatedAt: Value(now),
+          syncStatus: const Value('pending'),
+        );
+
+        if (existing != null) {
+          await (database.update(database.snapshots)..where((tbl) => tbl.id.equals(snapshotId))).write(companion);
+        } else {
+          await database.into(database.snapshots).insert(companion);
+        }
+      } catch (e) {
+        // Safe-guard to avoid blocking the stream in case of any database exceptions
+      }
+
       return NetWorthData(
         assets: assets,
         liabilities: liabilities,

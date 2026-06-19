@@ -26,6 +26,10 @@ import 'tables/mtf_positions.dart';
 import 'tables/sips.dart';
 import 'tables/daily_check_ins.dart';
 import 'tables/sync_queue.dart';
+import 'tables/portfolio_histories.dart';
+import 'tables/portfolio_snapshots.dart';
+import 'tables/recovery_allocations.dart';
+import 'tables/recovery_destinations.dart';
 
 part 'database.g.dart';
 
@@ -54,12 +58,16 @@ part 'database.g.dart';
   Sips,
   DailyCheckIns,
   SyncQueues,
+  PortfolioHistories,
+  PortfolioSnapshots,
+  RecoveryAllocations,
+  RecoveryDestinations,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 12; // Bumping version for soft delete columns
+  int get schemaVersion => 14; // Bumped for Recovery Allocation Engine tables
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -184,6 +192,14 @@ class AppDatabase extends _$AppDatabase {
             // Sips
             await m.addColumn(sips, sips.deletedAt);
             await m.addColumn(sips, sips.deletedBy);
+          }
+          if (from < 13) {
+            await m.createTable(portfolioHistories);
+            await m.createTable(portfolioSnapshots);
+          }
+          if (from < 14) {
+            await m.createTable(recoveryAllocations);
+            await m.createTable(recoveryDestinations);
           }
         },
       );

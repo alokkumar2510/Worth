@@ -1,56 +1,72 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 
 class NetWorthLineChart extends StatelessWidget {
   final List<FlSpot> spots;
   final List<String> dates;
   final String currency;
+  final Function(FlSpot?)? onSpotHover;
+  final bool isPlaceholder;
 
   const NetWorthLineChart({
     required this.spots,
     required this.dates,
     required this.currency,
+    this.onSpotHover,
+    this.isPlaceholder = false,
     super.key,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (spots.length < 2) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text(
-            'Add transactions across multiple months to view trend.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.grey500,
-              fontSize: 13,
-            ),
-          ),
-        ),
-      );
-    }
+    final isActualPlaceholder = isPlaceholder || spots.length < 2;
+    
+    // Fallback/Simulated Data for placeholder
+    final List<FlSpot> finalSpots = isActualPlaceholder
+        ? const [
+            FlSpot(0, 150000),
+            FlSpot(1, 195000),
+            FlSpot(2, 175000),
+            FlSpot(3, 235000),
+            FlSpot(4, 210000),
+            FlSpot(5, 290000),
+          ]
+        : spots;
+
+    final List<String> finalDates = isActualPlaceholder
+        ? const ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+        : dates;
 
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final minX = spots.map((s) => s.x).reduce((a, b) => a < b ? a : b);
-    final maxX = spots.map((s) => s.x).reduce((a, b) => a > b ? a : b);
+    final minX = finalSpots.map((s) => s.x).reduce((a, b) => a < b ? a : b);
+    final maxX = finalSpots.map((s) => s.x).reduce((a, b) => a > b ? a : b);
     final range = maxX - minX;
-    final intervalVal = range > 0 ? (range / 3) : 2592000000.0;
+    final intervalVal = range > 0 ? (range / 3) : 1.0;
 
-    return LineChart(
+    final yValues = finalSpots.map((s) => s.y).toList();
+    final minYVal = yValues.reduce((a, b) => a < b ? a : b);
+    final maxYVal = yValues.reduce((a, b) => a > b ? a : b);
+    final yRange = maxYVal - minYVal;
+    final padding = yRange > 0 ? yRange * 0.15 : 10000.0;
+    final finalMinY = minYVal - padding;
+    final finalMaxY = maxYVal + padding;
+
+    final lineChart = LineChart(
       LineChartData(
         gridData: FlGridData(
           show: true,
           drawVerticalLine: false,
-          horizontalInterval: 50000,
+          horizontalInterval: yRange > 0 ? yRange / 4 : 50000.0,
           getDrawingHorizontalLine: (value) {
             return FlLine(
-              color: isDark ? const Color(0x11FFFFFF) : const Color(0x0A000000),
+              color: isDark ? const Color(0x0AFFFFFF) : const Color(0x05000000),
               strokeWidth: 1.0,
+              dashArray: [4, 4],
             );
           },
         ),
@@ -68,18 +84,33 @@ class NetWorthLineChart extends StatelessWidget {
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 30,
+              reservedSize: 24,
               interval: intervalVal,
               getTitlesWidget: (value, meta) {
-                final date = DateTime.fromMillisecondsSinceEpoch(value.toInt());
+                if (value > 1000000) {
+                  final date = DateTime.fromMillisecondsSinceEpoch(value.toInt());
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 6.0),
+                    child: Text(
+                      DateFormat('MMM yy').format(date),
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: isDark ? AppColors.grey500 : AppColors.grey500,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  );
+                }
+                final int idx = value.toInt();
+                if (idx < 0 || idx >= finalDates.length) return const SizedBox.shrink();
                 return Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
+                  padding: const EdgeInsets.only(top: 6.0),
                   child: Text(
-                    DateFormat('MMM yy').format(date),
+                    finalDates[idx],
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 9,
                       color: isDark ? AppColors.grey500 : AppColors.grey500,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 );
@@ -90,27 +121,70 @@ class NetWorthLineChart extends StatelessWidget {
         borderData: FlBorderData(show: false),
         minX: minX,
         maxX: maxX,
-        minY: spots.map((s) => s.y).reduce((a, b) => a < b ? a : b) * 0.9,
-        maxY: spots.map((s) => s.y).reduce((a, b) => a > b ? a : b) * 1.1,
+        minY: finalMinY,
+        maxY: finalMaxY,
         lineTouchData: LineTouchData(
+          enabled: !isActualPlaceholder,
+          handleBuiltInTouches: true,
+          touchCallback: (FlTouchEvent event, LineTouchResponse? response) {
+            if (onSpotHover == null || isActualPlaceholder) return;
+            if (response == null || response.lineBarSpots == null || response.lineBarSpots!.isEmpty) {
+              onSpotHover!(null);
+              return;
+            }
+            if (event is FlTapUpEvent || event is FlPanEndEvent) {
+              onSpotHover!(null);
+            } else {
+              onSpotHover!(response.lineBarSpots!.first);
+            }
+          },
+          getTouchedSpotIndicator: (LineChartBarData barData, List<int> spotIndexes) {
+            return spotIndexes.map((spotIndex) {
+              return TouchedSpotIndicatorData(
+                FlLine(
+                  color: AppColors.glow.withOpacity(0.2), 
+                  strokeWidth: 2,
+                  dashArray: [3, 3],
+                ),
+                FlDotData(
+                  getDotPainter: (spot, percent, barData, index) {
+                    return FlDotCirclePainter(
+                      radius: 5,
+                      color: AppColors.glow,
+                      strokeWidth: 2,
+                      strokeColor: Colors.white,
+                    );
+                  },
+                ),
+              );
+            }).toList();
+          },
           touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (_) => isDark ? const Color(0xFF1F1F2E) : Colors.white,
+            getTooltipColor: (_) => isDark ? const Color(0xFF16152B) : Colors.white,
             tooltipBorder: BorderSide(
-              color: isDark ? AppColors.darkCardBorder : const Color(0xFFE2E8F0),
+              color: isDark ? AppColors.glow.withOpacity(0.3) : const Color(0xFFE2E8F0),
               width: 1.0,
             ),
             tooltipRoundedRadius: 8.0,
+            tooltipPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             getTooltipItems: (touchedSpots) {
               return touchedSpots.map((touchedSpot) {
-                final date = DateTime.fromMillisecondsSinceEpoch(touchedSpot.x.toInt());
-                final dateStr = DateFormat('dd MMM yyyy').format(date);
+                final idx = touchedSpot.x.toInt();
+                final String dateStr;
+                if (touchedSpot.x > 1000000) {
+                  final date = DateTime.fromMillisecondsSinceEpoch(idx);
+                  dateStr = DateFormat('dd MMM yyyy').format(date);
+                } else {
+                  dateStr = (idx >= 0 && idx < finalDates.length) ? finalDates[idx] : '';
+                }
                 final amount = NumberFormat.decimalPattern().format(touchedSpot.y);
                 return LineTooltipItem(
                   '$dateStr\n$currency$amount',
-                  TextStyle(
+                  GoogleFonts.inter(
                     color: isDark ? Colors.white : AppColors.lightText,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
+                    height: 1.4,
                   ),
                 );
               }).toList();
@@ -119,20 +193,37 @@ class NetWorthLineChart extends StatelessWidget {
         ),
         lineBarsData: [
           LineChartBarData(
-            spots: spots,
+            spots: finalSpots,
             isCurved: true,
             preventCurveOverShooting: true,
-            color: AppColors.darkPrimary,
-            barWidth: 3,
+            gradient: LinearGradient(
+              colors: isActualPlaceholder
+                  ? [
+                      AppColors.darkPrimary.withOpacity(0.25),
+                      AppColors.glow.withOpacity(0.25),
+                    ]
+                  : const [
+                      Color(0xFF8B5CF6), // Violet
+                      Color(0xFF3B82F6), // Blue
+                      Color(0xFF00F2FE), // Cyan
+                    ],
+            ),
+            barWidth: isActualPlaceholder ? 2 : 3,
             isStrokeCapRound: true,
+            dashArray: isActualPlaceholder ? const [6, 4] : null,
             dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
               gradient: LinearGradient(
-                colors: [
-                  AppColors.darkPrimary.withOpacity(0.25),
-                  AppColors.darkPrimary.withOpacity(0.0),
-                ],
+                colors: isActualPlaceholder
+                    ? [
+                        AppColors.darkPrimary.withOpacity(0.05),
+                        AppColors.glow.withOpacity(0.0),
+                      ]
+                    : [
+                        const Color(0xFF8B5CF6).withOpacity(0.2),
+                        const Color(0xFF00F2FE).withOpacity(0.0),
+                      ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
               ),
@@ -141,6 +232,79 @@ class NetWorthLineChart extends StatelessWidget {
         ],
       ),
     );
+
+    if (isActualPlaceholder) {
+      return Stack(
+        children: [
+          Opacity(
+            opacity: 0.4,
+            child: lineChart,
+          ),
+          Positioned.fill(
+            child: Center(
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.55),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.08),
+                    width: 1.0,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.darkPrimary.withOpacity(0.08),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.darkPrimary.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.analytics_outlined,
+                        color: AppColors.glow,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Visualize Your Wealth Trend',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Add transactions or log your assets across multiple dates to build your historical net worth trend.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: AppColors.grey500,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return lineChart;
   }
 }
 

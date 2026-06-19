@@ -1,13 +1,17 @@
 import 'package:drift/drift.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../database/database.dart' as db;
 import '../../domain/entities/investment.dart' as domain;
 import '../../domain/entities/investment_lot.dart' as domain_lot;
 import '../../domain/repositories/investment_repository.dart';
+import '../../../../core/providers/app_providers.dart';
+import '../../../auth/providers/auth_providers.dart';
 
 class InvestmentRepositoryImpl implements InvestmentRepository {
   final db.AppDatabase _database;
+  final Ref _ref;
 
-  InvestmentRepositoryImpl(this._database);
+  InvestmentRepositoryImpl(this._database, this._ref);
 
   domain.Investment _toDomain(db.Investment entity) {
     return domain.Investment(
@@ -88,6 +92,8 @@ class InvestmentRepositoryImpl implements InvestmentRepository {
     return list.map(_toDomain).toList();
   }
 
+
+
   @override
   Future<domain.Investment?> getInvestmentById(String id) async {
     final query = _database.select(_database.investments)..where((tbl) => tbl.id.equals(id));
@@ -98,6 +104,11 @@ class InvestmentRepositoryImpl implements InvestmentRepository {
   @override
   Future<void> createInvestment(domain.Investment investment) async {
     await _database.into(_database.investments).insert(_toCompanion(investment));
+    await _ref.read(syncServiceProvider).queueOperation(
+      entityType: 'investment',
+      entityId: investment.id,
+      operation: 'upsert',
+    );
   }
 
   @override
@@ -118,16 +129,27 @@ class InvestmentRepositoryImpl implements InvestmentRepository {
       syncStatus: investment.syncStatus,
     );
     await _database.update(_database.investments).replace(dbInvestment);
+    await _ref.read(syncServiceProvider).queueOperation(
+      entityType: 'investment',
+      entityId: investment.id,
+      operation: 'upsert',
+    );
   }
 
   @override
   Future<void> deleteInvestment(String id) async {
     final inv = await getInvestmentById(id);
     if (inv != null) {
-      await updateInvestment(inv.copyWith(
+      final updated = inv.copyWith(
         isArchived: 1,
         updatedAt: DateTime.now().toUtc(),
-      ));
+      );
+      await updateInvestment(updated);
+      await _ref.read(syncServiceProvider).queueOperation(
+        entityType: 'investment',
+        entityId: id,
+        operation: 'delete',
+      );
     }
   }
 
@@ -148,6 +170,11 @@ class InvestmentRepositoryImpl implements InvestmentRepository {
       marketValueUpdatedAt: Value(DateTime.now().toUtc()),
       updatedAt: Value(DateTime.now().toUtc()),
     ));
+    await _ref.read(syncServiceProvider).queueOperation(
+      entityType: 'investment',
+      entityId: id,
+      operation: 'upsert',
+    );
   }
 
   @override

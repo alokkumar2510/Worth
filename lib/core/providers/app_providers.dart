@@ -66,6 +66,7 @@ import '../services/notification_service.dart';
 import '../services/reminder_scheduler.dart';
 import '../services/network_monitor.dart';
 import '../services/sync_service.dart';
+import '../services/cloudinary_service.dart';
 import '../../features/checkins/presentation/providers/check_in_providers.dart';
 
 import '../../features/dashboard/domain/repositories/dashboard_repository.dart';
@@ -94,27 +95,27 @@ final realDatabaseProvider = Provider<db.AppDatabase>((ref) {
 // ==========================================
 
 final realAccountRepositoryProvider = Provider<AccountRepository>((ref) {
-  return AccountRepositoryImpl(ref.watch(realDatabaseProvider));
+  return AccountRepositoryImpl(ref.watch(realDatabaseProvider), ref);
 });
 
 final realAssetRepositoryProvider = Provider<AssetRepository>((ref) {
-  return AssetRepositoryImpl(ref.watch(realDatabaseProvider));
+  return AssetRepositoryImpl(ref.watch(realDatabaseProvider), ref);
 });
 
 final realLiabilityRepositoryProvider = Provider<LiabilityRepository>((ref) {
-  return LiabilityRepositoryImpl(ref.watch(realDatabaseProvider));
+  return LiabilityRepositoryImpl(ref.watch(realDatabaseProvider), ref);
 });
 
 final realReceivableRepositoryProvider = Provider<ReceivableRepository>((ref) {
-  return ReceivableRepositoryImpl(ref.watch(realDatabaseProvider));
+  return ReceivableRepositoryImpl(ref.watch(realDatabaseProvider), ref);
 });
 
 final realExpectedIncomeRepositoryProvider = Provider<ExpectedIncomeRepository>((ref) {
-  return ExpectedIncomeRepositoryImpl(ref.watch(realDatabaseProvider));
+  return ExpectedIncomeRepositoryImpl(ref.watch(realDatabaseProvider), ref);
 });
 
 final realInvestmentRepositoryProvider = Provider<InvestmentRepository>((ref) {
-  return InvestmentRepositoryImpl(ref.watch(realDatabaseProvider));
+  return InvestmentRepositoryImpl(ref.watch(realDatabaseProvider), ref);
 });
 
 final realSipRepositoryProvider = Provider<SipRepository>((ref) {
@@ -122,7 +123,7 @@ final realSipRepositoryProvider = Provider<SipRepository>((ref) {
 });
 
 final realTransactionRepositoryProvider = Provider<TransactionRepository>((ref) {
-  return TransactionRepositoryImpl(ref.watch(realDatabaseProvider));
+  return TransactionRepositoryImpl(ref.watch(realDatabaseProvider), ref);
 });
 
 final realGoalRepositoryProvider = Provider<GoalRepository>((ref) {
@@ -287,10 +288,24 @@ final networkMonitorProvider = Provider<NetworkMonitor>((ref) {
   return NetworkMonitor();
 });
 
+final cloudinaryConfigProvider = Provider<CloudinaryConfig>((ref) {
+  return CloudinaryConfig(
+    cloudName: 'dbpei4mqx',
+    uploadPreset: 'worth_unsigned_preset',
+  );
+});
+
+final cloudinaryServiceProvider = Provider<CloudinaryService>((ref) {
+  final config = ref.watch(cloudinaryConfigProvider);
+  return CloudinaryService(config);
+});
 final syncServiceProvider = Provider<SyncService>((ref) {
   return SyncService(
+    ref,
     ref.watch(realDatabaseProvider),
     ref.watch(networkMonitorProvider),
+    ref.watch(realBalanceCacheServiceProvider),
+    ref.watch(realSearchIndexServiceProvider),
   );
 });
 

@@ -1,12 +1,16 @@
 import 'package:drift/drift.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../database/database.dart' as db;
 import '../../domain/entities/receivable.dart' as domain;
 import '../../domain/repositories/receivable_repository.dart';
+import '../../../../core/providers/app_providers.dart';
+import '../../../auth/providers/auth_providers.dart';
 
 class ReceivableRepositoryImpl implements ReceivableRepository {
   final db.AppDatabase _database;
+  final Ref _ref;
 
-  ReceivableRepositoryImpl(this._database);
+  ReceivableRepositoryImpl(this._database, this._ref);
 
   domain.Receivable _toDomain(db.Person p) {
     return domain.Receivable(
@@ -56,6 +60,11 @@ class ReceivableRepositoryImpl implements ReceivableRepository {
   @override
   Future<void> createReceivable(domain.Receivable receivable) async {
     await _database.into(_database.people).insert(_toCompanion(receivable));
+    await _ref.read(syncServiceProvider).queueOperation(
+      entityType: 'person',
+      entityId: receivable.id,
+      operation: 'upsert',
+    );
   }
 
   @override
@@ -69,16 +78,27 @@ class ReceivableRepositoryImpl implements ReceivableRepository {
           updatedAt: receivable.updatedAt,
           syncStatus: receivable.syncStatus,
         ));
+    await _ref.read(syncServiceProvider).queueOperation(
+      entityType: 'person',
+      entityId: receivable.id,
+      operation: 'upsert',
+    );
   }
 
   @override
   Future<void> deleteReceivable(String id) async {
     final rec = await getReceivableById(id);
     if (rec != null) {
-      await updateReceivable(rec.copyWith(
+      final updated = rec.copyWith(
         isArchived: 1,
         updatedAt: DateTime.now().toUtc(),
-      ));
+      );
+      await updateReceivable(updated);
+      await _ref.read(syncServiceProvider).queueOperation(
+        entityType: 'person',
+        entityId: id,
+        operation: 'delete',
+      );
     }
   }
 

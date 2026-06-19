@@ -15,3 +15,6 @@ final isAuthenticatedProvider = Provider<bool>((ref) {
   final authState = ref.watch(authStateChangesProvider);
   return authState.value != null;
 });
+
+final isRestoringProvider = StateProvider<bool>((ref) => false);
+

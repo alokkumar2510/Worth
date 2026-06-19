@@ -176,8 +176,8 @@ class NotificationService {
     }
 
     // 2. SIP Reminders
-    final List sips = dbState.sips ?? [];
-    final List investments = dbState.investments ?? [];
+    final List<dynamic> sips = (dbState.sips as List<dynamic>?) ?? [];
+    final List<dynamic> investments = (dbState.investments as List<dynamic>?) ?? [];
     for (final sip in sips) {
       final nextDate = _getNextSipOccurrenceWithinWeek(sip, now);
       if (nextDate != null) {
@@ -185,7 +185,7 @@ class NotificationService {
         final inv = investments.firstWhereOrNull((i) => i.id == sip.investmentId);
         final name = inv?.name ?? 'Investment';
         await scheduleNotification(
-          id: 2000 + sip.id.hashCode,
+          id: 2000 + (sip.id as Object).hashCode,
           title: 'SIP Reminder',
           body: 'Your SIP for "$name" is scheduled for today. Make sure to fund it.',
           scheduledDateTime: scheduledTime,
@@ -195,16 +195,16 @@ class NotificationService {
     }
 
     // 3. Receivable Recovery Reminder
-    final List people = dbState.people ?? [];
+    final List<dynamic> people = (dbState.people as List<dynamic>?) ?? [];
     for (final person in people) {
       if (person.isArchived == 0) {
-        final outstanding = dbState.getPersonReceivableBalance(person.id);
+        final double outstanding = (dbState.getPersonReceivableBalance(person.id) as num).toDouble();
         if (outstanding > 0) {
           // Sunday at 11:00 AM
           final nextSunday = _getNextDayOfWeek(now, DateTime.sunday);
           final scheduledTime = DateTime(nextSunday.year, nextSunday.month, nextSunday.day, 11, 0);
           await scheduleNotification(
-            id: 3000 + person.id.hashCode,
+            id: 3000 + (person.id as Object).hashCode,
             title: 'Receivable Recovery Reminder',
             body: 'Friendly reminder: ${person.name} owes you $currency${outstanding.toStringAsFixed(0)}. Consider reaching out today.',
             scheduledDateTime: scheduledTime,
@@ -215,16 +215,19 @@ class NotificationService {
     }
 
     // 4. Goal Reminders
-    final List goals = dbState.goals ?? [];
+    final List<dynamic> goals = (dbState.goals as List<dynamic>?) ?? [];
     for (final goal in goals) {
-      if (goal.currentAmount < goal.targetAmount && goal.deadline != null) {
-        final reminderTime = goal.deadline!.subtract(const Duration(days: 1));
+      final double currentAmount = (goal.currentAmount as num).toDouble();
+      final double targetAmount = (goal.targetAmount as num).toDouble();
+      final DateTime? deadline = goal.deadline as DateTime?;
+      if (currentAmount < targetAmount && deadline != null) {
+        final reminderTime = deadline.subtract(const Duration(days: 1));
         final scheduledTime = DateTime(reminderTime.year, reminderTime.month, reminderTime.day, 10, 0); // 10:00 AM
         if (scheduledTime.isAfter(now)) {
           await scheduleNotification(
-            id: 6000 + goal.id.hashCode,
+            id: 6000 + (goal.id as Object).hashCode,
             title: 'Goal Deadline Approaching',
-            body: 'Your goal "${goal.name}" is due tomorrow! You need $currency${(goal.targetAmount - goal.currentAmount).toStringAsFixed(0)} more.',
+            body: 'Your goal "${goal.name}" is due tomorrow! You need $currency${(targetAmount - currentAmount).toStringAsFixed(0)} more.',
             scheduledDateTime: scheduledTime,
             type: 'goal',
           );
@@ -233,7 +236,7 @@ class NotificationService {
     }
 
     // 5. MTF Interest Reminder (every Friday at 6:00 PM)
-    final List activeMtf = (dbState.mtfPositions ?? []).where((p) => p.isClosed == 0).toList();
+    final List<dynamic> activeMtf = ((dbState.mtfPositions as List<dynamic>?) ?? []).where((p) => p.isClosed == 0).toList();
     if (activeMtf.isNotEmpty) {
       final nextFriday = _getNextDayOfWeek(now, DateTime.friday);
       final scheduledTime = DateTime(nextFriday.year, nextFriday.month, nextFriday.day, 18, 0);
@@ -247,7 +250,7 @@ class NotificationService {
     }
 
     // 6. IPO Settlement Reminders (every Tuesday at 12:00 PM)
-    final List activeIpo = (dbState.ipoPools ?? []).where((p) => p.status != 'Archived' && p.settlementStatus != 'Settled').toList();
+    final List<dynamic> activeIpo = ((dbState.ipoPools as List<dynamic>?) ?? []).where((p) => p.status != 'Archived' && p.settlementStatus != 'Settled').toList();
     if (activeIpo.isNotEmpty) {
       final nextTuesday = _getNextDayOfWeek(now, DateTime.tuesday);
       final scheduledTime = DateTime(nextTuesday.year, nextTuesday.month, nextTuesday.day, 12, 0);

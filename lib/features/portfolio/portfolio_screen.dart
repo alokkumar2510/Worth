@@ -1426,29 +1426,111 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
 
     if (assets.isEmpty) {
-      return Scaffold(
-        backgroundColor: Colors.transparent,
-        body: EmptyStateWidget(
-          icon: Icons.account_balance_wallet_outlined,
-          title: 'No Assets Yet',
-          description: 'Start building your portfolio to see your wealth grow.',
-          action: _buildAddButton('Add New Account', _showAddAccountDialog),
-        ),
+      return EmptyStateWidget(
+        icon: Icons.account_balance_wallet_outlined,
+        title: 'No Assets Yet',
+        description: 'Start building your portfolio to see your wealth grow.',
+        action: _buildAddButton('Add New Account', _showAddAccountDialog),
       );
     }
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: assets.length + 1,
-        itemBuilder: (context, index) {
-          if (index == assets.length) {
-            return _buildAddButton('Add New Account', _showAddAccountDialog);
-          }
-          final acc = assets[index];
-          final bal = state.getAccountCashBalance(acc.id);
+    return ListView.builder(
+      padding: const EdgeInsets.all(16.0),
+      itemCount: assets.length + 1,
+      itemBuilder: (context, index) {
+        if (index == assets.length) {
+          return _buildAddButton('Add New Account', _showAddAccountDialog);
+        }
+        final acc = assets[index];
+        final bal = state.getAccountCashBalance(acc.id);
 
+        return _buildDismissibleItem<Account>(
+          id: acc.id,
+          itemType: 'account',
+          item: acc,
+          onEdit: () => _showEditAccountDialog(acc),
+          onDelete: () async {
+            final success = await ref.read(mockDatabaseProvider.notifier).deleteAccountEmpty(acc.id);
+            if (!success) {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  
+                  title: const Text('Cannot Delete Account', style: TextStyle(color: Colors.white)),
+                  content: const Text('This account is not empty. Please clear its transactions or merge it first.', style: TextStyle(color: AppColors.grey400)),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK', style: TextStyle(color: AppColors.darkPrimary))),
+                  ],
+                ),
+              );
+              return false;
+            }
+            return true;
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: GlassCard(
+              onTap: () => context.push('/portfolio/asset/${acc.id}'),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: AppColors.darkPrimary.withOpacity(0.12),
+                    child: Icon(_getAccountIcon(acc.type), color: AppColors.darkPrimary),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(acc.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                        const SizedBox(height: 4),
+                        Text('${acc.type.toUpperCase()} • Tap to view details', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    format.format(bal),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLiabilitiesTab(MockDatabaseState state, String currency) {
+    final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
+
+    final ccLiabilities = state.accounts.where((a) => a.isArchived == 0 && a.type == 'credit').toList();
+    final peopleLiabilities = state.people.where((p) => p.isArchived == 0 && state.getPersonLiabilityBalance(p.id) > 0).toList();
+
+    final totalCount = ccLiabilities.length + peopleLiabilities.length;
+    if (ccLiabilities.isEmpty && peopleLiabilities.isEmpty) {
+      return EmptyStateWidget(
+        icon: Icons.trending_down_outlined,
+        title: 'No Liabilities Yet',
+        description: 'You have zero outstanding dues and your debt balance is empty.',
+        action: _buildAddButton('Add New Liability', () => _showAddPersonDialog(false)),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16.0),
+      itemCount: totalCount + 1,
+      itemBuilder: (context, index) {
+        if (index == totalCount) {
+          return _buildAddButton('Add New Liability', () => _showAddPersonDialog(false));
+        }
+
+        if (index < ccLiabilities.length) {
+          final acc = ccLiabilities[index];
+          final bal = state.getAccountLiabilityBalance(acc.id);
           return _buildDismissibleItem<Account>(
             id: acc.id,
             itemType: 'account',
@@ -1475,12 +1557,12 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
             child: Container(
               margin: const EdgeInsets.only(bottom: 12),
               child: GlassCard(
-                onTap: () => context.push('/portfolio/asset/${acc.id}'),
+                onTap: () => context.push('/portfolio/liability/acc_${acc.id}'),
                 child: Row(
                   children: [
                     CircleAvatar(
-                      backgroundColor: AppColors.darkPrimary.withOpacity(0.12),
-                      child: Icon(_getAccountIcon(acc.type), color: AppColors.darkPrimary),
+                      backgroundColor: AppColors.darkDanger.withOpacity(0.12),
+                      child: const Icon(Icons.credit_card_outlined, color: AppColors.darkDanger),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -1489,14 +1571,14 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         children: [
                           Text(acc.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                           const SizedBox(height: 4),
-                          Text('${acc.type.toUpperCase()} • Tap to view details', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
+                          const Text('CREDIT CARD • Tap to view details', style: TextStyle(fontSize: 11, color: AppColors.grey500)),
                         ],
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       format.format(bal),
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.darkDanger),
                     ),
                     const SizedBox(width: 8),
                     const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
@@ -1505,300 +1587,12 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
               ),
             ),
           );
-        },
-      ),
-    );
-  }
-
-  Widget _buildLiabilitiesTab(MockDatabaseState state, String currency) {
-    final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
-
-    final ccLiabilities = state.accounts.where((a) => a.isArchived == 0 && a.type == 'credit').toList();
-    final peopleLiabilities = state.people.where((p) => p.isArchived == 0 && state.getPersonLiabilityBalance(p.id) > 0).toList();
-
-    final totalCount = ccLiabilities.length + peopleLiabilities.length;
-
-    if (ccLiabilities.isEmpty && peopleLiabilities.isEmpty) {
-      return Scaffold(
-        backgroundColor: Colors.transparent,
-        body: EmptyStateWidget(
-          icon: Icons.trending_down_outlined,
-          title: 'No Liabilities Yet',
-          description: 'You have zero outstanding dues and your debt balance is empty.',
-          action: _buildAddButton('Add New Liability', () => _showAddPersonDialog(false)),
-        ),
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: totalCount + 1,
-        itemBuilder: (context, index) {
-          if (index == totalCount) {
-            return _buildAddButton('Add New Liability', () => _showAddPersonDialog(false));
-          }
-
-          if (index < ccLiabilities.length) {
-            final acc = ccLiabilities[index];
-            final bal = state.getAccountLiabilityBalance(acc.id);
-            return _buildDismissibleItem<Account>(
-              id: acc.id,
-              itemType: 'account',
-              item: acc,
-              onEdit: () => _showEditAccountDialog(acc),
-              onDelete: () async {
-                final success = await ref.read(mockDatabaseProvider.notifier).deleteAccountEmpty(acc.id);
-                if (!success) {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      
-                      title: const Text('Cannot Delete Account', style: TextStyle(color: Colors.white)),
-                      content: const Text('This account is not empty. Please clear its transactions or merge it first.', style: TextStyle(color: AppColors.grey400)),
-                      actions: [
-                        TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK', style: TextStyle(color: AppColors.darkPrimary))),
-                      ],
-                    ),
-                  );
-                  return false;
-                }
-                return true;
-              },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: GlassCard(
-                  onTap: () => context.push('/portfolio/liability/acc_${acc.id}'),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: AppColors.darkDanger.withOpacity(0.1),
-                        child: const Icon(Icons.credit_card, color: AppColors.darkDanger),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(acc.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-                            const SizedBox(height: 4),
-                            const Text('CREDIT CARD LINE • Tap to view details', style: TextStyle(fontSize: 11, color: AppColors.grey500)),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        format.format(bal),
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.darkDanger),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          } else {
-            final person = peopleLiabilities[index - ccLiabilities.length];
-            final bal = state.getPersonLiabilityBalance(person.id);
-            return _buildDismissibleItem<Person>(
-              id: person.id,
-              itemType: 'person_liability',
-              item: person,
-              onEdit: () => _showEditPersonDialog(person),
-              onDelete: () async {
-                final success = await ref.read(mockDatabaseProvider.notifier).deletePerson(person.id);
-                if (!success) {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      
-                      title: const Text('Cannot Delete Person', style: TextStyle(color: Colors.white)),
-                      content: const Text('This person has associated transactions. Please delete or archive them instead.', style: TextStyle(color: AppColors.grey400)),
-                      actions: [
-                        TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK', style: TextStyle(color: AppColors.darkPrimary))),
-                      ],
-                    ),
-                  );
-                  return false;
-                }
-                return true;
-              },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: GlassCard(
-                  onTap: () => context.push('/portfolio/liability/person_${person.id}'),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: AppColors.darkDanger.withOpacity(0.1),
-                        child: const Icon(Icons.person, color: AppColors.darkDanger),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(person.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-                            const SizedBox(height: 4),
-                            Text('${person.notes ?? "LOAN FROM PERSON"} • Tap to view details', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        format.format(bal),
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.darkDanger),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }
-        },
-      ),
-    );
-  }
-
-  Widget _buildInvestmentsTab(MockDatabaseState state, String currency) {
-    final investments = state.investments.where((i) => i.isArchived == 0).toList();
-    final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
-
-    if (investments.isEmpty) {
-      return Scaffold(
-        backgroundColor: Colors.transparent,
-        body: EmptyStateWidget(
-          icon: Icons.show_chart_outlined,
-          title: 'No Investments Yet',
-          description: 'Track your stocks, mutual funds, and crypto portfolios here.',
-          action: _buildAddButton('Add New Investment', _showAddInvestmentDialog),
-        ),
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: investments.length + 1,
-        itemBuilder: (context, index) {
-          if (index == investments.length) {
-            return _buildAddButton('Add New Investment', _showAddInvestmentDialog);
-          }
-          final inv = investments[index];
-          final value = state.getInvestmentMarketValue(inv.id);
-          final gain = state.getInvestmentUnrealizedGain(inv.id);
-
-          return _buildDismissibleItem<Investment>(
-            id: inv.id,
-            itemType: 'investment',
-            item: inv,
-            onEdit: () => _showEditInvestmentDialog(inv),
-            onDelete: () async {
-              final success = await ref.read(mockDatabaseProvider.notifier).deleteInvestment(inv.id);
-              if (!success) {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    
-                    title: const Text('Cannot Delete Investment', style: TextStyle(color: Colors.white)),
-                    content: const Text('This investment has transaction lots associated with it. Please delete transactions or archive the investment.', style: TextStyle(color: AppColors.grey400)),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK', style: TextStyle(color: AppColors.darkPrimary))),
-                    ],
-                  ),
-                );
-                return false;
-              }
-              return true;
-            },
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: GlassCard(
-                onTap: () => context.push('/portfolio/investment/${inv.id}'),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: AppColors.darkPrimary.withOpacity(0.12),
-                          child: const Icon(Icons.show_chart, color: AppColors.darkPrimary),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(inv.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-                              const SizedBox(height: 4),
-                              Text('${inv.symbol ?? inv.type.toUpperCase()} • Tap to view details', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
-                            ],
-                          ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(format.format(value), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${gain >= 0 ? '+' : ''}${format.format(gain)}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: gain >= 0 ? AppColors.darkSuccess : AppColors.darkDanger,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildReceivablesTab(MockDatabaseState state, String currency) {
-    final receivables = state.people.where((p) => p.isArchived == 0 && state.getPersonReceivableBalance(p.id) > 0).toList();
-    final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
-
-    if (receivables.isEmpty) {
-      return Scaffold(
-        backgroundColor: Colors.transparent,
-        body: EmptyStateWidget(
-          icon: Icons.handshake_outlined,
-          title: 'No Receivables Yet',
-          description: 'Your outstanding payment list is empty. You currently have zero outstanding money owed.',
-          action: _buildAddButton('Add New Receivable', () => _showAddPersonDialog(true)),
-        ),
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: receivables.length + 1,
-        itemBuilder: (context, index) {
-          if (index == receivables.length) {
-            return _buildAddButton('Add New Receivable', () => _showAddPersonDialog(true));
-          }
-          final person = receivables[index];
-          final bal = state.getPersonReceivableBalance(person.id);
-
+        } else {
+          final person = peopleLiabilities[index - ccLiabilities.length];
+          final bal = state.getPersonLiabilityBalance(person.id);
           return _buildDismissibleItem<Person>(
             id: person.id,
-            itemType: 'person_receivable',
+            itemType: 'person_liability',
             item: person,
             onEdit: () => _showEditPersonDialog(person),
             onDelete: () async {
@@ -1822,12 +1616,12 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
             child: Container(
               margin: const EdgeInsets.only(bottom: 12),
               child: GlassCard(
-                onTap: () => context.push('/portfolio/receivable/${person.id}'),
+                onTap: () => context.push('/portfolio/liability/person_${person.id}'),
                 child: Row(
                   children: [
                     CircleAvatar(
-                      backgroundColor: AppColors.darkSuccess.withOpacity(0.12),
-                      child: const Icon(Icons.people_alt_outlined, color: AppColors.darkSuccess),
+                      backgroundColor: AppColors.darkDanger.withOpacity(0.12),
+                      child: const Icon(Icons.person_outline, color: AppColors.darkDanger),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -1836,14 +1630,14 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         children: [
                           Text(person.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                           const SizedBox(height: 4),
-                          Text('${person.notes ?? "OUTSTANDING DEBT"} • Tap to view details', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
+                          Text('${person.notes ?? "INDIVIDUAL"} • Tap to view details', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
                         ],
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       format.format(bal),
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.darkSuccess),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.darkDanger),
                     ),
                     const SizedBox(width: 8),
                     const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
@@ -1852,8 +1646,189 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
               ),
             ),
           );
-        },
-      ),
+        }
+      },
+    );
+  }
+
+  Widget _buildInvestmentsTab(MockDatabaseState state, String currency) {
+    final investments = state.investments.where((i) => i.isArchived == 0).toList();
+    final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
+
+    if (investments.isEmpty) {
+      return EmptyStateWidget(
+        icon: Icons.show_chart_outlined,
+        title: 'No Investments Yet',
+        description: 'Track your stocks, mutual funds, and crypto portfolios here.',
+        action: _buildAddButton('Add New Investment', _showAddInvestmentDialog),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16.0),
+      itemCount: investments.length + 1,
+      itemBuilder: (context, index) {
+        if (index == investments.length) {
+          return _buildAddButton('Add New Investment', _showAddInvestmentDialog);
+        }
+        final inv = investments[index];
+        final value = state.getInvestmentMarketValue(inv.id);
+        final gain = state.getInvestmentUnrealizedGain(inv.id);
+
+        return _buildDismissibleItem<Investment>(
+          id: inv.id,
+          itemType: 'investment',
+          item: inv,
+          onEdit: () => _showEditInvestmentDialog(inv),
+          onDelete: () async {
+            final success = await ref.read(mockDatabaseProvider.notifier).deleteInvestment(inv.id);
+            if (!success) {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  
+                  title: const Text('Cannot Delete Investment', style: TextStyle(color: Colors.white)),
+                  content: const Text('This investment has transaction lots associated with it. Please delete transactions or archive the investment.', style: TextStyle(color: AppColors.grey400)),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK', style: TextStyle(color: AppColors.darkPrimary))),
+                  ],
+                ),
+              );
+              return false;
+            }
+            return true;
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: GlassCard(
+              onTap: () => context.push('/portfolio/investment/${inv.id}'),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: AppColors.darkPrimary.withOpacity(0.12),
+                        child: const Icon(Icons.show_chart, color: AppColors.darkPrimary),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(inv.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                            const SizedBox(height: 4),
+                            Text('${inv.symbol ?? inv.type.toUpperCase()} • Tap to view details', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(format.format(value), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${gain >= 0 ? '+' : ''}${format.format(gain)}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: gain >= 0 ? AppColors.darkSuccess : AppColors.darkDanger,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildReceivablesTab(MockDatabaseState state, String currency) {
+    final receivables = state.people.where((p) => p.isArchived == 0 && state.getPersonReceivableBalance(p.id) > 0).toList();
+    final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
+
+    if (receivables.isEmpty) {
+      return EmptyStateWidget(
+        icon: Icons.handshake_outlined,
+        title: 'No Receivables Yet',
+        description: 'Your outstanding payment list is empty. You currently have zero outstanding money owed.',
+        action: _buildAddButton('Add New Receivable', () => _showAddPersonDialog(true)),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16.0),
+      itemCount: receivables.length + 1,
+      itemBuilder: (context, index) {
+        if (index == receivables.length) {
+          return _buildAddButton('Add New Receivable', () => _showAddPersonDialog(true));
+        }
+        final person = receivables[index];
+        final bal = state.getPersonReceivableBalance(person.id);
+
+        return _buildDismissibleItem<Person>(
+          id: person.id,
+          itemType: 'person_receivable',
+          item: person,
+          onEdit: () => _showEditPersonDialog(person),
+          onDelete: () async {
+            final success = await ref.read(mockDatabaseProvider.notifier).deletePerson(person.id);
+            if (!success) {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  
+                  title: const Text('Cannot Delete Person', style: TextStyle(color: Colors.white)),
+                  content: const Text('This person has associated transactions. Please delete or archive them instead.', style: TextStyle(color: AppColors.grey400)),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK', style: TextStyle(color: AppColors.darkPrimary))),
+                  ],
+                ),
+              );
+              return false;
+            }
+            return true;
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: GlassCard(
+              onTap: () => context.push('/portfolio/receivable/${person.id}'),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: AppColors.darkSuccess.withOpacity(0.12),
+                    child: const Icon(Icons.people_alt_outlined, color: AppColors.darkSuccess),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(person.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                        const SizedBox(height: 4),
+                        Text('${person.notes ?? "OUTSTANDING DEBT"} • Tap to view details', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    format.format(bal),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.darkSuccess),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -1862,95 +1837,89 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
 
     if (expected.isEmpty) {
-      return Scaffold(
-        backgroundColor: Colors.transparent,
-        body: EmptyStateWidget(
-          icon: Icons.next_plan_outlined,
-          title: 'No Expected Income Yet',
-          description: 'Plan and track expected cash flow and future income streams.',
-          action: _buildAddButton('Add Expected Income', _showAddExpectedDialog),
-        ),
+      return EmptyStateWidget(
+        icon: Icons.next_plan_outlined,
+        title: 'No Expected Income Yet',
+        description: 'Plan and track expected cash flow and future income streams.',
+        action: _buildAddButton('Add Expected Income', _showAddExpectedDialog),
       );
     }
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: expected.length + 1,
-        itemBuilder: (context, index) {
-          if (index == expected.length) {
-            return _buildAddButton('Add Expected Income', _showAddExpectedDialog);
-          }
-          final inc = expected[index];
-          
-          Color statusColor = AppColors.darkWarning;
-          if (inc.status == 'received') statusColor = AppColors.darkSuccess;
-          if (inc.status == 'expired') statusColor = AppColors.grey500;
+    return ListView.builder(
+      padding: const EdgeInsets.all(16.0),
+      itemCount: expected.length + 1,
+      itemBuilder: (context, index) {
+        if (index == expected.length) {
+          return _buildAddButton('Add Expected Income', _showAddExpectedDialog);
+        }
+        final inc = expected[index];
+        
+        Color statusColor = AppColors.darkWarning;
+        if (inc.status == 'received') statusColor = AppColors.darkSuccess;
+        if (inc.status == 'expired') statusColor = AppColors.grey500;
 
-          return _buildDismissibleItem<ExpectedIncome>(
-            id: inc.id,
-            itemType: 'expected_income',
-            item: inc,
-            onEdit: () => _showEditExpectedDialog(inc),
-            onDelete: () async {
-              await ref.read(mockDatabaseProvider.notifier).deleteExpectedIncome(inc.id);
-              return true;
-            },
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: GlassCard(
-                onTap: () => context.push('/portfolio/expected/${inc.id}'),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: statusColor.withOpacity(0.12),
-                      child: Icon(
-                        inc.status == 'received' ? Icons.check : Icons.hourglass_bottom,
-                        color: statusColor,
-                      ),
+        return _buildDismissibleItem<ExpectedIncome>(
+          id: inc.id,
+          itemType: 'expected_income',
+          item: inc,
+          onEdit: () => _showEditExpectedDialog(inc),
+          onDelete: () async {
+            await ref.read(mockDatabaseProvider.notifier).deleteExpectedIncome(inc.id);
+            return true;
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: GlassCard(
+              onTap: () => context.push('/portfolio/expected/${inc.id}'),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    backgroundColor: statusColor.withOpacity(0.12),
+                    child: Icon(
+                      inc.status == 'received' ? Icons.check : Icons.hourglass_bottom,
+                      color: statusColor,
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            inc.source,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Colors.white,
-                              decoration: inc.status == 'expired' ? TextDecoration.lineThrough : null,
-                            ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          inc.source,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.white,
+                            decoration: inc.status == 'expired' ? TextDecoration.lineThrough : null,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${inc.status.toUpperCase()} • Tap to view details',
-                            style: TextStyle(fontSize: 10, color: statusColor, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${inc.status.toUpperCase()} • Tap to view details',
+                          style: TextStyle(fontSize: 10, color: statusColor, fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      format.format(inc.amount),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: inc.status == 'expired' ? AppColors.grey500 : Colors.white,
-                        decoration: inc.status == 'expired' ? TextDecoration.lineThrough : null,
-                      ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    format.format(inc.amount),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: inc.status == 'expired' ? AppColors.grey500 : Colors.white,
+                      decoration: inc.status == 'expired' ? TextDecoration.lineThrough : null,
                     ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
+                ],
               ),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -1959,85 +1928,80 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
 
     if (goals.isEmpty) {
-      return Scaffold(
-        backgroundColor: Colors.transparent,
-        body: EmptyStateWidget(
-          icon: Icons.flag_outlined,
-          title: 'No Goals Yet',
-          description: 'Define financial milestones to keep your savings motivated.',
-          action: _buildAddButton('Add New Goal', _showAddGoalDialog),
-        ),
+      return EmptyStateWidget(
+        icon: Icons.flag_outlined,
+        title: 'No Goals Yet',
+        description: 'Define financial milestones to keep your savings motivated.',
+        action: _buildAddButton('Add New Goal', _showAddGoalDialog),
       );
     }
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: goals.length + 1,
-        itemBuilder: (context, index) {
-          if (index == goals.length) {
-            return _buildAddButton('Add New Goal', _showAddGoalDialog);
-          }
-          final goal = goals[index];
-          final progress = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) : 0.0;
-          final percent = (progress * 100).clamp(0, 100).toStringAsFixed(0);
+    return ListView.builder(
+      padding: const EdgeInsets.all(16.0),
+      itemCount: goals.length + 1,
+      itemBuilder: (context, index) {
+        if (index == goals.length) {
+          return _buildAddButton('Add New Goal', _showAddGoalDialog);
+        }
+        final goal = goals[index];
+        final progress = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) : 0.0;
+        final percent = (progress * 100).clamp(0, 100).toStringAsFixed(0);
 
-          return _buildDismissibleItem<Goal>(
-            id: goal.id,
-            itemType: 'goal',
-            item: goal,
-            onEdit: () => _showEditGoalDialog(goal),
-            onDelete: () async {
-              await ref.read(mockDatabaseProvider.notifier).deleteGoal(goal.id);
-              return true;
-            },
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: GlassCard(
-                onTap: () => context.push('/portfolio/goal/${goal.id}'),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: AppColors.darkPrimary.withOpacity(0.12),
-                          child: const Icon(Icons.tour_outlined, color: AppColors.darkPrimary),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(goal.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
-                              const SizedBox(height: 4),
-                              Text(
-                                goal.deadline != null
-                                    ? 'DEADLINE: ${DateFormat('yyyy-MM-dd').format(goal.deadline!)} • Tap to view details'
-                                    : 'NO DEADLINE • Tap to view details',
-                                style: const TextStyle(fontSize: 10, color: AppColors.grey500),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
+        return _buildDismissibleItem<Goal>(
+          id: goal.id,
+          itemType: 'goal',
+          item: goal,
+          onEdit: () => _showEditGoalDialog(goal),
+          onDelete: () async {
+            await ref.read(mockDatabaseProvider.notifier).deleteGoal(goal.id);
+            return true;
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: GlassCard(
+              onTap: () => context.push('/portfolio/goal/${goal.id}'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: AppColors.darkPrimary.withOpacity(0.12),
+                        child: const Icon(Icons.tour_outlined, color: AppColors.darkPrimary),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(format.format(goal.targetAmount), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                            Text(goal.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                             const SizedBox(height: 4),
                             Text(
-                              '$percent% SAVED',
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.darkPrimary),
+                              goal.deadline != null
+                                  ? 'DEADLINE: ${DateFormat('yyyy-MM-dd').format(goal.deadline!)} • Tap to view details'
+                                  : 'NO DEADLINE • Tap to view details',
+                              style: const TextStyle(fontSize: 10, color: AppColors.grey500),
                             ),
                           ],
                         ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    ClipRRect(
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(format.format(goal.targetAmount), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$percent% SAVED',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.darkPrimary),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ClipRRect(
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
                         value: progress,
@@ -2046,13 +2010,12 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         minHeight: 6,
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -2063,14 +2026,11 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     final formatDec = NumberFormat.currency(symbol: currency, decimalDigits: 2);
 
     if (activePositions.isEmpty && closedPositions.isEmpty) {
-      return Scaffold(
-        backgroundColor: Colors.transparent,
-        body: EmptyStateWidget(
-          icon: Icons.trending_up_outlined,
-          title: 'No MTF Positions Yet',
-          description: 'Leverage your capital with Margin Trading Facility to track margin-funded ETF and stock positions.',
-          action: _buildAddButton('Add MTF Position', _showAddInvestmentDialog),
-        ),
+      return EmptyStateWidget(
+        icon: Icons.trending_up_outlined,
+        title: 'No MTF Positions Yet',
+        description: 'Leverage your capital with Margin Trading Facility to track margin-funded ETF and stock positions.',
+        action: _buildAddButton('Add MTF Position', _showAddInvestmentDialog),
       );
     }
 
@@ -2126,79 +2086,78 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
         t.type == 'expense' &&
         t.category == 'MTF Interest').fold<double>(0.0, (sum, t) => sum + t.amount);
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
-        children: [
-          // Dashboard Card
-          if (activePositions.isNotEmpty) ...[
-            GlassCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('MTF EXPOSURE DASHBOARD', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.grey500)),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: riskColor.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: riskColor.withOpacity(0.3), width: 1),
-                        ),
-                        child: Text(
-                          '$riskLevel RISK',
-                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: riskColor),
-                        ),
+    return ListView(
+      padding: const EdgeInsets.all(16.0),
+      children: [
+        // Dashboard Card
+        if (activePositions.isNotEmpty) ...[
+          GlassCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('MTF EXPOSURE DASHBOARD', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.grey500)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: riskColor.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: riskColor.withOpacity(0.3), width: 1),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(format.format(totalBorrowed), style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-                            const SizedBox(height: 4),
-                            const Text('Total Borrowed', style: TextStyle(color: AppColors.grey500, fontSize: 12)),
-                          ],
-                        ),
+                      child: Text(
+                        '$riskLevel RISK',
+                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: riskColor),
                       ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Text(format.format(totalInterestAccrued), style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-                            const SizedBox(height: 4),
-                            const Text('Total Interest Accrued', style: TextStyle(color: AppColors.grey500, fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text('${avgLtv.toStringAsFixed(1)}%', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-                            const SizedBox(height: 4),
-                            const Text('Avg LTV Ratio', style: TextStyle(color: AppColors.grey500, fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: SizedBox(
-                      height: 12,
-                      child: Row(
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Text(format.format(totalBorrowed), style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                          const SizedBox(height: 4),
+                          const Text('Total Borrowed', style: TextStyle(color: AppColors.grey500, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(format.format(totalInterestAccrued), style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                          const SizedBox(height: 4),
+                          const Text('Total Interest Accrued', style: TextStyle(color: AppColors.grey500, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text('${avgLtv.toStringAsFixed(1)}%', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                          const SizedBox(height: 4),
+                          const Text('Avg LTV Ratio', style: TextStyle(color: AppColors.grey500, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: SizedBox(
+                    height: 12,
+                    child: Row(
+                      children: [
+                        if (ownRatio > 0)
                           Expanded(
-                            flex: (ownRatio * 100).toInt(),
+                            flex: (ownRatio * 100).round(),
                             child: Container(
                               decoration: const BoxDecoration(
                                 gradient: LinearGradient(
@@ -2207,109 +2166,41 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                               ),
                             ),
                           ),
+                        if (ownRatio < 1)
                           Expanded(
-                            flex: ((1 - ownRatio) * 100).toInt(),
+                            flex: ((1 - ownRatio) * 100).round(),
                             child: Container(
                               color: AppColors.grey700,
                             ),
                           ),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Own: ${format.format(totalOwn)} (${(ownRatio * 100).toStringAsFixed(0)}%)', style: const TextStyle(color: AppColors.glow, fontSize: 11, fontWeight: FontWeight.bold)),
-                      Text('Borrowed: ${format.format(totalBorrowed)} (${((1 - ownRatio) * 100).toStringAsFixed(0)}%)', style: const TextStyle(color: AppColors.grey400, fontSize: 11, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            CalculationAuditPanel(
-              title: 'Verify MTF Total Exposure Calculations',
-              formula: 'Total Borrowed = Sum(pos.borrowedCapital)\n'
-                  'Total Own Capital = Sum(pos.ownCapital)\n'
-                  'Total Market Value = Sum(pos.units * currentPrice)\n'
-                  'Average LTV = (Total Borrowed / Total Market Value) * 100\n'
-                  'Total Accrued Interest = Sum(dailyInterest * daysHeld)',
-              inputs: {
-                'Total Borrowed Capital': format.format(totalBorrowed),
-                'Total Own Capital': format.format(totalOwn),
-                'Total Market Value': format.format(totalValue),
-                'Accrued Interest': format.format(totalInterestAccrued),
-              },
-              output: 'Average LTV Ratio: ${avgLtv.toStringAsFixed(1)}%',
-              steps: [
-                'Sum all borrowed capital across active positions: ${format.format(totalBorrowed)}.',
-                'Sum own capital invested across active positions: ${format.format(totalOwn)}.',
-                'Sum current market value of all positions: ${format.format(totalValue)}.',
-                'Calculate accrued interest on borrowed capital: ${format.format(totalInterestAccrued)}.',
-                'Compute average LTV (Loan-to-Value) ratio: (Total Borrowed / Total Market Value) * 100 = ${avgLtv.toStringAsFixed(1)}%.',
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Own: ${format.format(totalOwn)} (${(ownRatio * 100).toStringAsFixed(0)}%)', style: const TextStyle(color: AppColors.glow, fontSize: 11, fontWeight: FontWeight.bold)),
+                    Text('Borrowed: ${format.format(totalBorrowed)} (${((1 - ownRatio) * 100).toStringAsFixed(0)}%)', style: const TextStyle(color: AppColors.grey400, fontSize: 11, fontWeight: FontWeight.bold)),
+                  ],
+                ),
               ],
             ),
-            const SizedBox(height: 20),
+          ),
+          const SizedBox(height: 20),
+        ],
 
-            // Interest Reports Card
-            GlassCard(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('INTEREST REPORTS', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.grey500)),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildMtfStat('This Month', format.format(mtfInterestThisMonth)),
-                      _buildMtfStat('This Year', format.format(mtfInterestThisYear)),
-                      _buildMtfStat('Total Paid', format.format(totalInterestPaid)),
-                    ],
-                  ),
-                  const Divider(color: AppColors.grey700, height: 24),
-                  Text('POSITION-WISE INTEREST ACCRUED', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500)),
-                  const SizedBox(height: 8),
-                  if (activePositions.isEmpty && closedPositions.isEmpty)
-                    const Text('No positions', style: TextStyle(color: AppColors.grey500, fontSize: 12))
-                  else
-                    ...[...activePositions, ...closedPositions].map((pos) {
-                      final daysHeld = today.difference(DateTime(pos.interestStartDate.year, pos.interestStartDate.month, pos.interestStartDate.day)).inDays;
-                      final dailyInterest = pos.borrowedCapital * (pos.interestRate / 100) / 365;
-                      final totalInterestTillToday = dailyInterest * daysHeld;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(pos.instrument, style: const TextStyle(color: Colors.white, fontSize: 13)),
-                            Text(formatDec.format(totalInterestTillToday), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                          ],
-                        ),
-                      );
-                    }),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-
-          // Active Positions Title
-          if (activePositions.isNotEmpty) ...[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('ACTIVE POSITION TRACKING', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.grey500)),
-                Text('${activePositions.length} Open', style: GoogleFonts.inter(fontSize: 12, color: AppColors.grey500)),
-              ],
-            ),
-            const SizedBox(height: 12),
-          ],
-
-          // Active Positions Cards
+        // Active Positions Title
+        if (activePositions.isNotEmpty) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('ACTIVE POSITION TRACKING', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.grey500)),
+              Text('${activePositions.length} Open', style: GoogleFonts.inter(fontSize: 12, color: AppColors.grey500)),
+            ],
+          ),
+          const SizedBox(height: 12),
           ...activePositions.map((pos) {
             final inv = state.investments.firstWhereOrNull((i) => i.id == pos.investmentId);
             final currentPrice = inv?.marketValue ?? pos.averagePrice;
@@ -2375,94 +2266,94 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
               ),
             );
           }),
+        ],
 
-          // Add buttons and spacer
-          _buildAddButton('Add MTF Position', _showAddInvestmentDialog),
+        // Add buttons and spacer
+        _buildAddButton('Add MTF Position', _showAddInvestmentDialog),
 
-          // Closed Positions History Section
-          if (closedPositions.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text('CLOSED HISTORY', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.grey500)),
-            const SizedBox(height: 12),
-            ...closedPositions.map((pos) {
-              final totalInterestPaid = state.transactions
-                  .where((t) => t.investmentId == pos.investmentId && t.category == 'MTF Interest')
-                  .fold(0.0, (sum, t) => sum + t.amount);
-              
-              double salePrice = pos.averagePrice; // fallback
-              if (state.transactions.any((t) => t.investmentId == pos.investmentId && t.type == 'investment_sell')) {
-                final sellTx = state.transactions.firstWhere((t) => t.investmentId == pos.investmentId && t.type == 'investment_sell');
-                salePrice = pos.units > 0 ? sellTx.amount / pos.units : sellTx.amount;
-              }
-              final totalProceeds = pos.units * salePrice;
-              final totalCost = pos.units * pos.averagePrice;
-              final realizedNetProfit = totalProceeds - totalCost - totalInterestPaid;
-              final realizedRoi = pos.ownCapital > 0 ? (realizedNetProfit / pos.ownCapital * 100) : 0.0;
+        // Closed Positions History Section
+        if (closedPositions.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text('CLOSED HISTORY', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.grey500)),
+          const SizedBox(height: 12),
+          ...closedPositions.map((pos) {
+            final totalInterestPaid = state.transactions
+                .where((t) => t.investmentId == pos.investmentId && t.category == 'MTF Interest')
+                .fold(0.0, (sum, t) => sum + t.amount);
+            
+            double salePrice = pos.averagePrice; // fallback
+            if (state.transactions.any((t) => t.investmentId == pos.investmentId && t.type == 'investment_sell')) {
+              final sellTx = state.transactions.firstWhere((t) => t.investmentId == pos.investmentId && t.type == 'investment_sell');
+              salePrice = pos.units > 0 ? sellTx.amount / pos.units : sellTx.amount;
+            }
+            final totalProceeds = pos.units * salePrice;
+            final totalCost = pos.units * pos.averagePrice;
+            final realizedNetProfit = totalProceeds - totalCost - totalInterestPaid;
+            final realizedRoi = pos.ownCapital > 0 ? (realizedNetProfit / pos.ownCapital * 100) : 0.0;
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: GlassCard(
-                  child: Theme(
-                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                    child: ExpansionTile(
-                      tilePadding: EdgeInsets.zero,
-                      childrenPadding: EdgeInsets.zero,
-                      collapsedIconColor: Colors.white,
-                      iconColor: Colors.white,
-                      title: Text(pos.instrument, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white70)),
-                      subtitle: Text(
-                        'Closed ${pos.closedDate != null ? DateFormat('yyyy-MM-dd').format(pos.closedDate!) : 'n/a'} • Net: ${realizedNetProfit >= 0 ? '+' : ''}${format.format(realizedNetProfit)} (${realizedRoi.toStringAsFixed(1)}% ROI)',
-                        style: TextStyle(fontSize: 11, color: realizedNetProfit >= 0 ? AppColors.darkSuccess.withOpacity(0.8) : AppColors.darkDanger.withOpacity(0.8)),
-                      ),
-                      children: [
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            _buildMtfStat('Broker', pos.broker),
-                            _buildMtfStat('Buy Price', formatDec.format(pos.averagePrice)),
-                            _buildMtfStat('Sell Price', formatDec.format(salePrice)),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            _buildMtfStat('Own Capital', format.format(pos.ownCapital)),
-                            _buildMtfStat('Borrowed', format.format(pos.borrowedCapital)),
-                            _buildMtfStat('Interest Paid', formatDec.format(totalInterestPaid)),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Realized Return (ROI):', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
-                            Text(
-                              '${realizedNetProfit >= 0 ? '+' : ''}${realizedNetProfit.toStringAsFixed(2)} (${realizedRoi.toStringAsFixed(2)}% ROI)',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: realizedNetProfit >= 0 ? AppColors.darkSuccess : AppColors.darkDanger,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        TextButton.icon(
-                          onPressed: () => _showDeleteMtfConfirmDialog(pos),
-                          icon: const Icon(Icons.delete, color: AppColors.darkDanger, size: 14),
-                          label: const Text('Delete from History', style: TextStyle(color: AppColors.darkDanger, fontSize: 12)),
-                        ),
-                      ],
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: GlassCard(
+                child: Theme(
+                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                  child: ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    childrenPadding: EdgeInsets.zero,
+                    collapsedIconColor: Colors.white,
+                    iconColor: Colors.white,
+                    title: Text(pos.instrument, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white70)),
+                    subtitle: Text(
+                      'Closed ${pos.closedDate != null ? DateFormat('yyyy-MM-dd').format(pos.closedDate!) : 'n/a'} • Net: ${realizedNetProfit >= 0 ? '+' : ''}${format.format(realizedNetProfit)} (${realizedRoi.toStringAsFixed(1)}% ROI)',
+                      style: TextStyle(fontSize: 11, color: realizedNetProfit >= 0 ? AppColors.darkSuccess.withOpacity(0.8) : AppColors.darkDanger.withOpacity(0.8)),
                     ),
+                    children: [
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildMtfStat('Broker', pos.broker),
+                          _buildMtfStat('Buy Price', formatDec.format(pos.averagePrice)),
+                          _buildMtfStat('Sell Price', formatDec.format(salePrice)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildMtfStat('Own Capital', format.format(pos.ownCapital)),
+                          _buildMtfStat('Borrowed', format.format(pos.borrowedCapital)),
+                          _buildMtfStat('Interest Paid', formatDec.format(totalInterestPaid)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Realized Return (ROI):', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
+                          Text(
+                            '${realizedNetProfit >= 0 ? '+' : ''}${realizedNetProfit.toStringAsFixed(2)} (${realizedRoi.toStringAsFixed(2)}% ROI)',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: realizedNetProfit >= 0 ? AppColors.darkSuccess : AppColors.darkDanger,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: () => _showDeleteMtfConfirmDialog(pos),
+                        icon: const Icon(Icons.delete, color: AppColors.darkDanger, size: 14),
+                        label: const Text('Delete from History', style: TextStyle(color: AppColors.darkDanger, fontSize: 12)),
+                      ),
+                    ],
                   ),
                 ),
-              );
-            }),
-          ],
+              ),
+            );
+          }),
         ],
-      ),
+      ],
     );
   }
 

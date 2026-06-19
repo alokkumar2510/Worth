@@ -1,23 +1,49 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart' hide Transaction;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:drift/drift.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import '../../database/database.dart';
+import '../../database/seeder.dart';
+import '../calculation/balance_cache_service.dart';
+import '../providers/app_providers.dart';
+import '../providers/dependency_provider.dart';
+import 'search_index_service.dart';
 import 'network_monitor.dart';
 import 'conflict_resolver.dart';
+import 'cloudinary_service.dart';
+import '../../features/auth/providers/auth_providers.dart';
 
 class SyncService {
+  final Ref _ref;
   final AppDatabase _db;
   final NetworkMonitor _networkMonitor;
-  FirebaseAuth get _auth => FirebaseAuth.instance;
-  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
+  final BalanceCacheService _balanceCacheService;
+  final SearchIndexService _searchIndexService;
+  final FirebaseAuth? _authOverride;
+  final FirebaseFirestore? _firestoreOverride;
+
+  FirebaseAuth get _auth => _authOverride ?? FirebaseAuth.instance;
+  FirebaseFirestore get _firestore => _firestoreOverride ?? FirebaseFirestore.instance;
 
   StreamSubscription? _connectivitySubscription;
+  StreamSubscription? _authSubscription;
   bool _isSyncing = false;
   bool _isProcessingQueue = false;
 
-  SyncService(this._db, this._networkMonitor);
+  SyncService(
+    this._ref,
+    this._db,
+    this._networkMonitor,
+    this._balanceCacheService,
+    this._searchIndexService, {
+    FirebaseAuth? auth,
+    FirebaseFirestore? firestore,
+  }) : _authOverride = auth,
+       _firestoreOverride = firestore;
 
   void start() {
     try {
@@ -29,9 +55,15 @@ class SyncService {
         }
       });
 
+      // 2. Listen for auth state changes
+      _authSubscription = _auth.authStateChanges().listen((user) async {
+        if (user != null) {
+          _runAuthSync(user);
+        }
+      });
+
       // Run initial check
-      processQueue();
-      pullRemoteChanges();
+      _runInitialSync();
     } catch (e) {
       print('[SyncService] Failed to start: $e');
     }
@@ -39,7 +71,53 @@ class SyncService {
 
   void dispose() {
     _connectivitySubscription?.cancel();
+    _authSubscription?.cancel();
   }
+
+  Future<void> _runAuthSync(User user) async {
+    final isLocalEmpty = await isLocalDatabaseEmpty();
+    if (isLocalEmpty) {
+      final cloudCount = await getCloudRecordCount(user.uid);
+      if (cloudCount > 0) {
+        _ref.read(isRestoringProvider.notifier).state = true;
+        try {
+          print('[SyncService] Auth change: Local empty but cloud has data. Auto restoring...');
+          await manualRestore();
+        } catch (e) {
+          print('[SyncService] Auto restore failed: $e');
+        } finally {
+          _ref.read(isRestoringProvider.notifier).state = false;
+        }
+        return;
+      }
+    }
+    await forceSync();
+  }
+
+  Future<void> _runInitialSync() async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      final isLocalEmpty = await isLocalDatabaseEmpty();
+      if (isLocalEmpty) {
+        final cloudCount = await getCloudRecordCount(user.uid);
+        if (cloudCount > 0) {
+          _ref.read(isRestoringProvider.notifier).state = true;
+          try {
+            print('[SyncService] Startup check: Local empty but cloud has data. Auto restoring...');
+            await manualRestore();
+          } catch (e) {
+            print('[SyncService] Startup auto restore failed: $e');
+          } finally {
+            _ref.read(isRestoringProvider.notifier).state = false;
+          }
+          return;
+        }
+      }
+    }
+    await processQueue();
+    await pullRemoteChanges();
+  }
+
 
   /// Queues a mutation to be synchronized with Firebase.
   Future<void> queueOperation({
@@ -683,6 +761,23 @@ class SyncService {
 
   // --- Collection Mappers ---
 
+  DateTime _parseDateTime(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    } else if (value is String) {
+      return DateTime.parse(value);
+    } else if (value is int) {
+      return DateTime.fromMillisecondsSinceEpoch(value);
+    } else {
+      return DateTime.now().toUtc();
+    }
+  }
+
+  DateTime? _parseNullableDateTime(dynamic value) {
+    if (value == null) return null;
+    return _parseDateTime(value);
+  }
+
   Account _mapAccount(Map<String, dynamic> data) {
     return Account(
       id: data['id'] as String,
@@ -690,10 +785,10 @@ class SyncService {
       type: data['type'] as String,
       notes: data['notes'] as String?,
       isArchived: data['isArchived'] as int? ?? 0,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      createdAt: _parseDateTime(data['createdAt']),
+      updatedAt: _parseDateTime(data['updatedAt']),
       syncStatus: 'synced',
-      lastSyncedAt: (data['lastSyncedAt'] as Timestamp?)?.toDate(),
+      lastSyncedAt: _parseNullableDateTime(data['lastSyncedAt']),
       deviceId: data['deviceId'] as String?,
     );
   }
@@ -705,10 +800,10 @@ class SyncService {
       phone: data['phone'] as String?,
       notes: data['notes'] as String?,
       isArchived: data['isArchived'] as int? ?? 0,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      createdAt: _parseDateTime(data['createdAt']),
+      updatedAt: _parseDateTime(data['updatedAt']),
       syncStatus: 'synced',
-      lastSyncedAt: (data['lastSyncedAt'] as Timestamp?)?.toDate(),
+      lastSyncedAt: _parseNullableDateTime(data['lastSyncedAt']),
       deviceId: data['deviceId'] as String?,
     );
   }
@@ -720,15 +815,15 @@ class SyncService {
       type: data['type'] as String,
       symbol: data['symbol'] as String?,
       marketValue: (data['marketValue'] as num?)?.toDouble(),
-      marketValueUpdatedAt: (data['marketValueUpdatedAt'] as Timestamp?)?.toDate(),
+      marketValueUpdatedAt: _parseNullableDateTime(data['marketValueUpdatedAt']),
       isArchived: data['isArchived'] as int? ?? 0,
       notes: data['notes'] as String?,
-      purchaseDate: (data['purchaseDate'] as Timestamp?)?.toDate(),
+      purchaseDate: _parseNullableDateTime(data['purchaseDate']),
       purchaseTime: data['purchaseTime'] as String?,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      createdAt: _parseDateTime(data['createdAt']),
+      updatedAt: _parseDateTime(data['updatedAt']),
       syncStatus: 'synced',
-      lastSyncedAt: (data['lastSyncedAt'] as Timestamp?)?.toDate(),
+      lastSyncedAt: _parseNullableDateTime(data['lastSyncedAt']),
       deviceId: data['deviceId'] as String?,
     );
   }
@@ -741,11 +836,11 @@ class SyncService {
       unitsPurchased: (data['unitsPurchased'] as num).toDouble(),
       unitsRemaining: (data['unitsRemaining'] as num).toDouble(),
       costPerUnit: (data['costPerUnit'] as num).toDouble(),
-      purchaseDate: (data['purchaseDate'] as Timestamp).toDate(),
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      purchaseDate: _parseDateTime(data['purchaseDate']),
+      createdAt: _parseDateTime(data['createdAt']),
+      updatedAt: _parseDateTime(data['updatedAt']),
       syncStatus: 'synced',
-      lastSyncedAt: (data['lastSyncedAt'] as Timestamp?)?.toDate(),
+      lastSyncedAt: _parseNullableDateTime(data['lastSyncedAt']),
       deviceId: data['deviceId'] as String?,
     );
   }
@@ -764,11 +859,11 @@ class SyncService {
       notes: data['notes'] as String?,
       pricePerUnit: (data['pricePerUnit'] as num?)?.toDouble(),
       units: (data['units'] as num?)?.toDouble(),
-      transactionDate: (data['transactionDate'] as Timestamp).toDate(),
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      transactionDate: _parseDateTime(data['transactionDate']),
+      createdAt: _parseDateTime(data['createdAt']),
+      updatedAt: _parseDateTime(data['updatedAt']),
       syncStatus: 'synced',
-      lastSyncedAt: (data['lastSyncedAt'] as Timestamp?)?.toDate(),
+      lastSyncedAt: _parseNullableDateTime(data['lastSyncedAt']),
       deviceId: data['deviceId'] as String?,
     );
   }
@@ -779,13 +874,13 @@ class SyncService {
       source: data['source'] as String,
       amount: (data['amount'] as num).toDouble(),
       status: data['status'] as String,
-      expectedDate: (data['expectedDate'] as Timestamp?)?.toDate(),
+      expectedDate: _parseNullableDateTime(data['expectedDate']),
       receivedTransactionId: data['receivedTransactionId'] as String?,
       notes: data['notes'] as String?,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      createdAt: _parseDateTime(data['createdAt']),
+      updatedAt: _parseDateTime(data['updatedAt']),
       syncStatus: 'synced',
-      lastSyncedAt: (data['lastSyncedAt'] as Timestamp?)?.toDate(),
+      lastSyncedAt: _parseNullableDateTime(data['lastSyncedAt']),
       deviceId: data['deviceId'] as String?,
     );
   }
@@ -796,13 +891,13 @@ class SyncService {
       name: data['name'] as String,
       targetAmount: (data['targetAmount'] as num).toDouble(),
       currentAmount: (data['currentAmount'] as num).toDouble(),
-      deadline: (data['deadline'] as Timestamp?)?.toDate(),
+      deadline: _parseNullableDateTime(data['deadline']),
       notes: data['notes'] as String?,
       isArchived: data['isArchived'] as int? ?? 0,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      createdAt: _parseDateTime(data['createdAt']),
+      updatedAt: _parseDateTime(data['updatedAt']),
       syncStatus: 'synced',
-      lastSyncedAt: (data['lastSyncedAt'] as Timestamp?)?.toDate(),
+      lastSyncedAt: _parseNullableDateTime(data['lastSyncedAt']),
       deviceId: data['deviceId'] as String?,
     );
   }
@@ -810,17 +905,17 @@ class SyncService {
   Snapshot _mapSnapshot(Map<String, dynamic> data) {
     return Snapshot(
       id: data['id'] as String,
-      snapshotDate: (data['snapshotDate'] as Timestamp).toDate(),
+      snapshotDate: _parseDateTime(data['snapshotDate']),
       netWorth: (data['netWorth'] as num).toDouble(),
       assets: (data['assets'] as num).toDouble(),
       liabilities: (data['liabilities'] as num).toDouble(),
       receivables: (data['receivables'] as num? ?? 0.0).toDouble(),
       investedCapital: (data['investedCapital'] as num).toDouble(),
       expectedIncome: (data['expectedIncome'] as num).toDouble(),
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      createdAt: _parseDateTime(data['createdAt']),
+      updatedAt: _parseDateTime(data['updatedAt']),
       syncStatus: 'synced',
-      lastSyncedAt: (data['lastSyncedAt'] as Timestamp?)?.toDate(),
+      lastSyncedAt: _parseNullableDateTime(data['lastSyncedAt']),
       deviceId: data['deviceId'] as String?,
     );
   }
@@ -834,10 +929,10 @@ class SyncService {
       newAmount: (data['newAmount'] as num).toDouble(),
       adjustedAmount: (data['adjustedAmount'] as num).toDouble(),
       reason: data['reason'] as String,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      createdAt: _parseDateTime(data['createdAt']),
+      updatedAt: _parseNullableDateTime(data['updatedAt']),
       syncStatus: 'synced',
-      lastSyncedAt: (data['lastSyncedAt'] as Timestamp?)?.toDate(),
+      lastSyncedAt: _parseNullableDateTime(data['lastSyncedAt']),
       deviceId: data['deviceId'] as String?,
     );
   }
@@ -853,16 +948,16 @@ class SyncService {
       ownCapital: (data['ownCapital'] as num).toDouble(),
       borrowedCapital: (data['borrowedCapital'] as num).toDouble(),
       interestRate: (data['interestRate'] as num).toDouble(),
-      openingDate: (data['openingDate'] as Timestamp).toDate(),
-      interestStartDate: (data['interestStartDate'] as Timestamp).toDate(),
-      purchaseDate: (data['purchaseDate'] as Timestamp?)?.toDate(),
+      openingDate: _parseDateTime(data['openingDate']),
+      interestStartDate: _parseDateTime(data['interestStartDate']),
+      purchaseDate: _parseNullableDateTime(data['purchaseDate']),
       purchaseTime: data['purchaseTime'] as String?,
-      closedDate: (data['closedDate'] as Timestamp?)?.toDate(),
+      closedDate: _parseNullableDateTime(data['closedDate']),
       isClosed: data['isClosed'] as int? ?? 0,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      createdAt: _parseDateTime(data['createdAt']),
+      updatedAt: _parseDateTime(data['updatedAt']),
       syncStatus: 'synced',
-      lastSyncedAt: (data['lastSyncedAt'] as Timestamp?)?.toDate(),
+      lastSyncedAt: _parseNullableDateTime(data['lastSyncedAt']),
       deviceId: data['deviceId'] as String?,
     );
   }
@@ -874,14 +969,14 @@ class SyncService {
       amount: (data['amount'] as num).toDouble(),
       frequency: data['frequency'] as String,
       sipDate: data['sipDate'] as int,
-      startDate: (data['startDate'] as Timestamp).toDate(),
-      endDate: (data['endDate'] as Timestamp?)?.toDate(),
+      startDate: _parseDateTime(data['startDate']),
+      endDate: _parseNullableDateTime(data['endDate']),
       autoCreate: data['autoCreate'] as int? ?? 0,
       isActive: data['isActive'] as int? ?? 1,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
+      createdAt: _parseDateTime(data['createdAt']),
+      updatedAt: _parseDateTime(data['updatedAt']),
       syncStatus: 'synced',
-      lastSyncedAt: (data['lastSyncedAt'] as Timestamp?)?.toDate(),
+      lastSyncedAt: _parseNullableDateTime(data['lastSyncedAt']),
       deviceId: data['deviceId'] as String?,
     );
   }
@@ -890,11 +985,490 @@ class SyncService {
     return Setting(
       key: data['key'] as String,
       value: data['value'] as String?,
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      createdAt: _parseNullableDateTime(data['createdAt']),
+      updatedAt: _parseNullableDateTime(data['updatedAt']),
       syncStatus: 'synced',
-      lastSyncedAt: (data['lastSyncedAt'] as Timestamp?)?.toDate(),
+      lastSyncedAt: _parseNullableDateTime(data['lastSyncedAt']),
       deviceId: data['deviceId'] as String?,
     );
+  }
+
+  Future<bool> isLocalDatabaseEmpty() async {
+    final accountsCount = await _db.select(_db.accounts).get().then((l) => l.length);
+    final transactionsCount = await _db.select(_db.transactions).get().then((l) => l.length);
+    final investmentsCount = await _db.select(_db.investments).get().then((l) => l.length);
+    final peopleCount = await _db.select(_db.people).get().then((l) => l.length);
+    final expectedIncomesCount = await _db.select(_db.expectedIncomes).get().then((l) => l.length);
+    final goalsCount = await _db.select(_db.goals).get().then((l) => l.length);
+    final mtfPositionsCount = await _db.select(_db.mtfPositions).get().then((l) => l.length);
+    final sipsCount = await _db.select(_db.sips).get().then((l) => l.length);
+    
+    return (accountsCount == 0 &&
+            transactionsCount == 0 &&
+            investmentsCount == 0 &&
+            peopleCount == 0 &&
+            expectedIncomesCount == 0 &&
+            goalsCount == 0 &&
+            mtfPositionsCount == 0 &&
+            sipsCount == 0);
+  }
+
+  Future<int> getCloudRecordCount(String uid) async {
+    final collections = [
+      'accounts',
+      'liabilities',
+      'receivables',
+      'investments',
+      'investment_lots',
+      'transactions',
+      'expected_income',
+      'goals',
+      'snapshots',
+      'adjustments',
+      'mtf_positions',
+      'sips',
+      'settings'
+    ];
+    
+    int totalCount = 0;
+    for (final col in collections) {
+      try {
+        final countSnap = await _firestore
+            .collection('users')
+            .doc(uid)
+            .collection(col)
+            .count()
+            .get();
+        totalCount += countSnap.count ?? 0;
+      } catch (e) {
+        print('[SyncService] Failed to count collection $col: $e');
+      }
+    }
+    return totalCount;
+  }
+
+  Future<void> clearLocalDataBeforeRestore() async {
+    await _db.transaction(() async {
+      await _db.delete(_db.transactions).go();
+      await _db.delete(_db.investmentLotConsumptions).go();
+      await _db.delete(_db.investmentLots).go();
+      await _db.delete(_db.investments).go();
+      await _db.delete(_db.accounts).go();
+      await _db.delete(_db.people).go();
+      await _db.delete(_db.expectedIncomes).go();
+      await _db.delete(_db.goals).go();
+      await _db.delete(_db.goalMilestones).go();
+      await _db.delete(_db.snapshots).go();
+      await _db.delete(_db.settings).go();
+      await _db.delete(_db.auditLogs).go();
+      await _db.delete(_db.adjustments).go();
+      await _db.delete(_db.accountBalanceCaches).go();
+      await _db.delete(_db.personBalanceCaches).go();
+      await _db.delete(_db.investmentBalanceCaches).go();
+      await _db.delete(_db.mtfPositions).go();
+      await _db.delete(_db.sips).go();
+      await _db.delete(_db.dailyCheckIns).go();
+      await _db.delete(_db.syncQueues).go();
+    });
+  }
+  Future<void> _uploadBackupToStorage(String uid) async {
+    try {
+      print('[SyncService] Uploading database backup to Cloudinary...');
+      final backupService = _ref.read(realBackupServiceProvider);
+      final passphrase = _ref.read(databasePassphraseProvider);
+      final encryptedJson = await backupService.exportBackup(passphrase);
+      
+      final secureUrl = await _ref.read(cloudinaryServiceProvider).uploadBackupString(
+        backupJson: encryptedJson,
+        userId: uid,
+      );
+      
+      // Save backup metadata in Firestore settings
+      await _firestore.collection('users').doc(uid).collection('settings').doc('backupMetadata').set({
+        'key': 'backupMetadata',
+        'value': jsonEncode({
+          'backupUrl': secureUrl,
+          'uploadedAt': DateTime.now().toUtc().toIso8601String(),
+        }),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'syncStatus': 'synced',
+      });
+      print('[SyncService] Database backup uploaded to Cloudinary successfully. URL saved in Firestore.');
+    } catch (e) {
+      print('[SyncService] Failed to upload backup to Cloudinary: $e');
+    }
+  }
+
+  Future<void> manualRestore() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    final uid = user.uid;
+
+    await clearLocalDataBeforeRestore();
+    await seedDatabaseIfEmpty(_db);
+
+    // Try downloading and restoring from Cloudinary
+    bool storageRestoreSuccess = false;
+    try {
+      print('[SyncService] Attempting to restore from Cloudinary...');
+      final doc = await _firestore.collection('users').doc(uid).collection('settings').doc('backupMetadata').get();
+      if (doc.exists && doc.data() != null) {
+        final metaString = doc.data()!['value'] as String?;
+        if (metaString != null) {
+          final meta = jsonDecode(metaString);
+          final backupUrl = meta['backupUrl'] as String?;
+          if (backupUrl != null) {
+            print('[SyncService] Downloading backup from Cloudinary URL: $backupUrl');
+            final response = await http.get(Uri.parse(backupUrl));
+            if (response.statusCode == 200) {
+              final encryptedJson = response.body;
+              final backupService = _ref.read(realBackupServiceProvider);
+              final passphrase = _ref.read(databasePassphraseProvider);
+              await backupService.restoreBackup(encryptedJson, passphrase);
+              print('[SyncService] Cloudinary restore complete.');
+              storageRestoreSuccess = true;
+            } else {
+              print('[SyncService] Failed to download backup file: status ${response.statusCode}');
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('[SyncService] Cloudinary restore failed/not found: $e. Falling back to Firestore pull...');
+    }
+
+    if (!storageRestoreSuccess) {
+      await pullRemoteChanges();
+    }
+    await _balanceCacheService.rebuildCache();
+    await _searchIndexService.rebuildIndex();
+
+    // Trigger lazy snapshot generation/backfilling after restore completes
+    try {
+      final snapshotService = _ref.read(realSnapshotServiceProvider);
+      await snapshotService.triggerLazySnapshots();
+      print('[SyncService] Lazy snapshots backfilled successfully after restore.');
+    } catch (e) {
+      print('[SyncService] Failed to generate snapshots after restore: $e');
+    }
+  }
+
+  Future<void> forceSync() async {
+    final connected = await _networkMonitor.isConnected;
+    if (!connected) return;
+    await processQueue();
+    await pullRemoteChanges();
+
+    final user = _auth.currentUser;
+    if (user != null) {
+      await _uploadBackupToStorage(user.uid);
+    }
+  }
+
+  Future<void> forceBackupNow() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+    final uid = user.uid;
+
+    // 1. Upload accounts
+    final accounts = await _db.select(_db.accounts).get();
+    for (final row in accounts) {
+      final collectionName = row.type == 'credit' ? 'liabilities' : 'accounts';
+      await _firestore.collection('users').doc(uid).collection(collectionName).doc(row.id).set({
+        'id': row.id,
+        'name': row.name,
+        'type': row.type,
+        'notes': row.notes,
+        'isArchived': row.isArchived,
+        'createdAt': Timestamp.fromDate(row.createdAt),
+        'updatedAt': Timestamp.fromDate(row.updatedAt),
+        'syncStatus': 'synced',
+        'deviceId': row.deviceId,
+        'lastSyncedAt': FieldValue.serverTimestamp(),
+      });
+      await (_db.update(_db.accounts)..where((tbl) => tbl.id.equals(row.id)))
+          .write(AccountsCompanion(
+            syncStatus: const Value('synced'),
+            lastSyncedAt: Value(DateTime.now().toUtc()),
+          ));
+    }
+    
+    // 2. Upload people (receivables)
+    final people = await _db.select(_db.people).get();
+    for (final row in people) {
+      await _firestore.collection('users').doc(uid).collection('receivables').doc(row.id).set({
+        'id': row.id,
+        'name': row.name,
+        'phone': row.phone,
+        'notes': row.notes,
+        'isArchived': row.isArchived,
+        'createdAt': Timestamp.fromDate(row.createdAt),
+        'updatedAt': Timestamp.fromDate(row.updatedAt),
+        'syncStatus': 'synced',
+        'deviceId': row.deviceId,
+        'lastSyncedAt': FieldValue.serverTimestamp(),
+      });
+      await (_db.update(_db.people)..where((tbl) => tbl.id.equals(row.id)))
+          .write(PeopleCompanion(
+            syncStatus: const Value('synced'),
+            lastSyncedAt: Value(DateTime.now().toUtc()),
+          ));
+    }
+    
+    // 3. Upload investments
+    final investments = await _db.select(_db.investments).get();
+    for (final row in investments) {
+      await _firestore.collection('users').doc(uid).collection('investments').doc(row.id).set({
+        'id': row.id,
+        'name': row.name,
+        'type': row.type,
+        'symbol': row.symbol,
+        'marketValue': row.marketValue,
+        'marketValueUpdatedAt': row.marketValueUpdatedAt != null ? Timestamp.fromDate(row.marketValueUpdatedAt!) : null,
+        'isArchived': row.isArchived,
+        'notes': row.notes,
+        'purchaseDate': row.purchaseDate != null ? Timestamp.fromDate(row.purchaseDate!) : null,
+        'purchaseTime': row.purchaseTime,
+        'createdAt': Timestamp.fromDate(row.createdAt),
+        'updatedAt': Timestamp.fromDate(row.updatedAt),
+        'syncStatus': 'synced',
+        'deviceId': row.deviceId,
+        'lastSyncedAt': FieldValue.serverTimestamp(),
+      });
+      await (_db.update(_db.investments)..where((tbl) => tbl.id.equals(row.id)))
+          .write(InvestmentsCompanion(
+            syncStatus: const Value('synced'),
+            lastSyncedAt: Value(DateTime.now().toUtc()),
+          ));
+    }
+
+    // 4. Upload investment lots
+    final lots = await _db.select(_db.investmentLots).get();
+    for (final row in lots) {
+      await _firestore.collection('users').doc(uid).collection('investment_lots').doc(row.id).set({
+        'id': row.id,
+        'investmentId': row.investmentId,
+        'buyTransactionId': row.buyTransactionId,
+        'unitsPurchased': row.unitsPurchased,
+        'unitsRemaining': row.unitsRemaining,
+        'costPerUnit': row.costPerUnit,
+        'purchaseDate': Timestamp.fromDate(row.purchaseDate),
+        'createdAt': Timestamp.fromDate(row.createdAt),
+        'updatedAt': Timestamp.fromDate(row.updatedAt),
+        'syncStatus': 'synced',
+        'deviceId': row.deviceId,
+        'lastSyncedAt': FieldValue.serverTimestamp(),
+      });
+      await (_db.update(_db.investmentLots)..where((tbl) => tbl.id.equals(row.id)))
+          .write(InvestmentLotsCompanion(
+            syncStatus: const Value('synced'),
+            lastSyncedAt: Value(DateTime.now().toUtc()),
+          ));
+    }
+
+    // 5. Upload transactions
+    final transactions = await _db.select(_db.transactions).get();
+    for (final row in transactions) {
+      await _firestore.collection('users').doc(uid).collection('transactions').doc(row.id).set({
+        'id': row.id,
+        'type': row.type,
+        'amount': row.amount,
+        'category': row.category,
+        'fromAccountId': row.fromAccountId,
+        'toAccountId': row.toAccountId,
+        'personId': row.personId,
+        'investmentId': row.investmentId,
+        'voidedTransactionId': row.voidedTransactionId,
+        'notes': row.notes,
+        'pricePerUnit': row.pricePerUnit,
+        'units': row.units,
+        'transactionDate': Timestamp.fromDate(row.transactionDate),
+        'createdAt': Timestamp.fromDate(row.createdAt),
+        'updatedAt': Timestamp.fromDate(row.updatedAt),
+        'syncStatus': 'synced',
+        'deviceId': row.deviceId,
+        'lastSyncedAt': FieldValue.serverTimestamp(),
+      });
+      await (_db.update(_db.transactions)..where((tbl) => tbl.id.equals(row.id)))
+          .write(TransactionsCompanion(
+            syncStatus: const Value('synced'),
+            lastSyncedAt: Value(DateTime.now().toUtc()),
+          ));
+    }
+
+    // 6. Upload expected incomes
+    final incomes = await _db.select(_db.expectedIncomes).get();
+    for (final row in incomes) {
+      await _firestore.collection('users').doc(uid).collection('expected_income').doc(row.id).set({
+        'id': row.id,
+        'source': row.source,
+        'amount': row.amount,
+        'status': row.status,
+        'expectedDate': row.expectedDate != null ? Timestamp.fromDate(row.expectedDate!) : null,
+        'receivedTransactionId': row.receivedTransactionId,
+        'notes': row.notes,
+        'createdAt': Timestamp.fromDate(row.createdAt),
+        'updatedAt': Timestamp.fromDate(row.updatedAt),
+        'syncStatus': 'synced',
+        'deviceId': row.deviceId,
+        'lastSyncedAt': FieldValue.serverTimestamp(),
+      });
+      await (_db.update(_db.expectedIncomes)..where((tbl) => tbl.id.equals(row.id)))
+          .write(ExpectedIncomesCompanion(
+            syncStatus: const Value('synced'),
+            lastSyncedAt: Value(DateTime.now().toUtc()),
+          ));
+    }
+
+    // 7. Upload goals
+    final goals = await _db.select(_db.goals).get();
+    for (final row in goals) {
+      await _firestore.collection('users').doc(uid).collection('goals').doc(row.id).set({
+        'id': row.id,
+        'name': row.name,
+        'targetAmount': row.targetAmount,
+        'currentAmount': row.currentAmount,
+        'deadline': row.deadline != null ? Timestamp.fromDate(row.deadline!) : null,
+        'notes': row.notes,
+        'isArchived': row.isArchived,
+        'createdAt': Timestamp.fromDate(row.createdAt),
+        'updatedAt': Timestamp.fromDate(row.updatedAt),
+        'syncStatus': 'synced',
+        'deviceId': row.deviceId,
+        'lastSyncedAt': FieldValue.serverTimestamp(),
+      });
+      await (_db.update(_db.goals)..where((tbl) => tbl.id.equals(row.id)))
+          .write(GoalsCompanion(
+            syncStatus: const Value('synced'),
+            lastSyncedAt: Value(DateTime.now().toUtc()),
+          ));
+    }
+
+    // 8. Upload snapshots
+    final snapshots = await _db.select(_db.snapshots).get();
+    for (final row in snapshots) {
+      await _firestore.collection('users').doc(uid).collection('snapshots').doc(row.id).set({
+        'id': row.id,
+        'snapshotDate': Timestamp.fromDate(row.snapshotDate),
+        'netWorth': row.netWorth,
+        'assets': row.assets,
+        'liabilities': row.liabilities,
+        'receivables': row.receivables,
+        'investedCapital': row.investedCapital,
+        'expectedIncome': row.expectedIncome,
+        'createdAt': Timestamp.fromDate(row.createdAt),
+        'updatedAt': Timestamp.fromDate(row.updatedAt),
+        'syncStatus': 'synced',
+        'deviceId': row.deviceId,
+        'lastSyncedAt': FieldValue.serverTimestamp(),
+      });
+      await (_db.update(_db.snapshots)..where((tbl) => tbl.id.equals(row.id)))
+          .write(SnapshotsCompanion(
+            syncStatus: const Value('synced'),
+            lastSyncedAt: Value(DateTime.now().toUtc()),
+          ));
+    }
+
+    // 9. Upload adjustments
+    final adjustments = await _db.select(_db.adjustments).get();
+    for (final row in adjustments) {
+      await _firestore.collection('users').doc(uid).collection('adjustments').doc(row.id).set({
+        'id': row.id,
+        'entityType': row.entityType,
+        'entityId': row.entityId,
+        'oldAmount': row.oldAmount,
+        'newAmount': row.newAmount,
+        'adjustedAmount': row.adjustedAmount,
+        'reason': row.reason,
+        'createdAt': Timestamp.fromDate(row.createdAt),
+        'updatedAt': row.updatedAt != null ? Timestamp.fromDate(row.updatedAt!) : null,
+        'syncStatus': 'synced',
+        'deviceId': row.deviceId,
+        'lastSyncedAt': FieldValue.serverTimestamp(),
+      });
+      await (_db.update(_db.adjustments)..where((tbl) => tbl.id.equals(row.id)))
+          .write(AdjustmentsCompanion(
+            syncStatus: const Value('synced'),
+            lastSyncedAt: Value(DateTime.now().toUtc()),
+          ));
+    }
+
+    // 10. Upload mtf positions
+    final mtfList = await _db.select(_db.mtfPositions).get();
+    for (final row in mtfList) {
+      await _firestore.collection('users').doc(uid).collection('mtf_positions').doc(row.id).set({
+        'id': row.id,
+        'investmentId': row.investmentId,
+        'broker': row.broker,
+        'instrument': row.instrument,
+        'units': row.units,
+        'averagePrice': row.averagePrice,
+        'ownCapital': row.ownCapital,
+        'borrowedCapital': row.borrowedCapital,
+        'interestRate': row.interestRate,
+        'openingDate': Timestamp.fromDate(row.openingDate),
+        'interestStartDate': Timestamp.fromDate(row.interestStartDate),
+        'purchaseDate': row.purchaseDate != null ? Timestamp.fromDate(row.purchaseDate!) : null,
+        'purchaseTime': row.purchaseTime,
+        'closedDate': row.closedDate != null ? Timestamp.fromDate(row.closedDate!) : null,
+        'isClosed': row.isClosed,
+        'createdAt': Timestamp.fromDate(row.createdAt),
+        'updatedAt': Timestamp.fromDate(row.updatedAt),
+        'syncStatus': 'synced',
+        'deviceId': row.deviceId,
+        'lastSyncedAt': FieldValue.serverTimestamp(),
+      });
+      await (_db.update(_db.mtfPositions)..where((tbl) => tbl.id.equals(row.id)))
+          .write(MtfPositionsCompanion(
+            syncStatus: const Value('synced'),
+            lastSyncedAt: Value(DateTime.now().toUtc()),
+          ));
+    }
+
+    // 11. Upload sips
+    final sips = await _db.select(_db.sips).get();
+    for (final row in sips) {
+      await _firestore.collection('users').doc(uid).collection('sips').doc(row.id).set({
+        'id': row.id,
+        'investmentId': row.investmentId,
+        'amount': row.amount,
+        'frequency': row.frequency,
+        'sipDate': row.sipDate,
+        'startDate': Timestamp.fromDate(row.startDate),
+        'endDate': row.endDate != null ? Timestamp.fromDate(row.endDate!) : null,
+        'autoCreate': row.autoCreate,
+        'isActive': row.isActive,
+        'createdAt': Timestamp.fromDate(row.createdAt),
+        'updatedAt': Timestamp.fromDate(row.updatedAt),
+        'syncStatus': 'synced',
+        'deviceId': row.deviceId,
+        'lastSyncedAt': FieldValue.serverTimestamp(),
+      });
+      await (_db.update(_db.sips)..where((tbl) => tbl.id.equals(row.id)))
+          .write(SipsCompanion(
+            syncStatus: const Value('synced'),
+            lastSyncedAt: Value(DateTime.now().toUtc()),
+          ));
+    }
+
+    // 12. Upload settings
+    final settings = await _db.select(_db.settings).get();
+    for (final row in settings) {
+      await _firestore.collection('users').doc(uid).collection('settings').doc(row.key).set({
+        'key': row.key,
+        'value': row.value,
+        'createdAt': row.createdAt != null ? Timestamp.fromDate(row.createdAt!) : null,
+        'updatedAt': row.updatedAt != null ? Timestamp.fromDate(row.updatedAt!) : null,
+        'syncStatus': 'synced',
+        'deviceId': row.deviceId,
+        'lastSyncedAt': FieldValue.serverTimestamp(),
+      });
+      await (_db.update(_db.settings)..where((tbl) => tbl.key.equals(row.key)))
+          .write(SettingsCompanion(
+            syncStatus: const Value('synced'),
+            lastSyncedAt: Value(DateTime.now().toUtc()),
+          ));
+    }
+    await _uploadBackupToStorage(uid);
   }
 }

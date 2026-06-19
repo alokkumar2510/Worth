@@ -19,7 +19,7 @@ class NetworkMonitor {
   }
 
   bool _isConnected(dynamic result) {
-    if (result is List<ConnectivityResult>) {
+    if (result is Iterable) {
       return result.isNotEmpty && !result.contains(ConnectivityResult.none);
     }
     if (result is ConnectivityResult) {

@@ -13421,6 +13421,1943 @@ class SyncQueuesCompanion extends UpdateCompanion<SyncQueue> {
   }
 }
 
+class $PortfolioHistoriesTable extends PortfolioHistories
+    with TableInfo<$PortfolioHistoriesTable, PortfolioHistory> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PortfolioHistoriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _actionMeta = const VerificationMeta('action');
+  @override
+  late final GeneratedColumn<String> action = GeneratedColumn<String>(
+      'action', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _entityTypeMeta =
+      const VerificationMeta('entityType');
+  @override
+  late final GeneratedColumn<String> entityType = GeneratedColumn<String>(
+      'entity_type', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _entityIdMeta =
+      const VerificationMeta('entityId');
+  @override
+  late final GeneratedColumn<String> entityId = GeneratedColumn<String>(
+      'entity_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _entityTitleMeta =
+      const VerificationMeta('entityTitle');
+  @override
+  late final GeneratedColumn<String> entityTitle = GeneratedColumn<String>(
+      'entity_title', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _valueChangedMeta =
+      const VerificationMeta('valueChanged');
+  @override
+  late final GeneratedColumn<String> valueChanged = GeneratedColumn<String>(
+      'value_changed', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _previousValueMeta =
+      const VerificationMeta('previousValue');
+  @override
+  late final GeneratedColumn<String> previousValue = GeneratedColumn<String>(
+      'previous_value', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _newValueMeta =
+      const VerificationMeta('newValue');
+  @override
+  late final GeneratedColumn<String> newValue = GeneratedColumn<String>(
+      'new_value', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _detailsJsonMeta =
+      const VerificationMeta('detailsJson');
+  @override
+  late final GeneratedColumn<String> detailsJson = GeneratedColumn<String>(
+      'details_json', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        createdAt,
+        action,
+        entityType,
+        entityId,
+        entityTitle,
+        valueChanged,
+        previousValue,
+        newValue,
+        detailsJson
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'portfolio_histories';
+  @override
+  VerificationContext validateIntegrity(Insertable<PortfolioHistory> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('action')) {
+      context.handle(_actionMeta,
+          action.isAcceptableOrUnknown(data['action']!, _actionMeta));
+    } else if (isInserting) {
+      context.missing(_actionMeta);
+    }
+    if (data.containsKey('entity_type')) {
+      context.handle(
+          _entityTypeMeta,
+          entityType.isAcceptableOrUnknown(
+              data['entity_type']!, _entityTypeMeta));
+    } else if (isInserting) {
+      context.missing(_entityTypeMeta);
+    }
+    if (data.containsKey('entity_id')) {
+      context.handle(_entityIdMeta,
+          entityId.isAcceptableOrUnknown(data['entity_id']!, _entityIdMeta));
+    } else if (isInserting) {
+      context.missing(_entityIdMeta);
+    }
+    if (data.containsKey('entity_title')) {
+      context.handle(
+          _entityTitleMeta,
+          entityTitle.isAcceptableOrUnknown(
+              data['entity_title']!, _entityTitleMeta));
+    } else if (isInserting) {
+      context.missing(_entityTitleMeta);
+    }
+    if (data.containsKey('value_changed')) {
+      context.handle(
+          _valueChangedMeta,
+          valueChanged.isAcceptableOrUnknown(
+              data['value_changed']!, _valueChangedMeta));
+    } else if (isInserting) {
+      context.missing(_valueChangedMeta);
+    }
+    if (data.containsKey('previous_value')) {
+      context.handle(
+          _previousValueMeta,
+          previousValue.isAcceptableOrUnknown(
+              data['previous_value']!, _previousValueMeta));
+    }
+    if (data.containsKey('new_value')) {
+      context.handle(_newValueMeta,
+          newValue.isAcceptableOrUnknown(data['new_value']!, _newValueMeta));
+    }
+    if (data.containsKey('details_json')) {
+      context.handle(
+          _detailsJsonMeta,
+          detailsJson.isAcceptableOrUnknown(
+              data['details_json']!, _detailsJsonMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PortfolioHistory map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PortfolioHistory(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      action: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}action'])!,
+      entityType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}entity_type'])!,
+      entityId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}entity_id'])!,
+      entityTitle: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}entity_title'])!,
+      valueChanged: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}value_changed'])!,
+      previousValue: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}previous_value']),
+      newValue: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}new_value']),
+      detailsJson: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}details_json']),
+    );
+  }
+
+  @override
+  $PortfolioHistoriesTable createAlias(String alias) {
+    return $PortfolioHistoriesTable(attachedDatabase, alias);
+  }
+}
+
+class PortfolioHistory extends DataClass
+    implements Insertable<PortfolioHistory> {
+  final String id;
+  final DateTime createdAt;
+  final String action;
+  final String entityType;
+  final String entityId;
+  final String entityTitle;
+  final String valueChanged;
+  final String? previousValue;
+  final String? newValue;
+  final String? detailsJson;
+  const PortfolioHistory(
+      {required this.id,
+      required this.createdAt,
+      required this.action,
+      required this.entityType,
+      required this.entityId,
+      required this.entityTitle,
+      required this.valueChanged,
+      this.previousValue,
+      this.newValue,
+      this.detailsJson});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['action'] = Variable<String>(action);
+    map['entity_type'] = Variable<String>(entityType);
+    map['entity_id'] = Variable<String>(entityId);
+    map['entity_title'] = Variable<String>(entityTitle);
+    map['value_changed'] = Variable<String>(valueChanged);
+    if (!nullToAbsent || previousValue != null) {
+      map['previous_value'] = Variable<String>(previousValue);
+    }
+    if (!nullToAbsent || newValue != null) {
+      map['new_value'] = Variable<String>(newValue);
+    }
+    if (!nullToAbsent || detailsJson != null) {
+      map['details_json'] = Variable<String>(detailsJson);
+    }
+    return map;
+  }
+
+  PortfolioHistoriesCompanion toCompanion(bool nullToAbsent) {
+    return PortfolioHistoriesCompanion(
+      id: Value(id),
+      createdAt: Value(createdAt),
+      action: Value(action),
+      entityType: Value(entityType),
+      entityId: Value(entityId),
+      entityTitle: Value(entityTitle),
+      valueChanged: Value(valueChanged),
+      previousValue: previousValue == null && nullToAbsent
+          ? const Value.absent()
+          : Value(previousValue),
+      newValue: newValue == null && nullToAbsent
+          ? const Value.absent()
+          : Value(newValue),
+      detailsJson: detailsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(detailsJson),
+    );
+  }
+
+  factory PortfolioHistory.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PortfolioHistory(
+      id: serializer.fromJson<String>(json['id']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      action: serializer.fromJson<String>(json['action']),
+      entityType: serializer.fromJson<String>(json['entityType']),
+      entityId: serializer.fromJson<String>(json['entityId']),
+      entityTitle: serializer.fromJson<String>(json['entityTitle']),
+      valueChanged: serializer.fromJson<String>(json['valueChanged']),
+      previousValue: serializer.fromJson<String?>(json['previousValue']),
+      newValue: serializer.fromJson<String?>(json['newValue']),
+      detailsJson: serializer.fromJson<String?>(json['detailsJson']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'action': serializer.toJson<String>(action),
+      'entityType': serializer.toJson<String>(entityType),
+      'entityId': serializer.toJson<String>(entityId),
+      'entityTitle': serializer.toJson<String>(entityTitle),
+      'valueChanged': serializer.toJson<String>(valueChanged),
+      'previousValue': serializer.toJson<String?>(previousValue),
+      'newValue': serializer.toJson<String?>(newValue),
+      'detailsJson': serializer.toJson<String?>(detailsJson),
+    };
+  }
+
+  PortfolioHistory copyWith(
+          {String? id,
+          DateTime? createdAt,
+          String? action,
+          String? entityType,
+          String? entityId,
+          String? entityTitle,
+          String? valueChanged,
+          Value<String?> previousValue = const Value.absent(),
+          Value<String?> newValue = const Value.absent(),
+          Value<String?> detailsJson = const Value.absent()}) =>
+      PortfolioHistory(
+        id: id ?? this.id,
+        createdAt: createdAt ?? this.createdAt,
+        action: action ?? this.action,
+        entityType: entityType ?? this.entityType,
+        entityId: entityId ?? this.entityId,
+        entityTitle: entityTitle ?? this.entityTitle,
+        valueChanged: valueChanged ?? this.valueChanged,
+        previousValue:
+            previousValue.present ? previousValue.value : this.previousValue,
+        newValue: newValue.present ? newValue.value : this.newValue,
+        detailsJson: detailsJson.present ? detailsJson.value : this.detailsJson,
+      );
+  PortfolioHistory copyWithCompanion(PortfolioHistoriesCompanion data) {
+    return PortfolioHistory(
+      id: data.id.present ? data.id.value : this.id,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      action: data.action.present ? data.action.value : this.action,
+      entityType:
+          data.entityType.present ? data.entityType.value : this.entityType,
+      entityId: data.entityId.present ? data.entityId.value : this.entityId,
+      entityTitle:
+          data.entityTitle.present ? data.entityTitle.value : this.entityTitle,
+      valueChanged: data.valueChanged.present
+          ? data.valueChanged.value
+          : this.valueChanged,
+      previousValue: data.previousValue.present
+          ? data.previousValue.value
+          : this.previousValue,
+      newValue: data.newValue.present ? data.newValue.value : this.newValue,
+      detailsJson:
+          data.detailsJson.present ? data.detailsJson.value : this.detailsJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PortfolioHistory(')
+          ..write('id: $id, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('action: $action, ')
+          ..write('entityType: $entityType, ')
+          ..write('entityId: $entityId, ')
+          ..write('entityTitle: $entityTitle, ')
+          ..write('valueChanged: $valueChanged, ')
+          ..write('previousValue: $previousValue, ')
+          ..write('newValue: $newValue, ')
+          ..write('detailsJson: $detailsJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, createdAt, action, entityType, entityId,
+      entityTitle, valueChanged, previousValue, newValue, detailsJson);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PortfolioHistory &&
+          other.id == this.id &&
+          other.createdAt == this.createdAt &&
+          other.action == this.action &&
+          other.entityType == this.entityType &&
+          other.entityId == this.entityId &&
+          other.entityTitle == this.entityTitle &&
+          other.valueChanged == this.valueChanged &&
+          other.previousValue == this.previousValue &&
+          other.newValue == this.newValue &&
+          other.detailsJson == this.detailsJson);
+}
+
+class PortfolioHistoriesCompanion extends UpdateCompanion<PortfolioHistory> {
+  final Value<String> id;
+  final Value<DateTime> createdAt;
+  final Value<String> action;
+  final Value<String> entityType;
+  final Value<String> entityId;
+  final Value<String> entityTitle;
+  final Value<String> valueChanged;
+  final Value<String?> previousValue;
+  final Value<String?> newValue;
+  final Value<String?> detailsJson;
+  final Value<int> rowid;
+  const PortfolioHistoriesCompanion({
+    this.id = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.action = const Value.absent(),
+    this.entityType = const Value.absent(),
+    this.entityId = const Value.absent(),
+    this.entityTitle = const Value.absent(),
+    this.valueChanged = const Value.absent(),
+    this.previousValue = const Value.absent(),
+    this.newValue = const Value.absent(),
+    this.detailsJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PortfolioHistoriesCompanion.insert({
+    required String id,
+    required DateTime createdAt,
+    required String action,
+    required String entityType,
+    required String entityId,
+    required String entityTitle,
+    required String valueChanged,
+    this.previousValue = const Value.absent(),
+    this.newValue = const Value.absent(),
+    this.detailsJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        createdAt = Value(createdAt),
+        action = Value(action),
+        entityType = Value(entityType),
+        entityId = Value(entityId),
+        entityTitle = Value(entityTitle),
+        valueChanged = Value(valueChanged);
+  static Insertable<PortfolioHistory> custom({
+    Expression<String>? id,
+    Expression<DateTime>? createdAt,
+    Expression<String>? action,
+    Expression<String>? entityType,
+    Expression<String>? entityId,
+    Expression<String>? entityTitle,
+    Expression<String>? valueChanged,
+    Expression<String>? previousValue,
+    Expression<String>? newValue,
+    Expression<String>? detailsJson,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (createdAt != null) 'created_at': createdAt,
+      if (action != null) 'action': action,
+      if (entityType != null) 'entity_type': entityType,
+      if (entityId != null) 'entity_id': entityId,
+      if (entityTitle != null) 'entity_title': entityTitle,
+      if (valueChanged != null) 'value_changed': valueChanged,
+      if (previousValue != null) 'previous_value': previousValue,
+      if (newValue != null) 'new_value': newValue,
+      if (detailsJson != null) 'details_json': detailsJson,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PortfolioHistoriesCompanion copyWith(
+      {Value<String>? id,
+      Value<DateTime>? createdAt,
+      Value<String>? action,
+      Value<String>? entityType,
+      Value<String>? entityId,
+      Value<String>? entityTitle,
+      Value<String>? valueChanged,
+      Value<String?>? previousValue,
+      Value<String?>? newValue,
+      Value<String?>? detailsJson,
+      Value<int>? rowid}) {
+    return PortfolioHistoriesCompanion(
+      id: id ?? this.id,
+      createdAt: createdAt ?? this.createdAt,
+      action: action ?? this.action,
+      entityType: entityType ?? this.entityType,
+      entityId: entityId ?? this.entityId,
+      entityTitle: entityTitle ?? this.entityTitle,
+      valueChanged: valueChanged ?? this.valueChanged,
+      previousValue: previousValue ?? this.previousValue,
+      newValue: newValue ?? this.newValue,
+      detailsJson: detailsJson ?? this.detailsJson,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (action.present) {
+      map['action'] = Variable<String>(action.value);
+    }
+    if (entityType.present) {
+      map['entity_type'] = Variable<String>(entityType.value);
+    }
+    if (entityId.present) {
+      map['entity_id'] = Variable<String>(entityId.value);
+    }
+    if (entityTitle.present) {
+      map['entity_title'] = Variable<String>(entityTitle.value);
+    }
+    if (valueChanged.present) {
+      map['value_changed'] = Variable<String>(valueChanged.value);
+    }
+    if (previousValue.present) {
+      map['previous_value'] = Variable<String>(previousValue.value);
+    }
+    if (newValue.present) {
+      map['new_value'] = Variable<String>(newValue.value);
+    }
+    if (detailsJson.present) {
+      map['details_json'] = Variable<String>(detailsJson.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PortfolioHistoriesCompanion(')
+          ..write('id: $id, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('action: $action, ')
+          ..write('entityType: $entityType, ')
+          ..write('entityId: $entityId, ')
+          ..write('entityTitle: $entityTitle, ')
+          ..write('valueChanged: $valueChanged, ')
+          ..write('previousValue: $previousValue, ')
+          ..write('newValue: $newValue, ')
+          ..write('detailsJson: $detailsJson, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PortfolioSnapshotsTable extends PortfolioSnapshots
+    with TableInfo<$PortfolioSnapshotsTable, PortfolioSnapshot> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PortfolioSnapshotsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _snapshotDateMeta =
+      const VerificationMeta('snapshotDate');
+  @override
+  late final GeneratedColumn<DateTime> snapshotDate = GeneratedColumn<DateTime>(
+      'snapshot_date', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _snapshotTypeMeta =
+      const VerificationMeta('snapshotType');
+  @override
+  late final GeneratedColumn<String> snapshotType = GeneratedColumn<String>(
+      'snapshot_type', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _netWorthMeta =
+      const VerificationMeta('netWorth');
+  @override
+  late final GeneratedColumn<double> netWorth = GeneratedColumn<double>(
+      'net_worth', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _assetsMeta = const VerificationMeta('assets');
+  @override
+  late final GeneratedColumn<double> assets = GeneratedColumn<double>(
+      'assets', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _liabilitiesMeta =
+      const VerificationMeta('liabilities');
+  @override
+  late final GeneratedColumn<double> liabilities = GeneratedColumn<double>(
+      'liabilities', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _investmentsMeta =
+      const VerificationMeta('investments');
+  @override
+  late final GeneratedColumn<double> investments = GeneratedColumn<double>(
+      'investments', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _receivablesMeta =
+      const VerificationMeta('receivables');
+  @override
+  late final GeneratedColumn<double> receivables = GeneratedColumn<double>(
+      'receivables', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        snapshotDate,
+        snapshotType,
+        netWorth,
+        assets,
+        liabilities,
+        investments,
+        receivables,
+        createdAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'portfolio_snapshots';
+  @override
+  VerificationContext validateIntegrity(Insertable<PortfolioSnapshot> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('snapshot_date')) {
+      context.handle(
+          _snapshotDateMeta,
+          snapshotDate.isAcceptableOrUnknown(
+              data['snapshot_date']!, _snapshotDateMeta));
+    } else if (isInserting) {
+      context.missing(_snapshotDateMeta);
+    }
+    if (data.containsKey('snapshot_type')) {
+      context.handle(
+          _snapshotTypeMeta,
+          snapshotType.isAcceptableOrUnknown(
+              data['snapshot_type']!, _snapshotTypeMeta));
+    } else if (isInserting) {
+      context.missing(_snapshotTypeMeta);
+    }
+    if (data.containsKey('net_worth')) {
+      context.handle(_netWorthMeta,
+          netWorth.isAcceptableOrUnknown(data['net_worth']!, _netWorthMeta));
+    } else if (isInserting) {
+      context.missing(_netWorthMeta);
+    }
+    if (data.containsKey('assets')) {
+      context.handle(_assetsMeta,
+          assets.isAcceptableOrUnknown(data['assets']!, _assetsMeta));
+    } else if (isInserting) {
+      context.missing(_assetsMeta);
+    }
+    if (data.containsKey('liabilities')) {
+      context.handle(
+          _liabilitiesMeta,
+          liabilities.isAcceptableOrUnknown(
+              data['liabilities']!, _liabilitiesMeta));
+    } else if (isInserting) {
+      context.missing(_liabilitiesMeta);
+    }
+    if (data.containsKey('investments')) {
+      context.handle(
+          _investmentsMeta,
+          investments.isAcceptableOrUnknown(
+              data['investments']!, _investmentsMeta));
+    } else if (isInserting) {
+      context.missing(_investmentsMeta);
+    }
+    if (data.containsKey('receivables')) {
+      context.handle(
+          _receivablesMeta,
+          receivables.isAcceptableOrUnknown(
+              data['receivables']!, _receivablesMeta));
+    } else if (isInserting) {
+      context.missing(_receivablesMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PortfolioSnapshot map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PortfolioSnapshot(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      snapshotDate: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}snapshot_date'])!,
+      snapshotType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}snapshot_type'])!,
+      netWorth: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}net_worth'])!,
+      assets: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}assets'])!,
+      liabilities: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}liabilities'])!,
+      investments: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}investments'])!,
+      receivables: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}receivables'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $PortfolioSnapshotsTable createAlias(String alias) {
+    return $PortfolioSnapshotsTable(attachedDatabase, alias);
+  }
+}
+
+class PortfolioSnapshot extends DataClass
+    implements Insertable<PortfolioSnapshot> {
+  final String id;
+  final DateTime snapshotDate;
+  final String snapshotType;
+  final double netWorth;
+  final double assets;
+  final double liabilities;
+  final double investments;
+  final double receivables;
+  final DateTime createdAt;
+  const PortfolioSnapshot(
+      {required this.id,
+      required this.snapshotDate,
+      required this.snapshotType,
+      required this.netWorth,
+      required this.assets,
+      required this.liabilities,
+      required this.investments,
+      required this.receivables,
+      required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['snapshot_date'] = Variable<DateTime>(snapshotDate);
+    map['snapshot_type'] = Variable<String>(snapshotType);
+    map['net_worth'] = Variable<double>(netWorth);
+    map['assets'] = Variable<double>(assets);
+    map['liabilities'] = Variable<double>(liabilities);
+    map['investments'] = Variable<double>(investments);
+    map['receivables'] = Variable<double>(receivables);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  PortfolioSnapshotsCompanion toCompanion(bool nullToAbsent) {
+    return PortfolioSnapshotsCompanion(
+      id: Value(id),
+      snapshotDate: Value(snapshotDate),
+      snapshotType: Value(snapshotType),
+      netWorth: Value(netWorth),
+      assets: Value(assets),
+      liabilities: Value(liabilities),
+      investments: Value(investments),
+      receivables: Value(receivables),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory PortfolioSnapshot.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PortfolioSnapshot(
+      id: serializer.fromJson<String>(json['id']),
+      snapshotDate: serializer.fromJson<DateTime>(json['snapshotDate']),
+      snapshotType: serializer.fromJson<String>(json['snapshotType']),
+      netWorth: serializer.fromJson<double>(json['netWorth']),
+      assets: serializer.fromJson<double>(json['assets']),
+      liabilities: serializer.fromJson<double>(json['liabilities']),
+      investments: serializer.fromJson<double>(json['investments']),
+      receivables: serializer.fromJson<double>(json['receivables']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'snapshotDate': serializer.toJson<DateTime>(snapshotDate),
+      'snapshotType': serializer.toJson<String>(snapshotType),
+      'netWorth': serializer.toJson<double>(netWorth),
+      'assets': serializer.toJson<double>(assets),
+      'liabilities': serializer.toJson<double>(liabilities),
+      'investments': serializer.toJson<double>(investments),
+      'receivables': serializer.toJson<double>(receivables),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  PortfolioSnapshot copyWith(
+          {String? id,
+          DateTime? snapshotDate,
+          String? snapshotType,
+          double? netWorth,
+          double? assets,
+          double? liabilities,
+          double? investments,
+          double? receivables,
+          DateTime? createdAt}) =>
+      PortfolioSnapshot(
+        id: id ?? this.id,
+        snapshotDate: snapshotDate ?? this.snapshotDate,
+        snapshotType: snapshotType ?? this.snapshotType,
+        netWorth: netWorth ?? this.netWorth,
+        assets: assets ?? this.assets,
+        liabilities: liabilities ?? this.liabilities,
+        investments: investments ?? this.investments,
+        receivables: receivables ?? this.receivables,
+        createdAt: createdAt ?? this.createdAt,
+      );
+  PortfolioSnapshot copyWithCompanion(PortfolioSnapshotsCompanion data) {
+    return PortfolioSnapshot(
+      id: data.id.present ? data.id.value : this.id,
+      snapshotDate: data.snapshotDate.present
+          ? data.snapshotDate.value
+          : this.snapshotDate,
+      snapshotType: data.snapshotType.present
+          ? data.snapshotType.value
+          : this.snapshotType,
+      netWorth: data.netWorth.present ? data.netWorth.value : this.netWorth,
+      assets: data.assets.present ? data.assets.value : this.assets,
+      liabilities:
+          data.liabilities.present ? data.liabilities.value : this.liabilities,
+      investments:
+          data.investments.present ? data.investments.value : this.investments,
+      receivables:
+          data.receivables.present ? data.receivables.value : this.receivables,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PortfolioSnapshot(')
+          ..write('id: $id, ')
+          ..write('snapshotDate: $snapshotDate, ')
+          ..write('snapshotType: $snapshotType, ')
+          ..write('netWorth: $netWorth, ')
+          ..write('assets: $assets, ')
+          ..write('liabilities: $liabilities, ')
+          ..write('investments: $investments, ')
+          ..write('receivables: $receivables, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, snapshotDate, snapshotType, netWorth,
+      assets, liabilities, investments, receivables, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PortfolioSnapshot &&
+          other.id == this.id &&
+          other.snapshotDate == this.snapshotDate &&
+          other.snapshotType == this.snapshotType &&
+          other.netWorth == this.netWorth &&
+          other.assets == this.assets &&
+          other.liabilities == this.liabilities &&
+          other.investments == this.investments &&
+          other.receivables == this.receivables &&
+          other.createdAt == this.createdAt);
+}
+
+class PortfolioSnapshotsCompanion extends UpdateCompanion<PortfolioSnapshot> {
+  final Value<String> id;
+  final Value<DateTime> snapshotDate;
+  final Value<String> snapshotType;
+  final Value<double> netWorth;
+  final Value<double> assets;
+  final Value<double> liabilities;
+  final Value<double> investments;
+  final Value<double> receivables;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const PortfolioSnapshotsCompanion({
+    this.id = const Value.absent(),
+    this.snapshotDate = const Value.absent(),
+    this.snapshotType = const Value.absent(),
+    this.netWorth = const Value.absent(),
+    this.assets = const Value.absent(),
+    this.liabilities = const Value.absent(),
+    this.investments = const Value.absent(),
+    this.receivables = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PortfolioSnapshotsCompanion.insert({
+    required String id,
+    required DateTime snapshotDate,
+    required String snapshotType,
+    required double netWorth,
+    required double assets,
+    required double liabilities,
+    required double investments,
+    required double receivables,
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        snapshotDate = Value(snapshotDate),
+        snapshotType = Value(snapshotType),
+        netWorth = Value(netWorth),
+        assets = Value(assets),
+        liabilities = Value(liabilities),
+        investments = Value(investments),
+        receivables = Value(receivables),
+        createdAt = Value(createdAt);
+  static Insertable<PortfolioSnapshot> custom({
+    Expression<String>? id,
+    Expression<DateTime>? snapshotDate,
+    Expression<String>? snapshotType,
+    Expression<double>? netWorth,
+    Expression<double>? assets,
+    Expression<double>? liabilities,
+    Expression<double>? investments,
+    Expression<double>? receivables,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (snapshotDate != null) 'snapshot_date': snapshotDate,
+      if (snapshotType != null) 'snapshot_type': snapshotType,
+      if (netWorth != null) 'net_worth': netWorth,
+      if (assets != null) 'assets': assets,
+      if (liabilities != null) 'liabilities': liabilities,
+      if (investments != null) 'investments': investments,
+      if (receivables != null) 'receivables': receivables,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PortfolioSnapshotsCompanion copyWith(
+      {Value<String>? id,
+      Value<DateTime>? snapshotDate,
+      Value<String>? snapshotType,
+      Value<double>? netWorth,
+      Value<double>? assets,
+      Value<double>? liabilities,
+      Value<double>? investments,
+      Value<double>? receivables,
+      Value<DateTime>? createdAt,
+      Value<int>? rowid}) {
+    return PortfolioSnapshotsCompanion(
+      id: id ?? this.id,
+      snapshotDate: snapshotDate ?? this.snapshotDate,
+      snapshotType: snapshotType ?? this.snapshotType,
+      netWorth: netWorth ?? this.netWorth,
+      assets: assets ?? this.assets,
+      liabilities: liabilities ?? this.liabilities,
+      investments: investments ?? this.investments,
+      receivables: receivables ?? this.receivables,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (snapshotDate.present) {
+      map['snapshot_date'] = Variable<DateTime>(snapshotDate.value);
+    }
+    if (snapshotType.present) {
+      map['snapshot_type'] = Variable<String>(snapshotType.value);
+    }
+    if (netWorth.present) {
+      map['net_worth'] = Variable<double>(netWorth.value);
+    }
+    if (assets.present) {
+      map['assets'] = Variable<double>(assets.value);
+    }
+    if (liabilities.present) {
+      map['liabilities'] = Variable<double>(liabilities.value);
+    }
+    if (investments.present) {
+      map['investments'] = Variable<double>(investments.value);
+    }
+    if (receivables.present) {
+      map['receivables'] = Variable<double>(receivables.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PortfolioSnapshotsCompanion(')
+          ..write('id: $id, ')
+          ..write('snapshotDate: $snapshotDate, ')
+          ..write('snapshotType: $snapshotType, ')
+          ..write('netWorth: $netWorth, ')
+          ..write('assets: $assets, ')
+          ..write('liabilities: $liabilities, ')
+          ..write('investments: $investments, ')
+          ..write('receivables: $receivables, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $RecoveryAllocationsTable extends RecoveryAllocations
+    with TableInfo<$RecoveryAllocationsTable, RecoveryAllocation> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RecoveryAllocationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _personIdMeta =
+      const VerificationMeta('personId');
+  @override
+  late final GeneratedColumn<String> personId = GeneratedColumn<String>(
+      'person_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _sourceTransactionIdMeta =
+      const VerificationMeta('sourceTransactionId');
+  @override
+  late final GeneratedColumn<String> sourceTransactionId =
+      GeneratedColumn<String>('source_transaction_id', aliasedName, false,
+          type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _totalAmountMeta =
+      const VerificationMeta('totalAmount');
+  @override
+  late final GeneratedColumn<double> totalAmount = GeneratedColumn<double>(
+      'total_amount', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _allocatedAmountMeta =
+      const VerificationMeta('allocatedAmount');
+  @override
+  late final GeneratedColumn<double> allocatedAmount = GeneratedColumn<double>(
+      'allocated_amount', aliasedName, false,
+      type: DriftSqlType.double,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0.0));
+  static const VerificationMeta _unallocatedAmountMeta =
+      const VerificationMeta('unallocatedAmount');
+  @override
+  late final GeneratedColumn<double> unallocatedAmount =
+      GeneratedColumn<double>('unallocated_amount', aliasedName, false,
+          type: DriftSqlType.double,
+          requiredDuringInsert: false,
+          defaultValue: const Constant(0.0));
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+      'notes', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        personId,
+        sourceTransactionId,
+        totalAmount,
+        allocatedAmount,
+        unallocatedAmount,
+        notes,
+        createdAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'recovery_allocations';
+  @override
+  VerificationContext validateIntegrity(Insertable<RecoveryAllocation> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('person_id')) {
+      context.handle(_personIdMeta,
+          personId.isAcceptableOrUnknown(data['person_id']!, _personIdMeta));
+    } else if (isInserting) {
+      context.missing(_personIdMeta);
+    }
+    if (data.containsKey('source_transaction_id')) {
+      context.handle(
+          _sourceTransactionIdMeta,
+          sourceTransactionId.isAcceptableOrUnknown(
+              data['source_transaction_id']!, _sourceTransactionIdMeta));
+    } else if (isInserting) {
+      context.missing(_sourceTransactionIdMeta);
+    }
+    if (data.containsKey('total_amount')) {
+      context.handle(
+          _totalAmountMeta,
+          totalAmount.isAcceptableOrUnknown(
+              data['total_amount']!, _totalAmountMeta));
+    } else if (isInserting) {
+      context.missing(_totalAmountMeta);
+    }
+    if (data.containsKey('allocated_amount')) {
+      context.handle(
+          _allocatedAmountMeta,
+          allocatedAmount.isAcceptableOrUnknown(
+              data['allocated_amount']!, _allocatedAmountMeta));
+    }
+    if (data.containsKey('unallocated_amount')) {
+      context.handle(
+          _unallocatedAmountMeta,
+          unallocatedAmount.isAcceptableOrUnknown(
+              data['unallocated_amount']!, _unallocatedAmountMeta));
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+          _notesMeta, notes.isAcceptableOrUnknown(data['notes']!, _notesMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  RecoveryAllocation map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RecoveryAllocation(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      personId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}person_id'])!,
+      sourceTransactionId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}source_transaction_id'])!,
+      totalAmount: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}total_amount'])!,
+      allocatedAmount: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}allocated_amount'])!,
+      unallocatedAmount: attachedDatabase.typeMapping.read(
+          DriftSqlType.double, data['${effectivePrefix}unallocated_amount'])!,
+      notes: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}notes']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $RecoveryAllocationsTable createAlias(String alias) {
+    return $RecoveryAllocationsTable(attachedDatabase, alias);
+  }
+}
+
+class RecoveryAllocation extends DataClass
+    implements Insertable<RecoveryAllocation> {
+  final String id;
+
+  /// The person (receivable source) who paid back
+  final String personId;
+
+  /// The recover_money transaction that triggered this allocation
+  final String sourceTransactionId;
+
+  /// Total amount recovered in this event
+  final double totalAmount;
+
+  /// Amount that was explicitly allocated to destinations
+  final double allocatedAmount;
+
+  /// Amount left unallocated (kept as-is in source account)
+  final double unallocatedAmount;
+  final String? notes;
+  final DateTime createdAt;
+  const RecoveryAllocation(
+      {required this.id,
+      required this.personId,
+      required this.sourceTransactionId,
+      required this.totalAmount,
+      required this.allocatedAmount,
+      required this.unallocatedAmount,
+      this.notes,
+      required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['person_id'] = Variable<String>(personId);
+    map['source_transaction_id'] = Variable<String>(sourceTransactionId);
+    map['total_amount'] = Variable<double>(totalAmount);
+    map['allocated_amount'] = Variable<double>(allocatedAmount);
+    map['unallocated_amount'] = Variable<double>(unallocatedAmount);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  RecoveryAllocationsCompanion toCompanion(bool nullToAbsent) {
+    return RecoveryAllocationsCompanion(
+      id: Value(id),
+      personId: Value(personId),
+      sourceTransactionId: Value(sourceTransactionId),
+      totalAmount: Value(totalAmount),
+      allocatedAmount: Value(allocatedAmount),
+      unallocatedAmount: Value(unallocatedAmount),
+      notes:
+          notes == null && nullToAbsent ? const Value.absent() : Value(notes),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory RecoveryAllocation.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RecoveryAllocation(
+      id: serializer.fromJson<String>(json['id']),
+      personId: serializer.fromJson<String>(json['personId']),
+      sourceTransactionId:
+          serializer.fromJson<String>(json['sourceTransactionId']),
+      totalAmount: serializer.fromJson<double>(json['totalAmount']),
+      allocatedAmount: serializer.fromJson<double>(json['allocatedAmount']),
+      unallocatedAmount: serializer.fromJson<double>(json['unallocatedAmount']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'personId': serializer.toJson<String>(personId),
+      'sourceTransactionId': serializer.toJson<String>(sourceTransactionId),
+      'totalAmount': serializer.toJson<double>(totalAmount),
+      'allocatedAmount': serializer.toJson<double>(allocatedAmount),
+      'unallocatedAmount': serializer.toJson<double>(unallocatedAmount),
+      'notes': serializer.toJson<String?>(notes),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  RecoveryAllocation copyWith(
+          {String? id,
+          String? personId,
+          String? sourceTransactionId,
+          double? totalAmount,
+          double? allocatedAmount,
+          double? unallocatedAmount,
+          Value<String?> notes = const Value.absent(),
+          DateTime? createdAt}) =>
+      RecoveryAllocation(
+        id: id ?? this.id,
+        personId: personId ?? this.personId,
+        sourceTransactionId: sourceTransactionId ?? this.sourceTransactionId,
+        totalAmount: totalAmount ?? this.totalAmount,
+        allocatedAmount: allocatedAmount ?? this.allocatedAmount,
+        unallocatedAmount: unallocatedAmount ?? this.unallocatedAmount,
+        notes: notes.present ? notes.value : this.notes,
+        createdAt: createdAt ?? this.createdAt,
+      );
+  RecoveryAllocation copyWithCompanion(RecoveryAllocationsCompanion data) {
+    return RecoveryAllocation(
+      id: data.id.present ? data.id.value : this.id,
+      personId: data.personId.present ? data.personId.value : this.personId,
+      sourceTransactionId: data.sourceTransactionId.present
+          ? data.sourceTransactionId.value
+          : this.sourceTransactionId,
+      totalAmount:
+          data.totalAmount.present ? data.totalAmount.value : this.totalAmount,
+      allocatedAmount: data.allocatedAmount.present
+          ? data.allocatedAmount.value
+          : this.allocatedAmount,
+      unallocatedAmount: data.unallocatedAmount.present
+          ? data.unallocatedAmount.value
+          : this.unallocatedAmount,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RecoveryAllocation(')
+          ..write('id: $id, ')
+          ..write('personId: $personId, ')
+          ..write('sourceTransactionId: $sourceTransactionId, ')
+          ..write('totalAmount: $totalAmount, ')
+          ..write('allocatedAmount: $allocatedAmount, ')
+          ..write('unallocatedAmount: $unallocatedAmount, ')
+          ..write('notes: $notes, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, personId, sourceTransactionId,
+      totalAmount, allocatedAmount, unallocatedAmount, notes, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RecoveryAllocation &&
+          other.id == this.id &&
+          other.personId == this.personId &&
+          other.sourceTransactionId == this.sourceTransactionId &&
+          other.totalAmount == this.totalAmount &&
+          other.allocatedAmount == this.allocatedAmount &&
+          other.unallocatedAmount == this.unallocatedAmount &&
+          other.notes == this.notes &&
+          other.createdAt == this.createdAt);
+}
+
+class RecoveryAllocationsCompanion extends UpdateCompanion<RecoveryAllocation> {
+  final Value<String> id;
+  final Value<String> personId;
+  final Value<String> sourceTransactionId;
+  final Value<double> totalAmount;
+  final Value<double> allocatedAmount;
+  final Value<double> unallocatedAmount;
+  final Value<String?> notes;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const RecoveryAllocationsCompanion({
+    this.id = const Value.absent(),
+    this.personId = const Value.absent(),
+    this.sourceTransactionId = const Value.absent(),
+    this.totalAmount = const Value.absent(),
+    this.allocatedAmount = const Value.absent(),
+    this.unallocatedAmount = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RecoveryAllocationsCompanion.insert({
+    required String id,
+    required String personId,
+    required String sourceTransactionId,
+    required double totalAmount,
+    this.allocatedAmount = const Value.absent(),
+    this.unallocatedAmount = const Value.absent(),
+    this.notes = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        personId = Value(personId),
+        sourceTransactionId = Value(sourceTransactionId),
+        totalAmount = Value(totalAmount),
+        createdAt = Value(createdAt);
+  static Insertable<RecoveryAllocation> custom({
+    Expression<String>? id,
+    Expression<String>? personId,
+    Expression<String>? sourceTransactionId,
+    Expression<double>? totalAmount,
+    Expression<double>? allocatedAmount,
+    Expression<double>? unallocatedAmount,
+    Expression<String>? notes,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (personId != null) 'person_id': personId,
+      if (sourceTransactionId != null)
+        'source_transaction_id': sourceTransactionId,
+      if (totalAmount != null) 'total_amount': totalAmount,
+      if (allocatedAmount != null) 'allocated_amount': allocatedAmount,
+      if (unallocatedAmount != null) 'unallocated_amount': unallocatedAmount,
+      if (notes != null) 'notes': notes,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RecoveryAllocationsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? personId,
+      Value<String>? sourceTransactionId,
+      Value<double>? totalAmount,
+      Value<double>? allocatedAmount,
+      Value<double>? unallocatedAmount,
+      Value<String?>? notes,
+      Value<DateTime>? createdAt,
+      Value<int>? rowid}) {
+    return RecoveryAllocationsCompanion(
+      id: id ?? this.id,
+      personId: personId ?? this.personId,
+      sourceTransactionId: sourceTransactionId ?? this.sourceTransactionId,
+      totalAmount: totalAmount ?? this.totalAmount,
+      allocatedAmount: allocatedAmount ?? this.allocatedAmount,
+      unallocatedAmount: unallocatedAmount ?? this.unallocatedAmount,
+      notes: notes ?? this.notes,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (personId.present) {
+      map['person_id'] = Variable<String>(personId.value);
+    }
+    if (sourceTransactionId.present) {
+      map['source_transaction_id'] =
+          Variable<String>(sourceTransactionId.value);
+    }
+    if (totalAmount.present) {
+      map['total_amount'] = Variable<double>(totalAmount.value);
+    }
+    if (allocatedAmount.present) {
+      map['allocated_amount'] = Variable<double>(allocatedAmount.value);
+    }
+    if (unallocatedAmount.present) {
+      map['unallocated_amount'] = Variable<double>(unallocatedAmount.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RecoveryAllocationsCompanion(')
+          ..write('id: $id, ')
+          ..write('personId: $personId, ')
+          ..write('sourceTransactionId: $sourceTransactionId, ')
+          ..write('totalAmount: $totalAmount, ')
+          ..write('allocatedAmount: $allocatedAmount, ')
+          ..write('unallocatedAmount: $unallocatedAmount, ')
+          ..write('notes: $notes, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $RecoveryDestinationsTable extends RecoveryDestinations
+    with TableInfo<$RecoveryDestinationsTable, RecoveryDestination> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RecoveryDestinationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _allocationIdMeta =
+      const VerificationMeta('allocationId');
+  @override
+  late final GeneratedColumn<String> allocationId = GeneratedColumn<String>(
+      'allocation_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _destinationTypeMeta =
+      const VerificationMeta('destinationType');
+  @override
+  late final GeneratedColumn<String> destinationType = GeneratedColumn<String>(
+      'destination_type', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _destinationIdMeta =
+      const VerificationMeta('destinationId');
+  @override
+  late final GeneratedColumn<String> destinationId = GeneratedColumn<String>(
+      'destination_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _destinationLabelMeta =
+      const VerificationMeta('destinationLabel');
+  @override
+  late final GeneratedColumn<String> destinationLabel = GeneratedColumn<String>(
+      'destination_label', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<double> amount = GeneratedColumn<double>(
+      'amount', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _linkedTransactionIdMeta =
+      const VerificationMeta('linkedTransactionId');
+  @override
+  late final GeneratedColumn<String> linkedTransactionId =
+      GeneratedColumn<String>('linked_transaction_id', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        allocationId,
+        destinationType,
+        destinationId,
+        destinationLabel,
+        amount,
+        linkedTransactionId,
+        createdAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'recovery_destinations';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<RecoveryDestination> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('allocation_id')) {
+      context.handle(
+          _allocationIdMeta,
+          allocationId.isAcceptableOrUnknown(
+              data['allocation_id']!, _allocationIdMeta));
+    } else if (isInserting) {
+      context.missing(_allocationIdMeta);
+    }
+    if (data.containsKey('destination_type')) {
+      context.handle(
+          _destinationTypeMeta,
+          destinationType.isAcceptableOrUnknown(
+              data['destination_type']!, _destinationTypeMeta));
+    } else if (isInserting) {
+      context.missing(_destinationTypeMeta);
+    }
+    if (data.containsKey('destination_id')) {
+      context.handle(
+          _destinationIdMeta,
+          destinationId.isAcceptableOrUnknown(
+              data['destination_id']!, _destinationIdMeta));
+    }
+    if (data.containsKey('destination_label')) {
+      context.handle(
+          _destinationLabelMeta,
+          destinationLabel.isAcceptableOrUnknown(
+              data['destination_label']!, _destinationLabelMeta));
+    } else if (isInserting) {
+      context.missing(_destinationLabelMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(_amountMeta,
+          amount.isAcceptableOrUnknown(data['amount']!, _amountMeta));
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('linked_transaction_id')) {
+      context.handle(
+          _linkedTransactionIdMeta,
+          linkedTransactionId.isAcceptableOrUnknown(
+              data['linked_transaction_id']!, _linkedTransactionIdMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  RecoveryDestination map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RecoveryDestination(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      allocationId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}allocation_id'])!,
+      destinationType: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}destination_type'])!,
+      destinationId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}destination_id']),
+      destinationLabel: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}destination_label'])!,
+      amount: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}amount'])!,
+      linkedTransactionId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}linked_transaction_id']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $RecoveryDestinationsTable createAlias(String alias) {
+    return $RecoveryDestinationsTable(attachedDatabase, alias);
+  }
+}
+
+class RecoveryDestination extends DataClass
+    implements Insertable<RecoveryDestination> {
+  final String id;
+
+  /// Foreign key to the parent recovery_allocations record
+  final String allocationId;
+
+  /// Category: Cash | BankAccount | Investment | MTFPosition | EmergencyFund | Goal | Asset | Custom
+  final String destinationType;
+
+  /// ID of the destination entity (accountId, investmentId, goalId, etc.) — nullable for Cash/Custom
+  final String? destinationId;
+
+  /// Human-readable label shown in UI and reports
+  final String destinationLabel;
+
+  /// Amount allocated to this destination
+  final double amount;
+
+  /// The linked transaction created for this destination (if applicable)
+  final String? linkedTransactionId;
+  final DateTime createdAt;
+  const RecoveryDestination(
+      {required this.id,
+      required this.allocationId,
+      required this.destinationType,
+      this.destinationId,
+      required this.destinationLabel,
+      required this.amount,
+      this.linkedTransactionId,
+      required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['allocation_id'] = Variable<String>(allocationId);
+    map['destination_type'] = Variable<String>(destinationType);
+    if (!nullToAbsent || destinationId != null) {
+      map['destination_id'] = Variable<String>(destinationId);
+    }
+    map['destination_label'] = Variable<String>(destinationLabel);
+    map['amount'] = Variable<double>(amount);
+    if (!nullToAbsent || linkedTransactionId != null) {
+      map['linked_transaction_id'] = Variable<String>(linkedTransactionId);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  RecoveryDestinationsCompanion toCompanion(bool nullToAbsent) {
+    return RecoveryDestinationsCompanion(
+      id: Value(id),
+      allocationId: Value(allocationId),
+      destinationType: Value(destinationType),
+      destinationId: destinationId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(destinationId),
+      destinationLabel: Value(destinationLabel),
+      amount: Value(amount),
+      linkedTransactionId: linkedTransactionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(linkedTransactionId),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory RecoveryDestination.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RecoveryDestination(
+      id: serializer.fromJson<String>(json['id']),
+      allocationId: serializer.fromJson<String>(json['allocationId']),
+      destinationType: serializer.fromJson<String>(json['destinationType']),
+      destinationId: serializer.fromJson<String?>(json['destinationId']),
+      destinationLabel: serializer.fromJson<String>(json['destinationLabel']),
+      amount: serializer.fromJson<double>(json['amount']),
+      linkedTransactionId:
+          serializer.fromJson<String?>(json['linkedTransactionId']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'allocationId': serializer.toJson<String>(allocationId),
+      'destinationType': serializer.toJson<String>(destinationType),
+      'destinationId': serializer.toJson<String?>(destinationId),
+      'destinationLabel': serializer.toJson<String>(destinationLabel),
+      'amount': serializer.toJson<double>(amount),
+      'linkedTransactionId': serializer.toJson<String?>(linkedTransactionId),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  RecoveryDestination copyWith(
+          {String? id,
+          String? allocationId,
+          String? destinationType,
+          Value<String?> destinationId = const Value.absent(),
+          String? destinationLabel,
+          double? amount,
+          Value<String?> linkedTransactionId = const Value.absent(),
+          DateTime? createdAt}) =>
+      RecoveryDestination(
+        id: id ?? this.id,
+        allocationId: allocationId ?? this.allocationId,
+        destinationType: destinationType ?? this.destinationType,
+        destinationId:
+            destinationId.present ? destinationId.value : this.destinationId,
+        destinationLabel: destinationLabel ?? this.destinationLabel,
+        amount: amount ?? this.amount,
+        linkedTransactionId: linkedTransactionId.present
+            ? linkedTransactionId.value
+            : this.linkedTransactionId,
+        createdAt: createdAt ?? this.createdAt,
+      );
+  RecoveryDestination copyWithCompanion(RecoveryDestinationsCompanion data) {
+    return RecoveryDestination(
+      id: data.id.present ? data.id.value : this.id,
+      allocationId: data.allocationId.present
+          ? data.allocationId.value
+          : this.allocationId,
+      destinationType: data.destinationType.present
+          ? data.destinationType.value
+          : this.destinationType,
+      destinationId: data.destinationId.present
+          ? data.destinationId.value
+          : this.destinationId,
+      destinationLabel: data.destinationLabel.present
+          ? data.destinationLabel.value
+          : this.destinationLabel,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      linkedTransactionId: data.linkedTransactionId.present
+          ? data.linkedTransactionId.value
+          : this.linkedTransactionId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RecoveryDestination(')
+          ..write('id: $id, ')
+          ..write('allocationId: $allocationId, ')
+          ..write('destinationType: $destinationType, ')
+          ..write('destinationId: $destinationId, ')
+          ..write('destinationLabel: $destinationLabel, ')
+          ..write('amount: $amount, ')
+          ..write('linkedTransactionId: $linkedTransactionId, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, allocationId, destinationType,
+      destinationId, destinationLabel, amount, linkedTransactionId, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RecoveryDestination &&
+          other.id == this.id &&
+          other.allocationId == this.allocationId &&
+          other.destinationType == this.destinationType &&
+          other.destinationId == this.destinationId &&
+          other.destinationLabel == this.destinationLabel &&
+          other.amount == this.amount &&
+          other.linkedTransactionId == this.linkedTransactionId &&
+          other.createdAt == this.createdAt);
+}
+
+class RecoveryDestinationsCompanion
+    extends UpdateCompanion<RecoveryDestination> {
+  final Value<String> id;
+  final Value<String> allocationId;
+  final Value<String> destinationType;
+  final Value<String?> destinationId;
+  final Value<String> destinationLabel;
+  final Value<double> amount;
+  final Value<String?> linkedTransactionId;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const RecoveryDestinationsCompanion({
+    this.id = const Value.absent(),
+    this.allocationId = const Value.absent(),
+    this.destinationType = const Value.absent(),
+    this.destinationId = const Value.absent(),
+    this.destinationLabel = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.linkedTransactionId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RecoveryDestinationsCompanion.insert({
+    required String id,
+    required String allocationId,
+    required String destinationType,
+    this.destinationId = const Value.absent(),
+    required String destinationLabel,
+    required double amount,
+    this.linkedTransactionId = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        allocationId = Value(allocationId),
+        destinationType = Value(destinationType),
+        destinationLabel = Value(destinationLabel),
+        amount = Value(amount),
+        createdAt = Value(createdAt);
+  static Insertable<RecoveryDestination> custom({
+    Expression<String>? id,
+    Expression<String>? allocationId,
+    Expression<String>? destinationType,
+    Expression<String>? destinationId,
+    Expression<String>? destinationLabel,
+    Expression<double>? amount,
+    Expression<String>? linkedTransactionId,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (allocationId != null) 'allocation_id': allocationId,
+      if (destinationType != null) 'destination_type': destinationType,
+      if (destinationId != null) 'destination_id': destinationId,
+      if (destinationLabel != null) 'destination_label': destinationLabel,
+      if (amount != null) 'amount': amount,
+      if (linkedTransactionId != null)
+        'linked_transaction_id': linkedTransactionId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RecoveryDestinationsCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? allocationId,
+      Value<String>? destinationType,
+      Value<String?>? destinationId,
+      Value<String>? destinationLabel,
+      Value<double>? amount,
+      Value<String?>? linkedTransactionId,
+      Value<DateTime>? createdAt,
+      Value<int>? rowid}) {
+    return RecoveryDestinationsCompanion(
+      id: id ?? this.id,
+      allocationId: allocationId ?? this.allocationId,
+      destinationType: destinationType ?? this.destinationType,
+      destinationId: destinationId ?? this.destinationId,
+      destinationLabel: destinationLabel ?? this.destinationLabel,
+      amount: amount ?? this.amount,
+      linkedTransactionId: linkedTransactionId ?? this.linkedTransactionId,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (allocationId.present) {
+      map['allocation_id'] = Variable<String>(allocationId.value);
+    }
+    if (destinationType.present) {
+      map['destination_type'] = Variable<String>(destinationType.value);
+    }
+    if (destinationId.present) {
+      map['destination_id'] = Variable<String>(destinationId.value);
+    }
+    if (destinationLabel.present) {
+      map['destination_label'] = Variable<String>(destinationLabel.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<double>(amount.value);
+    }
+    if (linkedTransactionId.present) {
+      map['linked_transaction_id'] =
+          Variable<String>(linkedTransactionId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RecoveryDestinationsCompanion(')
+          ..write('id: $id, ')
+          ..write('allocationId: $allocationId, ')
+          ..write('destinationType: $destinationType, ')
+          ..write('destinationId: $destinationId, ')
+          ..write('destinationLabel: $destinationLabel, ')
+          ..write('amount: $amount, ')
+          ..write('linkedTransactionId: $linkedTransactionId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -13454,6 +15391,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $SipsTable sips = $SipsTable(this);
   late final $DailyCheckInsTable dailyCheckIns = $DailyCheckInsTable(this);
   late final $SyncQueuesTable syncQueues = $SyncQueuesTable(this);
+  late final $PortfolioHistoriesTable portfolioHistories =
+      $PortfolioHistoriesTable(this);
+  late final $PortfolioSnapshotsTable portfolioSnapshots =
+      $PortfolioSnapshotsTable(this);
+  late final $RecoveryAllocationsTable recoveryAllocations =
+      $RecoveryAllocationsTable(this);
+  late final $RecoveryDestinationsTable recoveryDestinations =
+      $RecoveryDestinationsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -13482,7 +15427,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         mtfPositions,
         sips,
         dailyCheckIns,
-        syncQueues
+        syncQueues,
+        portfolioHistories,
+        portfolioSnapshots,
+        recoveryAllocations,
+        recoveryDestinations
       ];
 }
 
@@ -13530,9 +15479,9 @@ final class $$AccountsTableReferences
 
   $$AccountBalanceCachesTableProcessedTableManager
       get accountBalanceCachesRefs {
-    final manager = $$AccountBalanceCachesTableTableManager(
-            $_db, $_db.accountBalanceCaches)
-        .filter((f) => f.accountId.id.sqlEquals($_itemColumn<String>('id')!));
+    final manager =
+        $$AccountBalanceCachesTableTableManager($_db, $_db.accountBalanceCaches)
+            .filter((f) => f.accountId.id($_item.id));
 
     final cache =
         $_typedResult.readTableOrNull(_accountBalanceCachesRefsTable($_db));
@@ -13821,8 +15770,7 @@ class $$AccountsTableTableManager extends RootTableManager<
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (accountBalanceCachesRefs)
-                    await $_getPrefetchedData<Account, $AccountsTable,
-                            AccountBalanceCache>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable: $$AccountsTableReferences
                             ._accountBalanceCachesRefsTable(db),
@@ -13895,9 +15843,9 @@ final class $$PeopleTableReferences
               db.people.id, db.personBalanceCaches.personId));
 
   $$PersonBalanceCachesTableProcessedTableManager get personBalanceCachesRefs {
-    final manager = $$PersonBalanceCachesTableTableManager(
-            $_db, $_db.personBalanceCaches)
-        .filter((f) => f.personId.id.sqlEquals($_itemColumn<String>('id')!));
+    final manager =
+        $$PersonBalanceCachesTableTableManager($_db, $_db.personBalanceCaches)
+            .filter((f) => f.personId.id($_item.id));
 
     final cache =
         $_typedResult.readTableOrNull(_personBalanceCachesRefsTable($_db));
@@ -14185,8 +16133,7 @@ class $$PeopleTableTableManager extends RootTableManager<
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (personBalanceCachesRefs)
-                    await $_getPrefetchedData<PeopleData, $PeopleTable,
-                            PersonBalanceCache>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable: $$PeopleTableReferences
                             ._personBalanceCachesRefsTable(db),
@@ -14274,8 +16221,7 @@ final class $$InvestmentsTableReferences
       get investmentBalanceCachesRefs {
     final manager = $$InvestmentBalanceCachesTableTableManager(
             $_db, $_db.investmentBalanceCaches)
-        .filter(
-            (f) => f.investmentId.id.sqlEquals($_itemColumn<String>('id')!));
+        .filter((f) => f.investmentId.id($_item.id));
 
     final cache =
         $_typedResult.readTableOrNull(_investmentBalanceCachesRefsTable($_db));
@@ -14291,8 +16237,7 @@ final class $$InvestmentsTableReferences
 
   $$MtfPositionsTableProcessedTableManager get mtfPositionsRefs {
     final manager = $$MtfPositionsTableTableManager($_db, $_db.mtfPositions)
-        .filter(
-            (f) => f.investmentId.id.sqlEquals($_itemColumn<String>('id')!));
+        .filter((f) => f.investmentId.id($_item.id));
 
     final cache = $_typedResult.readTableOrNull(_mtfPositionsRefsTable($_db));
     return ProcessedTableManager(
@@ -14306,8 +16251,8 @@ final class $$InvestmentsTableReferences
               $_aliasNameGenerator(db.investments.id, db.sips.investmentId));
 
   $$SipsTableProcessedTableManager get sipsRefs {
-    final manager = $$SipsTableTableManager($_db, $_db.sips).filter(
-        (f) => f.investmentId.id.sqlEquals($_itemColumn<String>('id')!));
+    final manager = $$SipsTableTableManager($_db, $_db.sips)
+        .filter((f) => f.investmentId.id($_item.id));
 
     final cache = $_typedResult.readTableOrNull(_sipsRefsTable($_db));
     return ProcessedTableManager(
@@ -14759,8 +16704,7 @@ class $$InvestmentsTableTableManager extends RootTableManager<
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (investmentBalanceCachesRefs)
-                    await $_getPrefetchedData<Investment, $InvestmentsTable,
-                            InvestmentBalanceCache>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable: $$InvestmentsTableReferences
                             ._investmentBalanceCachesRefsTable(db),
@@ -14772,8 +16716,7 @@ class $$InvestmentsTableTableManager extends RootTableManager<
                                 .where((e) => e.investmentId == item.id),
                         typedResults: items),
                   if (mtfPositionsRefs)
-                    await $_getPrefetchedData<Investment, $InvestmentsTable,
-                            MtfPosition>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable: $$InvestmentsTableReferences
                             ._mtfPositionsRefsTable(db),
@@ -14785,8 +16728,7 @@ class $$InvestmentsTableTableManager extends RootTableManager<
                                 .where((e) => e.investmentId == item.id),
                         typedResults: items),
                   if (sipsRefs)
-                    await $_getPrefetchedData<Investment, $InvestmentsTable,
-                            Sip>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable:
                             $$InvestmentsTableReferences._sipsRefsTable(db),
@@ -15403,8 +17345,7 @@ final class $$TransactionsTableReferences
       get accountBalanceCachesRefs {
     final manager =
         $$AccountBalanceCachesTableTableManager($_db, $_db.accountBalanceCaches)
-            .filter((f) =>
-                f.lastTransactionId.id.sqlEquals($_itemColumn<String>('id')!));
+            .filter((f) => f.lastTransactionId.id($_item.id));
 
     final cache =
         $_typedResult.readTableOrNull(_accountBalanceCachesRefsTable($_db));
@@ -15422,8 +17363,7 @@ final class $$TransactionsTableReferences
   $$PersonBalanceCachesTableProcessedTableManager get personBalanceCachesRefs {
     final manager =
         $$PersonBalanceCachesTableTableManager($_db, $_db.personBalanceCaches)
-            .filter((f) =>
-                f.lastTransactionId.id.sqlEquals($_itemColumn<String>('id')!));
+            .filter((f) => f.lastTransactionId.id($_item.id));
 
     final cache =
         $_typedResult.readTableOrNull(_personBalanceCachesRefsTable($_db));
@@ -15442,8 +17382,7 @@ final class $$TransactionsTableReferences
       get investmentBalanceCachesRefs {
     final manager = $$InvestmentBalanceCachesTableTableManager(
             $_db, $_db.investmentBalanceCaches)
-        .filter((f) =>
-            f.lastTransactionId.id.sqlEquals($_itemColumn<String>('id')!));
+        .filter((f) => f.lastTransactionId.id($_item.id));
 
     final cache =
         $_typedResult.readTableOrNull(_investmentBalanceCachesRefsTable($_db));
@@ -15943,8 +17882,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (accountBalanceCachesRefs)
-                    await $_getPrefetchedData<Transaction, $TransactionsTable,
-                            AccountBalanceCache>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable: $$TransactionsTableReferences
                             ._accountBalanceCachesRefsTable(db),
@@ -15956,8 +17894,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
                                 .where((e) => e.lastTransactionId == item.id),
                         typedResults: items),
                   if (personBalanceCachesRefs)
-                    await $_getPrefetchedData<Transaction, $TransactionsTable,
-                            PersonBalanceCache>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable: $$TransactionsTableReferences
                             ._personBalanceCachesRefsTable(db),
@@ -15969,8 +17906,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
                                 .where((e) => e.lastTransactionId == item.id),
                         typedResults: items),
                   if (investmentBalanceCachesRefs)
-                    await $_getPrefetchedData<Transaction, $TransactionsTable,
-                            InvestmentBalanceCache>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable: $$TransactionsTableReferences
                             ._investmentBalanceCachesRefsTable(db),
@@ -17533,11 +19469,10 @@ final class $$AccountBalanceCachesTableReferences extends BaseReferences<
       db.accounts.createAlias($_aliasNameGenerator(
           db.accountBalanceCaches.accountId, db.accounts.id));
 
-  $$AccountsTableProcessedTableManager get accountId {
-    final $_column = $_itemColumn<String>('account_id')!;
-
+  $$AccountsTableProcessedTableManager? get accountId {
+    if ($_item.accountId == null) return null;
     final manager = $$AccountsTableTableManager($_db, $_db.accounts)
-        .filter((f) => f.id.sqlEquals($_column));
+        .filter((f) => f.id($_item.accountId!));
     final item = $_typedResult.readTableOrNull(_accountIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -17549,10 +19484,9 @@ final class $$AccountBalanceCachesTableReferences extends BaseReferences<
           db.accountBalanceCaches.lastTransactionId, db.transactions.id));
 
   $$TransactionsTableProcessedTableManager? get lastTransactionId {
-    final $_column = $_itemColumn<String>('last_transaction_id');
-    if ($_column == null) return null;
+    if ($_item.lastTransactionId == null) return null;
     final manager = $$TransactionsTableTableManager($_db, $_db.transactions)
-        .filter((f) => f.id.sqlEquals($_column));
+        .filter((f) => f.id($_item.lastTransactionId!));
     final item = $_typedResult.readTableOrNull(_lastTransactionIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -17893,11 +19827,10 @@ final class $$PersonBalanceCachesTableReferences extends BaseReferences<
   static $PeopleTable _personIdTable(_$AppDatabase db) => db.people.createAlias(
       $_aliasNameGenerator(db.personBalanceCaches.personId, db.people.id));
 
-  $$PeopleTableProcessedTableManager get personId {
-    final $_column = $_itemColumn<String>('person_id')!;
-
+  $$PeopleTableProcessedTableManager? get personId {
+    if ($_item.personId == null) return null;
     final manager = $$PeopleTableTableManager($_db, $_db.people)
-        .filter((f) => f.id.sqlEquals($_column));
+        .filter((f) => f.id($_item.personId!));
     final item = $_typedResult.readTableOrNull(_personIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -17909,10 +19842,9 @@ final class $$PersonBalanceCachesTableReferences extends BaseReferences<
           db.personBalanceCaches.lastTransactionId, db.transactions.id));
 
   $$TransactionsTableProcessedTableManager? get lastTransactionId {
-    final $_column = $_itemColumn<String>('last_transaction_id');
-    if ($_column == null) return null;
+    if ($_item.lastTransactionId == null) return null;
     final manager = $$TransactionsTableTableManager($_db, $_db.transactions)
-        .filter((f) => f.id.sqlEquals($_column));
+        .filter((f) => f.id($_item.lastTransactionId!));
     final item = $_typedResult.readTableOrNull(_lastTransactionIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -18255,11 +20187,10 @@ final class $$InvestmentBalanceCachesTableReferences extends BaseReferences<
       db.investments.createAlias($_aliasNameGenerator(
           db.investmentBalanceCaches.investmentId, db.investments.id));
 
-  $$InvestmentsTableProcessedTableManager get investmentId {
-    final $_column = $_itemColumn<String>('investment_id')!;
-
+  $$InvestmentsTableProcessedTableManager? get investmentId {
+    if ($_item.investmentId == null) return null;
     final manager = $$InvestmentsTableTableManager($_db, $_db.investments)
-        .filter((f) => f.id.sqlEquals($_column));
+        .filter((f) => f.id($_item.investmentId!));
     final item = $_typedResult.readTableOrNull(_investmentIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -18271,10 +20202,9 @@ final class $$InvestmentBalanceCachesTableReferences extends BaseReferences<
           db.investmentBalanceCaches.lastTransactionId, db.transactions.id));
 
   $$TransactionsTableProcessedTableManager? get lastTransactionId {
-    final $_column = $_itemColumn<String>('last_transaction_id');
-    if ($_column == null) return null;
+    if ($_item.lastTransactionId == null) return null;
     final manager = $$TransactionsTableTableManager($_db, $_db.transactions)
-        .filter((f) => f.id.sqlEquals($_column));
+        .filter((f) => f.id($_item.lastTransactionId!));
     final item = $_typedResult.readTableOrNull(_lastTransactionIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -19787,11 +21717,10 @@ final class $$MtfPositionsTableReferences
       db.investments.createAlias($_aliasNameGenerator(
           db.mtfPositions.investmentId, db.investments.id));
 
-  $$InvestmentsTableProcessedTableManager get investmentId {
-    final $_column = $_itemColumn<String>('investment_id')!;
-
+  $$InvestmentsTableProcessedTableManager? get investmentId {
+    if ($_item.investmentId == null) return null;
     final manager = $$InvestmentsTableTableManager($_db, $_db.investments)
-        .filter((f) => f.id.sqlEquals($_column));
+        .filter((f) => f.id($_item.investmentId!));
     final item = $_typedResult.readTableOrNull(_investmentIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -20327,11 +22256,10 @@ final class $$SipsTableReferences
       db.investments.createAlias(
           $_aliasNameGenerator(db.sips.investmentId, db.investments.id));
 
-  $$InvestmentsTableProcessedTableManager get investmentId {
-    final $_column = $_itemColumn<String>('investment_id')!;
-
+  $$InvestmentsTableProcessedTableManager? get investmentId {
+    if ($_item.investmentId == null) return null;
     final manager = $$InvestmentsTableTableManager($_db, $_db.investments)
-        .filter((f) => f.id.sqlEquals($_column));
+        .filter((f) => f.id($_item.investmentId!));
     final item = $_typedResult.readTableOrNull(_investmentIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -21172,6 +23100,956 @@ typedef $$SyncQueuesTableProcessedTableManager = ProcessedTableManager<
     (SyncQueue, BaseReferences<_$AppDatabase, $SyncQueuesTable, SyncQueue>),
     SyncQueue,
     PrefetchHooks Function()>;
+typedef $$PortfolioHistoriesTableCreateCompanionBuilder
+    = PortfolioHistoriesCompanion Function({
+  required String id,
+  required DateTime createdAt,
+  required String action,
+  required String entityType,
+  required String entityId,
+  required String entityTitle,
+  required String valueChanged,
+  Value<String?> previousValue,
+  Value<String?> newValue,
+  Value<String?> detailsJson,
+  Value<int> rowid,
+});
+typedef $$PortfolioHistoriesTableUpdateCompanionBuilder
+    = PortfolioHistoriesCompanion Function({
+  Value<String> id,
+  Value<DateTime> createdAt,
+  Value<String> action,
+  Value<String> entityType,
+  Value<String> entityId,
+  Value<String> entityTitle,
+  Value<String> valueChanged,
+  Value<String?> previousValue,
+  Value<String?> newValue,
+  Value<String?> detailsJson,
+  Value<int> rowid,
+});
+
+class $$PortfolioHistoriesTableFilterComposer
+    extends Composer<_$AppDatabase, $PortfolioHistoriesTable> {
+  $$PortfolioHistoriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get action => $composableBuilder(
+      column: $table.action, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get entityType => $composableBuilder(
+      column: $table.entityType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get entityId => $composableBuilder(
+      column: $table.entityId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get entityTitle => $composableBuilder(
+      column: $table.entityTitle, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get valueChanged => $composableBuilder(
+      column: $table.valueChanged, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get previousValue => $composableBuilder(
+      column: $table.previousValue, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get newValue => $composableBuilder(
+      column: $table.newValue, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get detailsJson => $composableBuilder(
+      column: $table.detailsJson, builder: (column) => ColumnFilters(column));
+}
+
+class $$PortfolioHistoriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $PortfolioHistoriesTable> {
+  $$PortfolioHistoriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get action => $composableBuilder(
+      column: $table.action, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get entityType => $composableBuilder(
+      column: $table.entityType, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get entityId => $composableBuilder(
+      column: $table.entityId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get entityTitle => $composableBuilder(
+      column: $table.entityTitle, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get valueChanged => $composableBuilder(
+      column: $table.valueChanged,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get previousValue => $composableBuilder(
+      column: $table.previousValue,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get newValue => $composableBuilder(
+      column: $table.newValue, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get detailsJson => $composableBuilder(
+      column: $table.detailsJson, builder: (column) => ColumnOrderings(column));
+}
+
+class $$PortfolioHistoriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PortfolioHistoriesTable> {
+  $$PortfolioHistoriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get action =>
+      $composableBuilder(column: $table.action, builder: (column) => column);
+
+  GeneratedColumn<String> get entityType => $composableBuilder(
+      column: $table.entityType, builder: (column) => column);
+
+  GeneratedColumn<String> get entityId =>
+      $composableBuilder(column: $table.entityId, builder: (column) => column);
+
+  GeneratedColumn<String> get entityTitle => $composableBuilder(
+      column: $table.entityTitle, builder: (column) => column);
+
+  GeneratedColumn<String> get valueChanged => $composableBuilder(
+      column: $table.valueChanged, builder: (column) => column);
+
+  GeneratedColumn<String> get previousValue => $composableBuilder(
+      column: $table.previousValue, builder: (column) => column);
+
+  GeneratedColumn<String> get newValue =>
+      $composableBuilder(column: $table.newValue, builder: (column) => column);
+
+  GeneratedColumn<String> get detailsJson => $composableBuilder(
+      column: $table.detailsJson, builder: (column) => column);
+}
+
+class $$PortfolioHistoriesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $PortfolioHistoriesTable,
+    PortfolioHistory,
+    $$PortfolioHistoriesTableFilterComposer,
+    $$PortfolioHistoriesTableOrderingComposer,
+    $$PortfolioHistoriesTableAnnotationComposer,
+    $$PortfolioHistoriesTableCreateCompanionBuilder,
+    $$PortfolioHistoriesTableUpdateCompanionBuilder,
+    (
+      PortfolioHistory,
+      BaseReferences<_$AppDatabase, $PortfolioHistoriesTable, PortfolioHistory>
+    ),
+    PortfolioHistory,
+    PrefetchHooks Function()> {
+  $$PortfolioHistoriesTableTableManager(
+      _$AppDatabase db, $PortfolioHistoriesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PortfolioHistoriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PortfolioHistoriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PortfolioHistoriesTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<String> action = const Value.absent(),
+            Value<String> entityType = const Value.absent(),
+            Value<String> entityId = const Value.absent(),
+            Value<String> entityTitle = const Value.absent(),
+            Value<String> valueChanged = const Value.absent(),
+            Value<String?> previousValue = const Value.absent(),
+            Value<String?> newValue = const Value.absent(),
+            Value<String?> detailsJson = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              PortfolioHistoriesCompanion(
+            id: id,
+            createdAt: createdAt,
+            action: action,
+            entityType: entityType,
+            entityId: entityId,
+            entityTitle: entityTitle,
+            valueChanged: valueChanged,
+            previousValue: previousValue,
+            newValue: newValue,
+            detailsJson: detailsJson,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required DateTime createdAt,
+            required String action,
+            required String entityType,
+            required String entityId,
+            required String entityTitle,
+            required String valueChanged,
+            Value<String?> previousValue = const Value.absent(),
+            Value<String?> newValue = const Value.absent(),
+            Value<String?> detailsJson = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              PortfolioHistoriesCompanion.insert(
+            id: id,
+            createdAt: createdAt,
+            action: action,
+            entityType: entityType,
+            entityId: entityId,
+            entityTitle: entityTitle,
+            valueChanged: valueChanged,
+            previousValue: previousValue,
+            newValue: newValue,
+            detailsJson: detailsJson,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$PortfolioHistoriesTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $PortfolioHistoriesTable,
+    PortfolioHistory,
+    $$PortfolioHistoriesTableFilterComposer,
+    $$PortfolioHistoriesTableOrderingComposer,
+    $$PortfolioHistoriesTableAnnotationComposer,
+    $$PortfolioHistoriesTableCreateCompanionBuilder,
+    $$PortfolioHistoriesTableUpdateCompanionBuilder,
+    (
+      PortfolioHistory,
+      BaseReferences<_$AppDatabase, $PortfolioHistoriesTable, PortfolioHistory>
+    ),
+    PortfolioHistory,
+    PrefetchHooks Function()>;
+typedef $$PortfolioSnapshotsTableCreateCompanionBuilder
+    = PortfolioSnapshotsCompanion Function({
+  required String id,
+  required DateTime snapshotDate,
+  required String snapshotType,
+  required double netWorth,
+  required double assets,
+  required double liabilities,
+  required double investments,
+  required double receivables,
+  required DateTime createdAt,
+  Value<int> rowid,
+});
+typedef $$PortfolioSnapshotsTableUpdateCompanionBuilder
+    = PortfolioSnapshotsCompanion Function({
+  Value<String> id,
+  Value<DateTime> snapshotDate,
+  Value<String> snapshotType,
+  Value<double> netWorth,
+  Value<double> assets,
+  Value<double> liabilities,
+  Value<double> investments,
+  Value<double> receivables,
+  Value<DateTime> createdAt,
+  Value<int> rowid,
+});
+
+class $$PortfolioSnapshotsTableFilterComposer
+    extends Composer<_$AppDatabase, $PortfolioSnapshotsTable> {
+  $$PortfolioSnapshotsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get snapshotDate => $composableBuilder(
+      column: $table.snapshotDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get snapshotType => $composableBuilder(
+      column: $table.snapshotType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get netWorth => $composableBuilder(
+      column: $table.netWorth, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get assets => $composableBuilder(
+      column: $table.assets, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get liabilities => $composableBuilder(
+      column: $table.liabilities, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get investments => $composableBuilder(
+      column: $table.investments, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get receivables => $composableBuilder(
+      column: $table.receivables, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$PortfolioSnapshotsTableOrderingComposer
+    extends Composer<_$AppDatabase, $PortfolioSnapshotsTable> {
+  $$PortfolioSnapshotsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get snapshotDate => $composableBuilder(
+      column: $table.snapshotDate,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get snapshotType => $composableBuilder(
+      column: $table.snapshotType,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get netWorth => $composableBuilder(
+      column: $table.netWorth, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get assets => $composableBuilder(
+      column: $table.assets, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get liabilities => $composableBuilder(
+      column: $table.liabilities, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get investments => $composableBuilder(
+      column: $table.investments, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get receivables => $composableBuilder(
+      column: $table.receivables, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$PortfolioSnapshotsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PortfolioSnapshotsTable> {
+  $$PortfolioSnapshotsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get snapshotDate => $composableBuilder(
+      column: $table.snapshotDate, builder: (column) => column);
+
+  GeneratedColumn<String> get snapshotType => $composableBuilder(
+      column: $table.snapshotType, builder: (column) => column);
+
+  GeneratedColumn<double> get netWorth =>
+      $composableBuilder(column: $table.netWorth, builder: (column) => column);
+
+  GeneratedColumn<double> get assets =>
+      $composableBuilder(column: $table.assets, builder: (column) => column);
+
+  GeneratedColumn<double> get liabilities => $composableBuilder(
+      column: $table.liabilities, builder: (column) => column);
+
+  GeneratedColumn<double> get investments => $composableBuilder(
+      column: $table.investments, builder: (column) => column);
+
+  GeneratedColumn<double> get receivables => $composableBuilder(
+      column: $table.receivables, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$PortfolioSnapshotsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $PortfolioSnapshotsTable,
+    PortfolioSnapshot,
+    $$PortfolioSnapshotsTableFilterComposer,
+    $$PortfolioSnapshotsTableOrderingComposer,
+    $$PortfolioSnapshotsTableAnnotationComposer,
+    $$PortfolioSnapshotsTableCreateCompanionBuilder,
+    $$PortfolioSnapshotsTableUpdateCompanionBuilder,
+    (
+      PortfolioSnapshot,
+      BaseReferences<_$AppDatabase, $PortfolioSnapshotsTable, PortfolioSnapshot>
+    ),
+    PortfolioSnapshot,
+    PrefetchHooks Function()> {
+  $$PortfolioSnapshotsTableTableManager(
+      _$AppDatabase db, $PortfolioSnapshotsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PortfolioSnapshotsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PortfolioSnapshotsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PortfolioSnapshotsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<DateTime> snapshotDate = const Value.absent(),
+            Value<String> snapshotType = const Value.absent(),
+            Value<double> netWorth = const Value.absent(),
+            Value<double> assets = const Value.absent(),
+            Value<double> liabilities = const Value.absent(),
+            Value<double> investments = const Value.absent(),
+            Value<double> receivables = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              PortfolioSnapshotsCompanion(
+            id: id,
+            snapshotDate: snapshotDate,
+            snapshotType: snapshotType,
+            netWorth: netWorth,
+            assets: assets,
+            liabilities: liabilities,
+            investments: investments,
+            receivables: receivables,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required DateTime snapshotDate,
+            required String snapshotType,
+            required double netWorth,
+            required double assets,
+            required double liabilities,
+            required double investments,
+            required double receivables,
+            required DateTime createdAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              PortfolioSnapshotsCompanion.insert(
+            id: id,
+            snapshotDate: snapshotDate,
+            snapshotType: snapshotType,
+            netWorth: netWorth,
+            assets: assets,
+            liabilities: liabilities,
+            investments: investments,
+            receivables: receivables,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$PortfolioSnapshotsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $PortfolioSnapshotsTable,
+    PortfolioSnapshot,
+    $$PortfolioSnapshotsTableFilterComposer,
+    $$PortfolioSnapshotsTableOrderingComposer,
+    $$PortfolioSnapshotsTableAnnotationComposer,
+    $$PortfolioSnapshotsTableCreateCompanionBuilder,
+    $$PortfolioSnapshotsTableUpdateCompanionBuilder,
+    (
+      PortfolioSnapshot,
+      BaseReferences<_$AppDatabase, $PortfolioSnapshotsTable, PortfolioSnapshot>
+    ),
+    PortfolioSnapshot,
+    PrefetchHooks Function()>;
+typedef $$RecoveryAllocationsTableCreateCompanionBuilder
+    = RecoveryAllocationsCompanion Function({
+  required String id,
+  required String personId,
+  required String sourceTransactionId,
+  required double totalAmount,
+  Value<double> allocatedAmount,
+  Value<double> unallocatedAmount,
+  Value<String?> notes,
+  required DateTime createdAt,
+  Value<int> rowid,
+});
+typedef $$RecoveryAllocationsTableUpdateCompanionBuilder
+    = RecoveryAllocationsCompanion Function({
+  Value<String> id,
+  Value<String> personId,
+  Value<String> sourceTransactionId,
+  Value<double> totalAmount,
+  Value<double> allocatedAmount,
+  Value<double> unallocatedAmount,
+  Value<String?> notes,
+  Value<DateTime> createdAt,
+  Value<int> rowid,
+});
+
+class $$RecoveryAllocationsTableFilterComposer
+    extends Composer<_$AppDatabase, $RecoveryAllocationsTable> {
+  $$RecoveryAllocationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get personId => $composableBuilder(
+      column: $table.personId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get sourceTransactionId => $composableBuilder(
+      column: $table.sourceTransactionId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get totalAmount => $composableBuilder(
+      column: $table.totalAmount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get allocatedAmount => $composableBuilder(
+      column: $table.allocatedAmount,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get unallocatedAmount => $composableBuilder(
+      column: $table.unallocatedAmount,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get notes => $composableBuilder(
+      column: $table.notes, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$RecoveryAllocationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $RecoveryAllocationsTable> {
+  $$RecoveryAllocationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get personId => $composableBuilder(
+      column: $table.personId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get sourceTransactionId => $composableBuilder(
+      column: $table.sourceTransactionId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get totalAmount => $composableBuilder(
+      column: $table.totalAmount, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get allocatedAmount => $composableBuilder(
+      column: $table.allocatedAmount,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get unallocatedAmount => $composableBuilder(
+      column: $table.unallocatedAmount,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+      column: $table.notes, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$RecoveryAllocationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $RecoveryAllocationsTable> {
+  $$RecoveryAllocationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get personId =>
+      $composableBuilder(column: $table.personId, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceTransactionId => $composableBuilder(
+      column: $table.sourceTransactionId, builder: (column) => column);
+
+  GeneratedColumn<double> get totalAmount => $composableBuilder(
+      column: $table.totalAmount, builder: (column) => column);
+
+  GeneratedColumn<double> get allocatedAmount => $composableBuilder(
+      column: $table.allocatedAmount, builder: (column) => column);
+
+  GeneratedColumn<double> get unallocatedAmount => $composableBuilder(
+      column: $table.unallocatedAmount, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$RecoveryAllocationsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $RecoveryAllocationsTable,
+    RecoveryAllocation,
+    $$RecoveryAllocationsTableFilterComposer,
+    $$RecoveryAllocationsTableOrderingComposer,
+    $$RecoveryAllocationsTableAnnotationComposer,
+    $$RecoveryAllocationsTableCreateCompanionBuilder,
+    $$RecoveryAllocationsTableUpdateCompanionBuilder,
+    (
+      RecoveryAllocation,
+      BaseReferences<_$AppDatabase, $RecoveryAllocationsTable,
+          RecoveryAllocation>
+    ),
+    RecoveryAllocation,
+    PrefetchHooks Function()> {
+  $$RecoveryAllocationsTableTableManager(
+      _$AppDatabase db, $RecoveryAllocationsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RecoveryAllocationsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RecoveryAllocationsTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$RecoveryAllocationsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> personId = const Value.absent(),
+            Value<String> sourceTransactionId = const Value.absent(),
+            Value<double> totalAmount = const Value.absent(),
+            Value<double> allocatedAmount = const Value.absent(),
+            Value<double> unallocatedAmount = const Value.absent(),
+            Value<String?> notes = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              RecoveryAllocationsCompanion(
+            id: id,
+            personId: personId,
+            sourceTransactionId: sourceTransactionId,
+            totalAmount: totalAmount,
+            allocatedAmount: allocatedAmount,
+            unallocatedAmount: unallocatedAmount,
+            notes: notes,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String personId,
+            required String sourceTransactionId,
+            required double totalAmount,
+            Value<double> allocatedAmount = const Value.absent(),
+            Value<double> unallocatedAmount = const Value.absent(),
+            Value<String?> notes = const Value.absent(),
+            required DateTime createdAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              RecoveryAllocationsCompanion.insert(
+            id: id,
+            personId: personId,
+            sourceTransactionId: sourceTransactionId,
+            totalAmount: totalAmount,
+            allocatedAmount: allocatedAmount,
+            unallocatedAmount: unallocatedAmount,
+            notes: notes,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$RecoveryAllocationsTableProcessedTableManager = ProcessedTableManager<
+    _$AppDatabase,
+    $RecoveryAllocationsTable,
+    RecoveryAllocation,
+    $$RecoveryAllocationsTableFilterComposer,
+    $$RecoveryAllocationsTableOrderingComposer,
+    $$RecoveryAllocationsTableAnnotationComposer,
+    $$RecoveryAllocationsTableCreateCompanionBuilder,
+    $$RecoveryAllocationsTableUpdateCompanionBuilder,
+    (
+      RecoveryAllocation,
+      BaseReferences<_$AppDatabase, $RecoveryAllocationsTable,
+          RecoveryAllocation>
+    ),
+    RecoveryAllocation,
+    PrefetchHooks Function()>;
+typedef $$RecoveryDestinationsTableCreateCompanionBuilder
+    = RecoveryDestinationsCompanion Function({
+  required String id,
+  required String allocationId,
+  required String destinationType,
+  Value<String?> destinationId,
+  required String destinationLabel,
+  required double amount,
+  Value<String?> linkedTransactionId,
+  required DateTime createdAt,
+  Value<int> rowid,
+});
+typedef $$RecoveryDestinationsTableUpdateCompanionBuilder
+    = RecoveryDestinationsCompanion Function({
+  Value<String> id,
+  Value<String> allocationId,
+  Value<String> destinationType,
+  Value<String?> destinationId,
+  Value<String> destinationLabel,
+  Value<double> amount,
+  Value<String?> linkedTransactionId,
+  Value<DateTime> createdAt,
+  Value<int> rowid,
+});
+
+class $$RecoveryDestinationsTableFilterComposer
+    extends Composer<_$AppDatabase, $RecoveryDestinationsTable> {
+  $$RecoveryDestinationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get allocationId => $composableBuilder(
+      column: $table.allocationId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get destinationType => $composableBuilder(
+      column: $table.destinationType,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get destinationId => $composableBuilder(
+      column: $table.destinationId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get destinationLabel => $composableBuilder(
+      column: $table.destinationLabel,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get amount => $composableBuilder(
+      column: $table.amount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get linkedTransactionId => $composableBuilder(
+      column: $table.linkedTransactionId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$RecoveryDestinationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $RecoveryDestinationsTable> {
+  $$RecoveryDestinationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get allocationId => $composableBuilder(
+      column: $table.allocationId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get destinationType => $composableBuilder(
+      column: $table.destinationType,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get destinationId => $composableBuilder(
+      column: $table.destinationId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get destinationLabel => $composableBuilder(
+      column: $table.destinationLabel,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get amount => $composableBuilder(
+      column: $table.amount, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get linkedTransactionId => $composableBuilder(
+      column: $table.linkedTransactionId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$RecoveryDestinationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $RecoveryDestinationsTable> {
+  $$RecoveryDestinationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get allocationId => $composableBuilder(
+      column: $table.allocationId, builder: (column) => column);
+
+  GeneratedColumn<String> get destinationType => $composableBuilder(
+      column: $table.destinationType, builder: (column) => column);
+
+  GeneratedColumn<String> get destinationId => $composableBuilder(
+      column: $table.destinationId, builder: (column) => column);
+
+  GeneratedColumn<String> get destinationLabel => $composableBuilder(
+      column: $table.destinationLabel, builder: (column) => column);
+
+  GeneratedColumn<double> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<String> get linkedTransactionId => $composableBuilder(
+      column: $table.linkedTransactionId, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$RecoveryDestinationsTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $RecoveryDestinationsTable,
+    RecoveryDestination,
+    $$RecoveryDestinationsTableFilterComposer,
+    $$RecoveryDestinationsTableOrderingComposer,
+    $$RecoveryDestinationsTableAnnotationComposer,
+    $$RecoveryDestinationsTableCreateCompanionBuilder,
+    $$RecoveryDestinationsTableUpdateCompanionBuilder,
+    (
+      RecoveryDestination,
+      BaseReferences<_$AppDatabase, $RecoveryDestinationsTable,
+          RecoveryDestination>
+    ),
+    RecoveryDestination,
+    PrefetchHooks Function()> {
+  $$RecoveryDestinationsTableTableManager(
+      _$AppDatabase db, $RecoveryDestinationsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RecoveryDestinationsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RecoveryDestinationsTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$RecoveryDestinationsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> allocationId = const Value.absent(),
+            Value<String> destinationType = const Value.absent(),
+            Value<String?> destinationId = const Value.absent(),
+            Value<String> destinationLabel = const Value.absent(),
+            Value<double> amount = const Value.absent(),
+            Value<String?> linkedTransactionId = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              RecoveryDestinationsCompanion(
+            id: id,
+            allocationId: allocationId,
+            destinationType: destinationType,
+            destinationId: destinationId,
+            destinationLabel: destinationLabel,
+            amount: amount,
+            linkedTransactionId: linkedTransactionId,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String allocationId,
+            required String destinationType,
+            Value<String?> destinationId = const Value.absent(),
+            required String destinationLabel,
+            required double amount,
+            Value<String?> linkedTransactionId = const Value.absent(),
+            required DateTime createdAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              RecoveryDestinationsCompanion.insert(
+            id: id,
+            allocationId: allocationId,
+            destinationType: destinationType,
+            destinationId: destinationId,
+            destinationLabel: destinationLabel,
+            amount: amount,
+            linkedTransactionId: linkedTransactionId,
+            createdAt: createdAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$RecoveryDestinationsTableProcessedTableManager
+    = ProcessedTableManager<
+        _$AppDatabase,
+        $RecoveryDestinationsTable,
+        RecoveryDestination,
+        $$RecoveryDestinationsTableFilterComposer,
+        $$RecoveryDestinationsTableOrderingComposer,
+        $$RecoveryDestinationsTableAnnotationComposer,
+        $$RecoveryDestinationsTableCreateCompanionBuilder,
+        $$RecoveryDestinationsTableUpdateCompanionBuilder,
+        (
+          RecoveryDestination,
+          BaseReferences<_$AppDatabase, $RecoveryDestinationsTable,
+              RecoveryDestination>
+        ),
+        RecoveryDestination,
+        PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -21225,4 +24103,12 @@ class $AppDatabaseManager {
       $$DailyCheckInsTableTableManager(_db, _db.dailyCheckIns);
   $$SyncQueuesTableTableManager get syncQueues =>
       $$SyncQueuesTableTableManager(_db, _db.syncQueues);
+  $$PortfolioHistoriesTableTableManager get portfolioHistories =>
+      $$PortfolioHistoriesTableTableManager(_db, _db.portfolioHistories);
+  $$PortfolioSnapshotsTableTableManager get portfolioSnapshots =>
+      $$PortfolioSnapshotsTableTableManager(_db, _db.portfolioSnapshots);
+  $$RecoveryAllocationsTableTableManager get recoveryAllocations =>
+      $$RecoveryAllocationsTableTableManager(_db, _db.recoveryAllocations);
+  $$RecoveryDestinationsTableTableManager get recoveryDestinations =>
+      $$RecoveryDestinationsTableTableManager(_db, _db.recoveryDestinations);
 }

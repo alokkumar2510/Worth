@@ -31,12 +31,8 @@ mixin _$Asset {
   DateTime get updatedAt => throw _privateConstructorUsedError;
   String get syncStatus => throw _privateConstructorUsedError;
 
-  /// Serializes this Asset to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of Asset
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $AssetCopyWith<Asset> get copyWith => throw _privateConstructorUsedError;
 }
 
@@ -67,8 +63,6 @@ class _$AssetCopyWithImpl<$Res, $Val extends Asset>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of Asset
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -150,8 +144,6 @@ class __$$AssetImplCopyWithImpl<$Res>
       _$AssetImpl _value, $Res Function(_$AssetImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of Asset
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -269,14 +261,12 @@ class _$AssetImpl implements _Asset {
                 other.syncStatus == syncStatus));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(runtimeType, id, name, type, balance, notes,
       isArchived, createdAt, updatedAt, syncStatus);
 
-  /// Create a copy of Asset
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$AssetImplCopyWith<_$AssetImpl> get copyWith =>
@@ -309,8 +299,8 @@ abstract class _Asset implements Asset {
   @override
   String get name;
   @override
-  String get type; // cash | bank | wallet | physical | other
-  @override
+  String get type;
+  @override // cash | bank | wallet | physical | other
   double get balance;
   @override
   String? get notes;
@@ -322,11 +312,8 @@ abstract class _Asset implements Asset {
   DateTime get updatedAt;
   @override
   String get syncStatus;
-
-  /// Create a copy of Asset
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$AssetImplCopyWith<_$AssetImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

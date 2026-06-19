@@ -2,9 +2,12 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/asset_paths.dart';
 import '../../../../core/widgets/glass_card.dart';
 import '../../providers/auth_providers.dart';
+import '../../../../core/providers/app_providers.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -56,15 +59,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final authRepo = ref.read(authRepositoryProvider);
+      User? user;
       if (_isRegistering) {
-        await authRepo.signUpWithEmailAndPassword(email, password, displayName: name);
+        user = await authRepo.signUpWithEmailAndPassword(email, password, displayName: name);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Account created successfully!')),
           );
         }
       } else {
-        await authRepo.signInWithEmailAndPassword(email, password);
+        user = await authRepo.signInWithEmailAndPassword(email, password);
+      }
+
+      if (user != null) {
+        ref.read(isRestoringProvider.notifier).state = true;
+        try {
+          final syncService = ref.read(syncServiceProvider);
+          final isLocalEmpty = await syncService.isLocalDatabaseEmpty();
+          if (isLocalEmpty) {
+            final cloudCount = await syncService.getCloudRecordCount(user.uid);
+            if (cloudCount > 0) {
+              await syncService.manualRestore();
+            }
+          } else {
+            await syncService.forceSync();
+          }
+        } catch (e) {
+          print('[Login] Sync check failed: $e');
+        } finally {
+          ref.read(isRestoringProvider.notifier).state = false;
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -87,7 +111,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
 
     try {
-      await ref.read(authRepositoryProvider).signInWithGoogle();
+      final user = await ref.read(authRepositoryProvider).signInWithGoogle();
+      if (user != null) {
+        ref.read(isRestoringProvider.notifier).state = true;
+        try {
+          final syncService = ref.read(syncServiceProvider);
+          final isLocalEmpty = await syncService.isLocalDatabaseEmpty();
+          if (isLocalEmpty) {
+            final cloudCount = await syncService.getCloudRecordCount(user.uid);
+            if (cloudCount > 0) {
+              await syncService.manualRestore();
+            }
+          } else {
+            await syncService.forceSync();
+          }
+        } catch (e) {
+          print('[Login] Google sign-in sync check failed: $e');
+        } finally {
+          ref.read(isRestoringProvider.notifier).state = false;
+        }
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -140,125 +183,196 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isRestoring = ref.watch(isRestoringProvider);
+
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              physics: const ClampingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight - 64,
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Top: Minimalist Worth Logo Column
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
+      body: Stack(
+        children: [
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight - 64,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const SizedBox(height: 24),
-                        const WorthLogo(size: 44),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Worth',
-                          style: GoogleFonts.outfit(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            letterSpacing: -0.5,
+                        // Top: Minimalist Worth Logo Column
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(height: 24),
+                            const WorthLogo(size: 44),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Worth',
+                              style: GoogleFonts.outfit(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Middle: Headline & Auth Card
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 48.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Headline
+                              Text(
+                                "Know What You're Worth.",
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.inter(
+                                  fontSize: 36,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: -1.5,
+                                  height: 1.15,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              // Subheadline
+                              Text(
+                                "Track assets, liabilities, investments, and net worth in one place.",
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.grey400,
+                                  height: 1.5,
+                                ),
+                              ),
+                              const SizedBox(height: 40),
+
+                              // Auth Glass Container (Constrained width like Linear/Notion web panel)
+                              Center(
+                                child: Container(
+                                  constraints: const BoxConstraints(maxWidth: 400),
+                                  child: GlassCard(
+                                    padding: const EdgeInsets.all(28.0),
+                                    child: AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 250),
+                                      transitionBuilder: (child, animation) {
+                                        return FadeTransition(
+                                          opacity: animation,
+                                          child: SlideTransition(
+                                            position: Tween<Offset>(
+                                              begin: const Offset(0.0, 0.05),
+                                              end: Offset.zero,
+                                            ).animate(CurvedAnimation(
+                                              parent: animation,
+                                              curve: Curves.easeOutCubic,
+                                            )),
+                                            child: child,
+                                          ),
+                                        );
+                                      },
+                                      child: _showEmailForm ? _buildEmailForm() : _buildOAuthChoices(),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Bottom: Luxury Apple-style Footer
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: Text(
+                            "Privacy First  ·  Offline First  ·  Secure Sync",
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.grey500,
+                              letterSpacing: 0.5,
+                            ),
                           ),
                         ),
                       ],
                     ),
-
-                    // Middle: Headline & Auth Card
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 48.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Headline
-                          Text(
-                            "Know What You're Worth.",
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(
-                              fontSize: 36,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              letterSpacing: -1.5,
-                              height: 1.15,
-                            ),
+                  ),
+                );
+              },
+            ),
+          ),
+          if (isRestoring)
+            Positioned.fill(
+              child: ClipRRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                  child: Container(
+                    color: Colors.black.withOpacity(0.6),
+                    child: Center(
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 32),
+                        padding: const EdgeInsets.all(28),
+                        decoration: BoxDecoration(
+                          color: AppColors.layer2.withOpacity(0.65),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: AppColors.glassBorder,
+                            width: 1.5,
                           ),
-                          const SizedBox(height: 16),
-                          // Subheadline
-                          Text(
-                            "Track assets, liabilities, investments, and net worth in one place.",
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.grey400,
-                              height: 1.5,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.darkPrimary.withOpacity(0.08),
+                              blurRadius: 40,
+                              spreadRadius: 4,
                             ),
-                          ),
-                          const SizedBox(height: 40),
-
-                          // Auth Glass Container (Constrained width like Linear/Notion web panel)
-                          Center(
-                            child: Container(
-                              constraints: const BoxConstraints(maxWidth: 400),
-                              child: GlassCard(
-                                padding: const EdgeInsets.all(28.0),
-                                child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 250),
-                                  transitionBuilder: (child, animation) {
-                                    return FadeTransition(
-                                      opacity: animation,
-                                      child: SlideTransition(
-                                        position: Tween<Offset>(
-                                          begin: const Offset(0.0, 0.05),
-                                          end: Offset.zero,
-                                        ).animate(CurvedAnimation(
-                                          parent: animation,
-                                          curve: Curves.easeOutCubic,
-                                        )),
-                                        child: child,
-                                      ),
-                                    );
-                                  },
-                                  child: _showEmailForm ? _buildEmailForm() : _buildOAuthChoices(),
-                                ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(
+                              width: 44,
+                              height: 44,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 3,
+                                valueColor: AlwaysStoppedAnimation<Color>(AppColors.darkPrimary),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Bottom: Luxury Apple-style Footer
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: Text(
-                        "Privacy First  ·  Offline First  ·  Secure Sync",
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.grey500,
-                          letterSpacing: 0.5,
+                            const SizedBox(height: 24),
+                            Text(
+                              'Restoring Profile',
+                              style: GoogleFonts.outfit(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Downloading cloud backup and rebuilding local transaction ledgers...',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: AppColors.grey400,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
-            );
-          },
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -517,10 +631,14 @@ class WorthLogo extends StatelessWidget {
         ],
       ),
       child: Center(
-        child: Icon(
-          Icons.radar_rounded,
-          color: AppColors.darkPrimary,
-          size: size * 0.55,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(size * 0.5),
+          child: Image.asset(
+            AssetPaths.logoMark,
+            width: size * 0.6,
+            height: size * 0.6,
+            fit: BoxFit.contain,
+          ),
         ),
       ),
     );

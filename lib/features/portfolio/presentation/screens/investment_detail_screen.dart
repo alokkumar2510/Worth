@@ -633,8 +633,8 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                 _showEditInvestmentDialog(inv);
               } else if (menuVal == 'update_price') {
                 _showUpdateMarketValueDialog(inv, currency);
-              } else if (menuVal == 'adjust_amount') {
-                _showChooseAdjustmentTypeDialog(context, ref, inv, cap, value);
+              } else if (menuVal == 'adjust_units') {
+                _showAdjustUnitsDialog(context, ref, inv, units);
               } else if (menuVal == 'view_history') {
                 showAdjustmentHistorySheet(context, inv.id, 'investment', inv.name);
               } else if (menuVal == 'duplicate') {
@@ -667,8 +667,8 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                 child: Text('Update Live Price', style: TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
-                value: 'adjust_amount',
-                child: Text('Adjust Amount', style: TextStyle(color: Colors.white)),
+                value: 'adjust_units',
+                child: Text('Adjust Units', style: TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
                 value: 'view_history',
@@ -935,33 +935,31 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                 ),
               const SizedBox(height: 24),
               GlassCard(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'AUDIT LOG INFORMATION',
-                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Created At', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
-                          Text(createdStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Last Edited', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
-                          Text(updatedStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
-                        ],
-                      ),
-                    ],
-                  ),
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'AUDIT LOG INFORMATION',
+                      style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Created At', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                        Text(createdStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Last Edited', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                        Text(updatedStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -1004,62 +1002,31 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
     );
   }
 
-  void _showChooseAdjustmentTypeDialog(BuildContext context, WidgetRef ref, Investment inv, double cap, double marketValue) {
+  void _showAdjustUnitsDialog(BuildContext context, WidgetRef ref, Investment inv, double currentUnits) {
+    final controller = TextEditingController(text: currentUnits.toString());
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Adjust Investment Amount', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: const Text(
-          'Which value would you like to adjust manually?',
-          style: TextStyle(color: AppColors.grey400, fontSize: 13),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showAdjustInvestmentFieldDialog(context, ref, inv, 'investment_capital', 'Principal Invested', cap);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
-            child: const Text('Principal Invested'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showAdjustInvestmentFieldDialog(context, ref, inv, 'investment_market_value', 'Market Value', marketValue);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
-            child: const Text('Market Value'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAdjustInvestmentFieldDialog(
-    BuildContext context,
-    WidgetRef ref,
-    Investment inv,
-    String entityType,
-    String fieldName,
-    double currentVal,
-  ) {
-    final controller = TextEditingController(text: currentVal.toStringAsFixed(0));
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Adjust $fieldName', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            labelText: 'New $fieldName',
-            labelStyle: const TextStyle(color: AppColors.grey500),
-          ),
+        title: const Text('Adjust Units', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Enter the new number of units purchased. This will update your investment holdings.',
+              style: TextStyle(color: AppColors.grey400, fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(
+                labelText: 'Number of Units',
+                labelStyle: TextStyle(color: AppColors.grey500),
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -1068,31 +1035,18 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
           ),
           ElevatedButton(
             onPressed: () async {
-              final newAmt = double.tryParse(controller.text.trim());
-              if (newAmt == null) return;
+              final newUnits = double.tryParse(controller.text.trim());
+              if (newUnits == null || newUnits <= 0) return;
               
               Navigator.pop(context); // close dialog
+              
+              await ref.read(mockDatabaseProvider.notifier).updateInvestmentUnits(inv.id, newUnits);
 
-              // 1. Warning
-              final continueAdj = await showAdjustmentWarningDialog(context);
-              if (!continueAdj) return;
-
-              // 2. Reason
-              final reason = await showAdjustmentReasonSheet(context);
-              if (reason == null) return;
-
-              // 3. Save
-              await ref.read(mockDatabaseProvider.notifier).addAdjustment(
-                entityType: entityType,
-                entityId: inv.id,
-                oldAmount: currentVal,
-                newAmount: newAmt,
-                reason: reason,
-              );
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('$fieldName adjusted successfully.')),
-              );
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Units updated successfully.')),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
             child: const Text('Save', style: TextStyle(color: Colors.white)),

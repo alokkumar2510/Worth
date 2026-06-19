@@ -62,7 +62,7 @@ export default function RootLayout({
       "name": "Alok Kumar Sahu",
       "url": "https://alokkumarsahu.in"
     },
-    "downloadUrl": "https://github.com/alokkumar2510/Worth/releases/download/v1.5.0/app-release.apk"
+    "downloadUrl": "https://github.com/alokkumar2510/Worth/releases/download/v1.7.0/app-release.apk"
   };
 
   return (

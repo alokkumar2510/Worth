@@ -32,12 +32,8 @@ mixin _$Snapshot {
   DateTime get updatedAt => throw _privateConstructorUsedError;
   String get syncStatus => throw _privateConstructorUsedError;
 
-  /// Serializes this Snapshot to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of Snapshot
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $SnapshotCopyWith<Snapshot> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -71,8 +67,6 @@ class _$SnapshotCopyWithImpl<$Res, $Val extends Snapshot>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of Snapshot
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -167,8 +161,6 @@ class __$$SnapshotImplCopyWithImpl<$Res>
       _$SnapshotImpl _value, $Res Function(_$SnapshotImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of Snapshot
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -308,7 +300,7 @@ class _$SnapshotImpl implements _Snapshot {
                 other.syncStatus == syncStatus));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
       runtimeType,
@@ -324,9 +316,7 @@ class _$SnapshotImpl implements _Snapshot {
       updatedAt,
       syncStatus);
 
-  /// Create a copy of Snapshot
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$SnapshotImplCopyWith<_$SnapshotImpl> get copyWith =>
@@ -379,11 +369,8 @@ abstract class _Snapshot implements Snapshot {
   DateTime get updatedAt;
   @override
   String get syncStatus;
-
-  /// Create a copy of Snapshot
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$SnapshotImplCopyWith<_$SnapshotImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

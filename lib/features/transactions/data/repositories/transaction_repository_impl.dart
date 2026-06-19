@@ -1,14 +1,18 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../database/database.dart' as db;
 import '../../domain/entities/transaction.dart' as domain;
 import '../../domain/repositories/transaction_repository.dart';
+import '../../../../core/providers/app_providers.dart';
+import '../../../auth/providers/auth_providers.dart';
 
 class TransactionRepositoryImpl implements TransactionRepository {
   final db.AppDatabase _database;
+  final Ref _ref;
   final _uuid = const Uuid();
 
-  TransactionRepositoryImpl(this._database);
+  TransactionRepositoryImpl(this._database, this._ref);
 
   domain.Transaction _toDomain(db.Transaction tx) {
     return domain.Transaction(
@@ -84,6 +88,11 @@ class TransactionRepositoryImpl implements TransactionRepository {
   @override
   Future<void> createTransaction(domain.Transaction transaction) async {
     await _database.into(_database.transactions).insert(_toCompanion(transaction));
+    await _ref.read(syncServiceProvider).queueOperation(
+      entityType: 'transaction',
+      entityId: transaction.id,
+      operation: 'upsert',
+    );
   }
 
   @override
@@ -107,13 +116,22 @@ class TransactionRepositoryImpl implements TransactionRepository {
       syncStatus: transaction.syncStatus,
     );
     await _database.update(_database.transactions).replace(dbTx);
+    await _ref.read(syncServiceProvider).queueOperation(
+      entityType: 'transaction',
+      entityId: transaction.id,
+      operation: 'upsert',
+    );
   }
 
   @override
   Future<void> deleteTransaction(String id) async {
-    // Standard delete, or void for transactions (in Worth, we void instead of delete, but we can support standard hard delete here)
     final query = _database.delete(_database.transactions)..where((tbl) => tbl.id.equals(id));
     await query.go();
+    await _ref.read(syncServiceProvider).queueOperation(
+      entityType: 'transaction',
+      entityId: id,
+      operation: 'delete',
+    );
   }
 
   @override

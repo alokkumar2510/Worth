@@ -1,13 +1,17 @@
 import 'dart:async';
 import 'package:drift/drift.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../database/database.dart' as db;
 import '../../domain/entities/liability.dart' as domain;
 import '../../domain/repositories/liability_repository.dart';
+import '../../../../core/providers/app_providers.dart';
+import '../../../auth/providers/auth_providers.dart';
 
 class LiabilityRepositoryImpl implements LiabilityRepository {
   final db.AppDatabase _database;
+  final Ref _ref;
 
-  LiabilityRepositoryImpl(this._database);
+  LiabilityRepositoryImpl(this._database, this._ref);
 
   // Helper to combine streams reactively
   Stream<List<T>> _combineTwoStreams<A, B, T>(
@@ -167,6 +171,8 @@ class LiabilityRepositoryImpl implements LiabilityRepository {
     return null;
   }
 
+
+
   @override
   Future<void> createLiability(domain.Liability liability) async {
     await _database.transaction(() async {
@@ -191,6 +197,11 @@ class LiabilityRepositoryImpl implements LiabilityRepository {
             ));
       }
     });
+    await _ref.read(syncServiceProvider).queueOperation(
+      entityType: liability.type == 'personal_debt' ? 'person' : 'account',
+      entityId: liability.id,
+      operation: 'upsert',
+    );
   }
 
   @override
@@ -219,16 +230,27 @@ class LiabilityRepositoryImpl implements LiabilityRepository {
             ));
       }
     });
+    await _ref.read(syncServiceProvider).queueOperation(
+      entityType: liability.type == 'personal_debt' ? 'person' : 'account',
+      entityId: liability.id,
+      operation: 'upsert',
+    );
   }
 
   @override
   Future<void> deleteLiability(String id) async {
     final liability = await getLiabilityById(id);
     if (liability != null) {
-      await updateLiability(liability.copyWith(
+      final updated = liability.copyWith(
         isArchived: 1,
         updatedAt: DateTime.now().toUtc(),
-      ));
+      );
+      await updateLiability(updated);
+      await _ref.read(syncServiceProvider).queueOperation(
+        entityType: liability.type == 'personal_debt' ? 'person' : 'account',
+        entityId: id,
+        operation: 'delete',
+      );
     }
   }
 

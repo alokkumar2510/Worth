@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/asset_paths.dart';
 import '../../../../core/widgets/glass_card.dart';
 
 class SplashScreen extends StatelessWidget {
@@ -57,13 +58,19 @@ class SplashScreen extends StatelessWidget {
                   height: 96,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.darkPrimary.withOpacity(0.15),
-                    border: Border.all(color: AppColors.darkPrimary.withOpacity(0.3), width: 1.5),
+                    color: AppColors.darkPrimary.withOpacity(0.08),
+                    border: Border.all(color: AppColors.darkPrimary.withOpacity(0.25), width: 1.5),
                   ),
-                  child: const Icon(
-                    Icons.radar_rounded,
-                    size: 52,
-                    color: AppColors.darkPrimary,
+                  child: Center(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(48),
+                      child: Image.asset(
+                        AssetPaths.logoMark,
+                        width: 58,
+                        height: 58,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),

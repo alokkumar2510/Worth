@@ -11,6 +11,8 @@ import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/providers/mock_database.dart';
 import '../../../../database/database.dart';
 import '../widgets/adjustment_widgets.dart';
+import '../../../../features/recovery/presentation/widgets/recovery_allocation_dialog.dart';
+import '../../../../features/recovery/presentation/widgets/recovery_flow_report_widget.dart';
 
 class ReceivableDetailScreen extends ConsumerStatefulWidget {
   final String personId;
@@ -34,8 +36,6 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        
-        
         title: Text('Recover from $name', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -66,10 +66,11 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
             child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final amount = double.tryParse(_recoverController.text.trim()) ?? 0.0;
               if (amount > 0) {
-                ref.read(mockDatabaseProvider.notifier).addRecoverTransaction(
+                Navigator.pop(context);
+                final txId = await ref.read(mockDatabaseProvider.notifier).addRecoverTransaction(
                   widget.personId,
                   'acc_primary_bank_uuid',
                   amount,
@@ -77,10 +78,9 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
                   DateTime.now().toUtc(),
                 );
                 _recoverController.clear();
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Recovery of $currency$amount recorded.')),
-                );
+                if (context.mounted) {
+                  await _showAllocationDialog(context, currency, name, amount, txId);
+                }
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
@@ -91,18 +91,41 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
     );
   }
 
-  void _handleSettle(double outstanding) {
+  Future<void> _showAllocationDialog(
+    BuildContext context,
+    String currency,
+    String personName,
+    double amount,
+    String txId,
+  ) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => RecoveryAllocationDialog(
+        personId: widget.personId,
+        personName: personName,
+        totalAmount: amount,
+        sourceTransactionId: txId,
+        currency: currency,
+      ),
+    );
+  }
+
+  Future<void> _handleSettle(BuildContext context, String currency, String name, double outstanding) async {
     if (outstanding > 0) {
-      ref.read(mockDatabaseProvider.notifier).addRecoverTransaction(
+      final txId = await ref.read(mockDatabaseProvider.notifier).addRecoverTransaction(
         widget.personId,
         'acc_primary_bank_uuid',
         outstanding,
         'Full debt settlement',
         DateTime.now().toUtc(),
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Receivable fully settled.')),
-      );
+      if (context.mounted) {
+        await _showAllocationDialog(context, currency, name, outstanding, txId);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Receivable fully settled.')),
+        );
+      }
     }
   }
 
@@ -338,7 +361,7 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
                     const SizedBox(width: 12),
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => _handleSettle(outstanding),
+                        onPressed: () => _handleSettle(context, currency, person.name, outstanding),
                         icon: const Icon(Icons.check, color: AppColors.darkSuccess),
                         label: const Text('Mark Settled', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                         style: OutlinedButton.styleFrom(
@@ -463,35 +486,40 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
                 ),
               const SizedBox(height: 24),
               GlassCard(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'AUDIT LOG INFORMATION',
-                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Created At', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
-                          Text(createdStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Last Edited', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
-                          Text(updatedStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
-                        ],
-                      ),
-                    ],
-                  ),
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'AUDIT LOG INFORMATION',
+                      style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Created At', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                        Text(createdStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Last Edited', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                        Text(updatedStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  ],
                 ),
               ),
+
+              // ─── Recovery Flow Report ────────────────────────────────────
+              RecoveryFlowReportWidget(
+                personId: widget.personId,
+                dbState: dbState,
+              ),
+              const SizedBox(height: 24),
             ],
           ),
         ),

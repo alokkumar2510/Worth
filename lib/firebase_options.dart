@@ -25,12 +25,12 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'placeholder-web-api-key',
-    appId: '1:1234567890:web:1234567890',
-    messagingSenderId: '1234567890',
-    projectId: 'worth-wealth-os',
-    authDomain: 'worth-wealth-os.firebaseapp.com',
-    storageBucket: 'worth-wealth-os.appspot.com',
+    apiKey: 'AIzaSyAmopUy17uih9yDdzzhJyujsdYKJVlnrgU',
+    appId: '1:478137199876:web:c538f52b7bcd6c7f493451',
+    messagingSenderId: '478137199876',
+    projectId: 'worth-app-alokk',
+    authDomain: 'worth-app-alokk.firebaseapp.com',
+    storageBucket: 'worth-app-alokk.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
@@ -50,10 +50,11 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'placeholder-windows-api-key',
-    appId: '1:1234567890:windows:1234567890',
-    messagingSenderId: '1234567890',
-    projectId: 'worth-wealth-os',
-    storageBucket: 'worth-wealth-os.appspot.com',
+    apiKey: 'AIzaSyAmopUy17uih9yDdzzhJyujsdYKJVlnrgU',
+    appId: '1:478137199876:web:c538f52b7bcd6c7f493451',
+    messagingSenderId: '478137199876',
+    projectId: 'worth-app-alokk',
+    authDomain: 'worth-app-alokk.firebaseapp.com',
+    storageBucket: 'worth-app-alokk.firebasestorage.app',
   );
 }

@@ -1,13 +1,17 @@
 import 'dart:async';
 import 'package:drift/drift.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../database/database.dart' as db;
 import '../../domain/entities/asset.dart' as domain;
 import '../../domain/repositories/asset_repository.dart';
+import '../../../../core/providers/app_providers.dart';
+import '../../../auth/providers/auth_providers.dart';
 
 class AssetRepositoryImpl implements AssetRepository {
   final db.AppDatabase _database;
+  final Ref _ref;
 
-  AssetRepositoryImpl(this._database);
+  AssetRepositoryImpl(this._database, this._ref);
 
   // Helper to combine streams reactively
   Stream<List<T>> _combineThreeStreams<A, B, C, T>(
@@ -223,6 +227,8 @@ class AssetRepositoryImpl implements AssetRepository {
     return null;
   }
 
+
+
   @override
   Future<void> createAsset(domain.Asset asset) async {
     await _database.transaction(() async {
@@ -261,6 +267,15 @@ class AssetRepositoryImpl implements AssetRepository {
             ));
       }
     });
+    await _ref.read(syncServiceProvider).queueOperation(
+      entityType: asset.type == 'receivable'
+          ? 'person'
+          : (['stock', 'mutual_fund', 'etf', 'gold', 'crypto', 'bond', 'fd'].contains(asset.type)
+              ? 'investment'
+              : 'account'),
+      entityId: asset.id,
+      operation: 'upsert',
+    );
   }
 
   @override
@@ -301,16 +316,35 @@ class AssetRepositoryImpl implements AssetRepository {
             ));
       }
     });
+    await _ref.read(syncServiceProvider).queueOperation(
+      entityType: asset.type == 'receivable'
+          ? 'person'
+          : (['stock', 'mutual_fund', 'etf', 'gold', 'crypto', 'bond', 'fd'].contains(asset.type)
+              ? 'investment'
+              : 'account'),
+      entityId: asset.id,
+      operation: 'upsert',
+    );
   }
 
   @override
   Future<void> deleteAsset(String id) async {
     final asset = await getAssetById(id);
     if (asset != null) {
-      await updateAsset(asset.copyWith(
+      final updated = asset.copyWith(
         isArchived: 1,
         updatedAt: DateTime.now(),
-      ));
+      );
+      await updateAsset(updated);
+      await _ref.read(syncServiceProvider).queueOperation(
+        entityType: asset.type == 'receivable'
+            ? 'person'
+            : (['stock', 'mutual_fund', 'etf', 'gold', 'crypto', 'bond', 'fd'].contains(asset.type)
+                ? 'investment'
+                : 'account'),
+        entityId: id,
+        operation: 'delete',
+      );
     }
   }
 

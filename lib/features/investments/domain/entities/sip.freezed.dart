@@ -36,12 +36,8 @@ mixin _$Sip {
   DateTime get updatedAt => throw _privateConstructorUsedError;
   String get syncStatus => throw _privateConstructorUsedError;
 
-  /// Serializes this Sip to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of Sip
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $SipCopyWith<Sip> get copyWith => throw _privateConstructorUsedError;
 }
 
@@ -74,8 +70,6 @@ class _$SipCopyWithImpl<$Res, $Val extends Sip> implements $SipCopyWith<$Res> {
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of Sip
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -172,8 +166,6 @@ class __$$SipImplCopyWithImpl<$Res> extends _$SipCopyWithImpl<$Res, _$SipImpl>
   __$$SipImplCopyWithImpl(_$SipImpl _value, $Res Function(_$SipImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of Sip
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -325,7 +317,7 @@ class _$SipImpl implements _Sip {
                 other.syncStatus == syncStatus));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
       runtimeType,
@@ -342,9 +334,7 @@ class _$SipImpl implements _Sip {
       updatedAt,
       syncStatus);
 
-  /// Create a copy of Sip
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$SipImplCopyWith<_$SipImpl> get copyWith =>
@@ -382,28 +372,25 @@ abstract class _Sip implements Sip {
   @override
   double get amount;
   @override
-  String get frequency; // monthly | weekly | quarterly
-  @override
-  int get sipDate; // day of month (1-31) or day of week (1-7)
-  @override
+  String get frequency;
+  @override // monthly | weekly | quarterly
+  int get sipDate;
+  @override // day of month (1-31) or day of week (1-7)
   DateTime get startDate;
   @override
   DateTime? get endDate;
   @override
-  int get autoCreate; // 0 = No, 1 = Yes
-  @override
-  int get isActive; // 0 = Inactive, 1 = Active
-  @override
+  int get autoCreate;
+  @override // 0 = No, 1 = Yes
+  int get isActive;
+  @override // 0 = Inactive, 1 = Active
   DateTime get createdAt;
   @override
   DateTime get updatedAt;
   @override
   String get syncStatus;
-
-  /// Create a copy of Sip
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$SipImplCopyWith<_$SipImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

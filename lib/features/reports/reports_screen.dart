@@ -282,8 +282,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   Text(
                     'ALLOCATION BREAKDOWN',
@@ -295,6 +298,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     ),
                   ),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       _buildTabPill('Assets', 0),
                       _buildTabPill('Liabilities', 1),
@@ -306,12 +310,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               const SizedBox(height: 24),
 
               // Allocation Pie Chart
-              SizedBox(
-                height: 160,
-                child: AllocationPieChart(
-                  data: activeAllocation,
-                  currency: currency,
-                ),
+              AllocationPieChart(
+                data: activeAllocation,
+                currency: currency,
               ),
             ],
           ),

@@ -31,12 +31,8 @@ mixin _$Goal {
   DateTime get updatedAt => throw _privateConstructorUsedError;
   String get syncStatus => throw _privateConstructorUsedError;
 
-  /// Serializes this Goal to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of Goal
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $GoalCopyWith<Goal> get copyWith => throw _privateConstructorUsedError;
 }
 
@@ -68,8 +64,6 @@ class _$GoalCopyWithImpl<$Res, $Val extends Goal>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of Goal
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -156,8 +150,6 @@ class __$$GoalImplCopyWithImpl<$Res>
   __$$GoalImplCopyWithImpl(_$GoalImpl _value, $Res Function(_$GoalImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of Goal
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -286,7 +278,7 @@ class _$GoalImpl implements _Goal {
                 other.syncStatus == syncStatus));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
       runtimeType,
@@ -301,9 +293,7 @@ class _$GoalImpl implements _Goal {
       updatedAt,
       syncStatus);
 
-  /// Create a copy of Goal
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$GoalImplCopyWith<_$GoalImpl> get copyWith =>
@@ -352,11 +342,8 @@ abstract class _Goal implements Goal {
   DateTime get updatedAt;
   @override
   String get syncStatus;
-
-  /// Create a copy of Goal
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$GoalImplCopyWith<_$GoalImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

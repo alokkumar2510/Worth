@@ -98,107 +98,39 @@ class _GlassCardState extends State<GlassCard> with TickerProviderStateMixin {
         ? AppColors.darkCard.withOpacity(0.55) 
         : Colors.white.withOpacity(0.7);
 
-    final borderGradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: isDark 
-          ? [
-              Colors.white.withOpacity(0.18),
-              Colors.white.withOpacity(0.03),
-              AppColors.darkPrimary.withOpacity(0.15),
-              Colors.white.withOpacity(0.01),
-            ]
-          : [
-              Colors.black.withOpacity(0.1),
-              Colors.black.withOpacity(0.02),
-              Colors.black.withOpacity(0.05),
+    final borderGradient = widget.borderColor != null
+        ? LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              widget.borderColor!,
+              widget.borderColor!.withOpacity(0.1),
             ],
-      stops: isDark ? const [0.0, 0.4, 0.8, 1.0] : null,
-    );
+          )
+        : LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark 
+                ? [
+                    Colors.white.withOpacity(0.18),
+                    Colors.white.withOpacity(0.03),
+                    AppColors.darkPrimary.withOpacity(0.15),
+                    Colors.white.withOpacity(0.01),
+                  ]
+                : [
+                    Colors.black.withOpacity(0.1),
+                    Colors.black.withOpacity(0.02),
+                    Colors.black.withOpacity(0.05),
+                  ],
+            stops: isDark ? const [0.0, 0.4, 0.8, 1.0] : null,
+          );
 
-    Widget cardBody = Stack(
-      children: [
-        // Background and Child Container
-        Container(
-          padding: widget.padding ?? const EdgeInsets.all(20.0),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(radius - 1.0),
-            gradient: widget.gradientColors != null
-                ? LinearGradient(
-                    colors: widget.gradientColors!,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  )
-                : null,
-            color: widget.gradientColors == null ? defaultBackground : null,
-          ),
-          child: widget.child,
-        ),
-
-        // Premium Noise Overlay Layer
-        Positioned.fill(
-          child: IgnorePointer(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(radius - 1.0),
-              child: CustomPaint(
-                painter: NoisePainter(
-                  opacity: isDark ? 0.012 : 0.008,
-                  density: 0.12,
-                ),
-              ),
-            ),
-          ),
-        ),
-
-        // Animated Glass Shine Sweep
-        if (isDark)
-          AnimatedBuilder(
-            animation: _shineController,
-            builder: (context, child) {
-              final value = _shineController.value;
-              final begin = Alignment(
-                -4.0 + (value * 8.0),
-                -4.0 + (value * 8.0),
-              );
-              final end = Alignment(
-                begin.x + 1.2,
-                begin.y + 1.2,
-              );
-              return Positioned.fill(
-                child: IgnorePointer(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(radius - 1.0),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: begin,
-                          end: end,
-                          colors: [
-                            Colors.transparent,
-                            Colors.white.withOpacity(0.07),
-                            Colors.transparent,
-                          ],
-                          stops: const [0.3, 0.5, 0.7],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-      ],
-    );
-
-    // Dynamic Scale Transition
     Widget animatedCard = ScaleTransition(
       scale: _scaleAnimation,
       child: Container(
         margin: widget.margin,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(radius),
-          // Gradient light-edge catch border
-          gradient: borderGradient,
           boxShadow: [
             BoxShadow(
               color: isDark ? const Color(0x3F000000) : const Color(0x0A000000),
@@ -215,13 +147,106 @@ class _GlassCardState extends State<GlassCard> with TickerProviderStateMixin {
               ),
           ],
         ),
-        // Glass backing padding of 1.0px to reveal gradient border catch
-        padding: const EdgeInsets.all(1.0),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(radius - 1.0),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: widget.blurSigma, sigmaY: widget.blurSigma),
-            child: cardBody,
+          borderRadius: BorderRadius.circular(radius),
+          child: Stack(
+            children: [
+              // 1. Background layer (expanded to full card width)
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(radius),
+                    gradient: widget.gradientColors != null
+                        ? LinearGradient(
+                            colors: widget.gradientColors!,
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
+                    color: widget.gradientColors == null ? defaultBackground : null,
+                  ),
+                ),
+              ),
+
+              // 2. Blur / BackdropFilter layer
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: widget.blurSigma, sigmaY: widget.blurSigma),
+                  child: const SizedBox(),
+                ),
+              ),
+
+              // 3. Premium Noise Overlay Layer
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(radius),
+                    child: CustomPaint(
+                      painter: NoisePainter(
+                        opacity: isDark ? 0.012 : 0.008,
+                        density: 0.12,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // 4. Animated Glass Shine Sweep (conditional)
+              if (isDark)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: AnimatedBuilder(
+                      animation: _shineController,
+                      builder: (context, child) {
+                        final value = _shineController.value;
+                        final begin = Alignment(
+                          -4.0 + (value * 8.0),
+                          -4.0 + (value * 8.0),
+                        );
+                        final end = Alignment(
+                          begin.x + 1.2,
+                          begin.y + 1.2,
+                        );
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(radius),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: begin,
+                                end: end,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.white.withOpacity(0.07),
+                                  Colors.transparent,
+                                ],
+                                stops: const [0.3, 0.5, 0.7],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+
+              // 5. Border Gradient Layer (Custom Paint)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: BorderGradientPainter(
+                      radius: radius,
+                      gradient: borderGradient,
+                    ),
+                  ),
+                ),
+              ),
+
+              // 6. Content child (non-positioned, determines the card size)
+              Container(
+                padding: widget.padding ?? const EdgeInsets.all(20.0),
+                child: widget.child,
+              ),
+            ],
           ),
         ),
       ),
@@ -240,6 +265,40 @@ class _GlassCardState extends State<GlassCard> with TickerProviderStateMixin {
     return animatedCard;
   }
 }
+
+class BorderGradientPainter extends CustomPainter {
+  final double radius;
+  final Gradient gradient;
+  final double strokeWidth;
+
+  BorderGradientPainter({
+    required this.radius,
+    required this.gradient,
+    this.strokeWidth = 1.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset(strokeWidth / 2, strokeWidth / 2) & 
+        Size(size.width - strokeWidth, size.height - strokeWidth);
+    final paint = Paint()
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..shader = gradient.createShader(rect);
+    
+    final adjustedRadius = math.max(0.0, radius - strokeWidth / 2);
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(adjustedRadius));
+    canvas.drawRRect(rrect, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant BorderGradientPainter oldDelegate) {
+    return oldDelegate.radius != radius || 
+           oldDelegate.gradient != gradient || 
+           oldDelegate.strokeWidth != strokeWidth;
+  }
+}
+
 
 class NoisePainter extends CustomPainter {
   final double opacity;

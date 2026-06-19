@@ -43,3 +43,13 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Graphify
+graphify-out/
+.graphifyignore
+
+# Agent configurations/workflows
+.agents/
+
+# Kotlin compiler cache
+android/.kotlin/

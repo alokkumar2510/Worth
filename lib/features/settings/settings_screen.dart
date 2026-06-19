@@ -10,6 +10,8 @@ import '../../core/widgets/glass_card.dart';
 import '../../core/providers/mock_database.dart';
 import '../../core/mock_data/mock_constants.dart';
 import '../auth/providers/auth_providers.dart';
+import '../sync/presentation/providers/sync_status_provider.dart';
+import '../../core/widgets/tactile_button.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -229,6 +231,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             const SizedBox(height: 24),
 
+            // Cloud Sync Section
+            _buildSectionHeader('CLOUD BACKUP & SYNC'),
+            const SizedBox(height: 8),
+            _buildCloudSyncCard(),
+            const SizedBox(height: 24),
+
             // Preferences Title
             _buildSectionHeader('PREFERENCES'),
             const SizedBox(height: 8),
@@ -418,6 +426,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     value: 'View and restore archived items',
                     onTap: () => context.push('/settings/archive_center'),
                   ),
+                  const Divider(color: AppColors.glassBorder, height: 1),
+                  _buildSettingsTile(
+                    icon: Icons.manage_search_outlined,
+                    title: 'Portfolio History Archive',
+                    value: 'Permanent timeline & time machine snapshots',
+                    onTap: () => context.push('/settings/history_archive'),
+                  ),
+                  const Divider(color: AppColors.glassBorder, height: 1),
+                  _buildSettingsTile(
+                    icon: Icons.account_tree_outlined,
+                    title: 'Recovery Allocation Report',
+                    value: 'See where recovered money was allocated',
+                    onTap: () => context.push('/settings/recovery_report'),
+                  ),
                 ],
               ),
             ),
@@ -519,6 +541,212 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         Text(label, style: const TextStyle(color: AppColors.grey500, fontSize: 12)),
         Text(val, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
       ],
+    );
+  }
+
+  Widget _buildCloudSyncCard() {
+    final syncState = ref.watch(syncStatusProvider);
+
+    Color statusColor;
+    IconData statusIcon;
+    Widget statusWidget;
+
+    switch (syncState.status) {
+      case SyncStatusType.synced:
+        statusColor = const Color(0xFF10B981); // Emerald Green
+        statusIcon = Icons.check_circle_rounded;
+        statusWidget = Icon(statusIcon, color: statusColor, size: 18);
+        break;
+      case SyncStatusType.syncing:
+        statusColor = AppColors.darkPrimary;
+        statusWidget = const SizedBox(
+          width: 14,
+          height: 14,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.darkPrimary),
+          ),
+        );
+        break;
+      case SyncStatusType.pending:
+        statusColor = const Color(0xFFF59E0B); // Amber
+        statusIcon = Icons.pending_actions_rounded;
+        statusWidget = Icon(statusIcon, color: statusColor, size: 18);
+        break;
+      case SyncStatusType.offline:
+        statusColor = AppColors.grey500;
+        statusIcon = Icons.cloud_off_rounded;
+        statusWidget = Icon(statusIcon, color: statusColor, size: 18);
+        break;
+      case SyncStatusType.error:
+        statusColor = const Color(0xFFEF4444); // Red
+        statusIcon = Icons.error_outline_rounded;
+        statusWidget = Icon(statusIcon, color: statusColor, size: 18);
+        break;
+    }
+
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.cloud_done_outlined, color: AppColors.darkPrimary, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Cloud Sync Status',
+                    style: GoogleFonts.outfit(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  statusWidget,
+                  const SizedBox(width: 6),
+                  Text(
+                    syncState.statusText,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: statusColor,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'LAST SYNC',
+                    style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    syncState.lastSyncedText,
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white70),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'CLOUD RECORDS',
+                    style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${syncState.cloudRecords}',
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white70),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: TactileButton(
+                  color: AppColors.layer2,
+                  border: const BorderSide(color: AppColors.glassBorder),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  onTap: syncState.status == SyncStatusType.syncing
+                      ? null
+                      : () => ref.read(syncStatusProvider.notifier).forceSync(),
+                  child: Text(
+                    'Sync Now',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TactileButton(
+                  color: AppColors.layer2,
+                  border: const BorderSide(color: AppColors.glassBorder),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  onTap: syncState.status == SyncStatusType.syncing
+                      ? null
+                      : () => ref.read(syncStatusProvider.notifier).manualBackup(),
+                  child: Text(
+                    'Backup Now',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TactileButton(
+                  color: AppColors.layer2,
+                  border: const BorderSide(color: AppColors.glassBorder),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  onTap: syncState.status == SyncStatusType.syncing
+                      ? null
+                      : () => _confirmRestore(context),
+                  child: Text(
+                    'Restore Profile',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmRestore(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: AppColors.glassBorder),
+        ),
+        title: Text(
+          'Restore Cloud Backup?',
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+        content: Text(
+          'This will wipe all local data, download your backup from the cloud, and rebuild your balance ledgers. Continue?',
+          style: GoogleFonts.inter(fontSize: 13, color: AppColors.grey400, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text('Cancel', style: GoogleFonts.inter(color: AppColors.grey500)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              ref.read(syncStatusProvider.notifier).manualRestore();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.darkPrimary,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Restore', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 

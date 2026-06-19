@@ -31,12 +31,8 @@ mixin _$InvestmentLot {
   DateTime get updatedAt => throw _privateConstructorUsedError;
   String get syncStatus => throw _privateConstructorUsedError;
 
-  /// Serializes this InvestmentLot to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of InvestmentLot
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $InvestmentLotCopyWith<InvestmentLot> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -70,8 +66,6 @@ class _$InvestmentLotCopyWithImpl<$Res, $Val extends InvestmentLot>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of InvestmentLot
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -160,8 +154,6 @@ class __$$InvestmentLotImplCopyWithImpl<$Res>
       _$InvestmentLotImpl _value, $Res Function(_$InvestmentLotImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of InvestmentLot
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -292,7 +284,7 @@ class _$InvestmentLotImpl implements _InvestmentLot {
                 other.syncStatus == syncStatus));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
       runtimeType,
@@ -307,9 +299,7 @@ class _$InvestmentLotImpl implements _InvestmentLot {
       updatedAt,
       syncStatus);
 
-  /// Create a copy of InvestmentLot
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$InvestmentLotImplCopyWith<_$InvestmentLotImpl> get copyWith =>
@@ -359,11 +349,8 @@ abstract class _InvestmentLot implements InvestmentLot {
   DateTime get updatedAt;
   @override
   String get syncStatus;
-
-  /// Create a copy of InvestmentLot
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$InvestmentLotImplCopyWith<_$InvestmentLotImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

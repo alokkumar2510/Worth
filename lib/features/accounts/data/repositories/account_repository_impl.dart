@@ -1,12 +1,16 @@
 import 'package:drift/drift.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../database/database.dart' as db;
 import '../../domain/entities/account.dart' as domain;
 import '../../domain/repositories/account_repository.dart';
+import '../../../../core/providers/app_providers.dart';
+import '../../../auth/providers/auth_providers.dart';
 
 class AccountRepositoryImpl implements AccountRepository {
   final db.AppDatabase _database;
+  final Ref _ref;
 
-  AccountRepositoryImpl(this._database);
+  AccountRepositoryImpl(this._database, this._ref);
 
   domain.Account _toDomain(db.Account entity) {
     return domain.Account(
@@ -57,6 +61,11 @@ class AccountRepositoryImpl implements AccountRepository {
   @override
   Future<void> createAccount(domain.Account account) async {
     await _database.into(_database.accounts).insert(_toCompanion(account));
+    await _ref.read(syncServiceProvider).queueOperation(
+      entityType: 'account',
+      entityId: account.id,
+      operation: 'upsert',
+    );
   }
 
   @override
@@ -72,17 +81,27 @@ class AccountRepositoryImpl implements AccountRepository {
       syncStatus: account.syncStatus,
     );
     await _database.update(_database.accounts).replace(dbAccount);
+    await _ref.read(syncServiceProvider).queueOperation(
+      entityType: 'account',
+      entityId: account.id,
+      operation: 'upsert',
+    );
   }
 
   @override
   Future<void> deleteAccount(String id) async {
-    // Clean Architecture Soft Delete Requirement
     final account = await getAccountById(id);
     if (account != null) {
-      await updateAccount(account.copyWith(
+      final updated = account.copyWith(
         isArchived: 1,
         updatedAt: DateTime.now().toUtc(),
-      ));
+      );
+      await updateAccount(updated);
+      await _ref.read(syncServiceProvider).queueOperation(
+        entityType: 'account',
+        entityId: id,
+        operation: 'delete',
+      );
     }
   }
 

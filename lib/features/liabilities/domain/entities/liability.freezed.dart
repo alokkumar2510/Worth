@@ -31,12 +31,8 @@ mixin _$Liability {
   DateTime get updatedAt => throw _privateConstructorUsedError;
   String get syncStatus => throw _privateConstructorUsedError;
 
-  /// Serializes this Liability to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of Liability
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $LiabilityCopyWith<Liability> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -68,8 +64,6 @@ class _$LiabilityCopyWithImpl<$Res, $Val extends Liability>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of Liability
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -152,8 +146,6 @@ class __$$LiabilityImplCopyWithImpl<$Res>
       _$LiabilityImpl _value, $Res Function(_$LiabilityImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of Liability
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -272,14 +264,12 @@ class _$LiabilityImpl implements _Liability {
                 other.syncStatus == syncStatus));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(runtimeType, id, name, type,
       outstandingAmount, notes, isArchived, createdAt, updatedAt, syncStatus);
 
-  /// Create a copy of Liability
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$LiabilityImplCopyWith<_$LiabilityImpl> get copyWith =>
@@ -313,8 +303,8 @@ abstract class _Liability implements Liability {
   @override
   String get name;
   @override
-  String get type; // credit_card | personal_loan | mortgage | other
-  @override
+  String get type;
+  @override // credit_card | personal_loan | mortgage | other
   double get outstandingAmount;
   @override
   String? get notes;
@@ -326,11 +316,8 @@ abstract class _Liability implements Liability {
   DateTime get updatedAt;
   @override
   String get syncStatus;
-
-  /// Create a copy of Liability
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$LiabilityImplCopyWith<_$LiabilityImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

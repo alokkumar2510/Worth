@@ -32,12 +32,8 @@ mixin _$ExpectedIncome {
   DateTime get updatedAt => throw _privateConstructorUsedError;
   String get syncStatus => throw _privateConstructorUsedError;
 
-  /// Serializes this ExpectedIncome to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of ExpectedIncome
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $ExpectedIncomeCopyWith<ExpectedIncome> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -71,8 +67,6 @@ class _$ExpectedIncomeCopyWithImpl<$Res, $Val extends ExpectedIncome>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of ExpectedIncome
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -161,8 +155,6 @@ class __$$ExpectedIncomeImplCopyWithImpl<$Res>
       _$ExpectedIncomeImpl _value, $Res Function(_$ExpectedIncomeImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of ExpectedIncome
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -290,7 +282,7 @@ class _$ExpectedIncomeImpl implements _ExpectedIncome {
                 other.syncStatus == syncStatus));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
       runtimeType,
@@ -305,9 +297,7 @@ class _$ExpectedIncomeImpl implements _ExpectedIncome {
       updatedAt,
       syncStatus);
 
-  /// Create a copy of ExpectedIncome
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$ExpectedIncomeImplCopyWith<_$ExpectedIncomeImpl> get copyWith =>
@@ -345,8 +335,8 @@ abstract class _ExpectedIncome implements ExpectedIncome {
   @override
   double get amount;
   @override
-  String get status; // pending | received | expired
-  @override
+  String get status;
+  @override // pending | received | expired
   DateTime? get expectedDate;
   @override
   String? get receivedTransactionId;
@@ -358,11 +348,8 @@ abstract class _ExpectedIncome implements ExpectedIncome {
   DateTime get updatedAt;
   @override
   String get syncStatus;
-
-  /// Create a copy of ExpectedIncome
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$ExpectedIncomeImplCopyWith<_$ExpectedIncomeImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

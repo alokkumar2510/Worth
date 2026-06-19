@@ -13,6 +13,7 @@ import '../../core/widgets/glass_card.dart';
 import '../../core/widgets/premium_chart.dart';
 import '../../core/providers/mock_database.dart';
 import '../../core/providers/dependency_provider.dart';
+import '../../core/providers/app_providers.dart';
 import '../../database/database.dart' hide Transaction, Snapshot, Account, Investment, Goal, ExpectedIncome, Milestone, Achievement, AchievementProgress;
 import '../transactions/domain/entities/transaction.dart';
 import '../reports/domain/entities/snapshot.dart';
@@ -38,6 +39,17 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   String _chartRange = 'ALL'; // '30D' | '90D' | '1Y' | 'ALL'
+  FlSpot? _hoveredSpot;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!ref.read(mockModeProvider)) {
+        ref.read(realReportServiceProvider).generateMissingSnapshots();
+      }
+    });
+  }
 
   void _openAddTransactionSheet(BuildContext context) {
     showModalBottomSheet(
@@ -259,11 +271,35 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildNetWorthCard(dynamic data, String currency, List<Snapshot> snapshots) {
+    // Filter and sort snapshots for correct index mapping
+    final now = DateTime.now();
+    final List<Snapshot> filtered;
+    if (_chartRange == '30D') {
+      filtered = snapshots.where((s) => now.difference(s.snapshotDate).inDays <= 30).toList();
+    } else if (_chartRange == '90D') {
+      filtered = snapshots.where((s) => now.difference(s.snapshotDate).inDays <= 90).toList();
+    } else if (_chartRange == '1Y') {
+      filtered = snapshots.where((s) => now.difference(s.snapshotDate).inDays <= 365).toList();
+    } else {
+      filtered = List.from(snapshots);
+    }
+
+    final sorted = filtered.length >= 2
+        ? (filtered..sort((a, b) => a.snapshotDate.compareTo(b.snapshotDate)))
+        : (List<Snapshot>.from(snapshots)..sort((a, b) => a.snapshotDate.compareTo(b.snapshotDate)));
+
+    final hoveredIdx = _hoveredSpot?.x.toInt();
+    final Snapshot? hoveredSnapshot = (hoveredIdx != null && hoveredIdx >= 0 && hoveredIdx < sorted.length)
+        ? sorted[hoveredIdx]
+        : null;
+
+    final double displayNetWorth = hoveredSnapshot != null ? hoveredSnapshot.netWorth : (data.netWorth as double);
+
     // Calculate growth compared to previous snapshots dynamically
     double growth = 0.0;
     if (snapshots.isNotEmpty) {
-      final sorted = List<Snapshot>.from(snapshots)..sort((a, b) => a.snapshotDate.compareTo(b.snapshotDate));
-      final prev = sorted.last.netWorth;
+      final allSorted = List<Snapshot>.from(snapshots)..sort((a, b) => a.snapshotDate.compareTo(b.snapshotDate));
+      final prev = allSorted.last.netWorth;
       if (prev > 0) {
         growth = (((data.netWorth as double) - prev) / prev) * 100;
       }
@@ -276,7 +312,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     
     return GlassCard(
       isPrimary: true,
-      borderColor: AppColors.darkPrimary.withOpacity(0.35),
+      borderColor: hoveredSnapshot != null 
+          ? AppColors.darkWarning.withOpacity(0.5)
+          : AppColors.darkPrimary.withOpacity(0.35),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -291,7 +329,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.darkPrimary.withOpacity(0.18),
+                    color: hoveredSnapshot != null
+                        ? AppColors.darkWarning.withOpacity(0.12)
+                        : AppColors.darkPrimary.withOpacity(0.18),
                     blurRadius: 40,
                     spreadRadius: 20,
                   ),
@@ -319,44 +359,102 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     onTap: () => context.push('/definitions'),
                     child: const Icon(Icons.info_outline, size: 14, color: AppColors.grey500),
                   ),
+                  const Spacer(),
+                  // Live vs Historical Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: hoveredSnapshot != null
+                          ? AppColors.darkWarning.withOpacity(0.12)
+                          : AppColors.darkSuccess.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: hoveredSnapshot != null
+                            ? AppColors.darkWarning.withOpacity(0.2)
+                            : AppColors.darkSuccess.withOpacity(0.2),
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: hoveredSnapshot != null ? AppColors.darkWarning : AppColors.darkSuccess,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          hoveredSnapshot != null ? 'HISTORICAL' : 'LIVE',
+                          style: GoogleFonts.inter(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: hoveredSnapshot != null ? AppColors.darkWarning : AppColors.darkSuccess,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
-              AnimatedNumberText(
-                value: data.netWorth as double,
-                currency: currency,
-                style: GoogleFonts.inter(
-                  fontSize: 48,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  letterSpacing: -1.5,
-                  height: 1.0,
-                ),
-              ),
+              // Use plain Text if scrubbing (hoveredSnapshot != null) to avoid lagginess, otherwise AnimatedNumberText
+              hoveredSnapshot != null
+                  ? Text(
+                      NumberFormat.currency(symbol: currency, decimalDigits: 0).format(displayNetWorth),
+                      style: GoogleFonts.inter(
+                        fontSize: 48,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: -1.5,
+                        height: 1.0,
+                      ),
+                    )
+                  : AnimatedNumberText(
+                      value: displayNetWorth,
+                      currency: currency,
+                      style: GoogleFonts.inter(
+                        fontSize: 48,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: -1.5,
+                        height: 1.0,
+                      ),
+                    ),
               const SizedBox(height: 18),
               Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: growthColor.withOpacity(0.12),
+                      color: hoveredSnapshot != null
+                          ? AppColors.darkWarning.withOpacity(0.12)
+                          : growthColor.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          growthIcon,
+                          hoveredSnapshot != null
+                              ? Icons.history_toggle_off_rounded
+                              : growthIcon,
                           size: 14,
-                          color: growthColor,
+                          color: hoveredSnapshot != null ? AppColors.darkWarning : growthColor,
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          growthText,
+                          hoveredSnapshot != null
+                              ? 'As of ${DateFormat('dd MMM yyyy').format(hoveredSnapshot.snapshotDate)}'
+                              : growthText,
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: growthColor,
+                            color: hoveredSnapshot != null ? AppColors.darkWarning : growthColor,
                           ),
                         ),
                       ],
@@ -703,26 +801,95 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildTrendChartCard(List<Snapshot> snapshots, String currency) {
+    final now = DateTime.now();
+    final List<Snapshot> filtered;
+    if (_chartRange == '30D') {
+      filtered = snapshots.where((s) => now.difference(s.snapshotDate).inDays <= 30).toList();
+    } else if (_chartRange == '90D') {
+      filtered = snapshots.where((s) => now.difference(s.snapshotDate).inDays <= 90).toList();
+    } else if (_chartRange == '1Y') {
+      filtered = snapshots.where((s) => now.difference(s.snapshotDate).inDays <= 365).toList();
+    } else {
+      filtered = List.from(snapshots);
+    }
+
+    final sorted = filtered.length >= 2
+        ? (filtered..sort((a, b) => a.snapshotDate.compareTo(b.snapshotDate)))
+        : (List<Snapshot>.from(snapshots)..sort((a, b) => a.snapshotDate.compareTo(b.snapshotDate)));
+
     final List<FlSpot> spots = [];
     final List<String> dates = [];
     
-    final sorted = List<Snapshot>.from(snapshots)..sort((a, b) => a.snapshotDate.compareTo(b.snapshotDate));
-    
     for (int i = 0; i < sorted.length; i++) {
       spots.add(FlSpot(i.toDouble(), sorted[i].netWorth));
-      dates.add(DateFormat('MMM yy').format(sorted[i].snapshotDate));
+      dates.add(DateFormat('dd MMM').format(sorted[i].snapshotDate));
+    }
+
+    // Compute period difference
+    double difference = 0.0;
+    double percentage = 0.0;
+    if (sorted.length >= 2) {
+      final firstVal = sorted.first.netWorth;
+      final lastVal = sorted.last.netWorth;
+      difference = lastVal - firstVal;
+      if (firstVal != 0) {
+        percentage = (difference / firstVal.abs()) * 100;
+      }
+    }
+
+    final hasGrowth = difference >= 0;
+    final growthColor = hasGrowth ? AppColors.darkSuccess : AppColors.darkDanger;
+    final growthSign = hasGrowth ? '+' : '-';
+    final growthIcon = hasGrowth ? Icons.trending_up : Icons.trending_down;
+
+    final formatter = NumberFormat.compact();
+
+    // Calculate period stats
+    double peakVal = 0.0;
+    double lowestVal = 0.0;
+    double averageVal = 0.0;
+    final isActualPlaceholder = sorted.length < 2;
+
+    if (!isActualPlaceholder) {
+      final netWorths = sorted.map((s) => s.netWorth).toList();
+      peakVal = netWorths.reduce((a, b) => a > b ? a : b);
+      lowestVal = netWorths.reduce((a, b) => a < b ? a : b);
+      averageVal = netWorths.reduce((a, b) => a + b) / netWorths.length;
     }
 
     return GlassCard(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Net Worth Trend',
-                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Net Worth Trend',
+                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  if (sorted.length >= 2) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(growthIcon, size: 12, color: growthColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$growthSign$currency${formatter.format(difference.abs())} (${percentage.toStringAsFixed(1)}%)',
+                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: growthColor),
+                        ),
+                        Text(
+                          ' this period',
+                          style: GoogleFonts.inter(fontSize: 10, color: AppColors.grey500),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
               ),
               // Filter Range selector
               Row(
@@ -732,6 +899,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     onTap: () {
                       setState(() {
                         _chartRange = range;
+                        _hoveredSpot = null; // Reset hovered spot when range changes
                       });
                     },
                     child: AnimatedContainer(
@@ -767,10 +935,54 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               spots: spots,
               dates: dates,
               currency: currency,
+              onSpotHover: (spot) {
+                setState(() {
+                  _hoveredSpot = spot;
+                });
+              },
             ),
           ),
+          if (!isActualPlaceholder) ...[
+            const SizedBox(height: 16),
+            const Divider(color: Colors.white10, height: 1),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildStatColumn('PEAK NW', peakVal, currency, formatter),
+                _buildStatColumn('LOWEST NW', lowestVal, currency, formatter),
+                _buildStatColumn('AVERAGE NW', averageVal, currency, formatter),
+              ],
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _buildStatColumn(String label, double value, String currency, NumberFormat formatter) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 9,
+            fontWeight: FontWeight.bold,
+            color: AppColors.grey500,
+            letterSpacing: 1.0,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '$currency${formatter.format(value)}',
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ],
     );
   }
 

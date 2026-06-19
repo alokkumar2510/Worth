@@ -1,12 +1,16 @@
 import 'package:drift/drift.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../database/database.dart' as db;
 import '../../domain/entities/expected_income.dart' as domain;
 import '../../domain/repositories/expected_income_repository.dart';
+import '../../../../core/providers/app_providers.dart';
+import '../../../auth/providers/auth_providers.dart';
 
 class ExpectedIncomeRepositoryImpl implements ExpectedIncomeRepository {
   final db.AppDatabase _database;
+  final Ref _ref;
 
-  ExpectedIncomeRepositoryImpl(this._database);
+  ExpectedIncomeRepositoryImpl(this._database, this._ref);
 
   domain.ExpectedIncome _toDomain(db.ExpectedIncome entity) {
     return domain.ExpectedIncome(
@@ -56,25 +60,42 @@ class ExpectedIncomeRepositoryImpl implements ExpectedIncomeRepository {
   Future<void> saveExpectedIncome(domain.ExpectedIncome income) async {
     final companion = _toCompanion(income);
     await _database.into(_database.expectedIncomes).insertOnConflictUpdate(companion);
+    await _ref.read(syncServiceProvider).queueOperation(
+      entityType: 'expected_income',
+      entityId: income.id,
+      operation: 'upsert',
+    );
   }
 
   @override
   Future<void> markAsReceived(String id, String toAccountId) async {
     await _database.transaction(() async {
       final query = _database.update(_database.expectedIncomes)..where((tbl) => tbl.id.equals(id));
+      final updatedAt = DateTime.now().toUtc();
       await query.write(db.ExpectedIncomesCompanion(
         status: const Value('received'),
-        updatedAt: Value(DateTime.now().toUtc()),
+        updatedAt: Value(updatedAt),
       ));
+      await _ref.read(syncServiceProvider).queueOperation(
+        entityType: 'expected_income',
+        entityId: id,
+        operation: 'upsert',
+      );
     });
   }
 
   @override
   Future<void> markAsExpired(String id) async {
     final query = _database.update(_database.expectedIncomes)..where((tbl) => tbl.id.equals(id));
+    final updatedAt = DateTime.now().toUtc();
     await query.write(db.ExpectedIncomesCompanion(
       status: const Value('expired'),
-      updatedAt: Value(DateTime.now().toUtc()),
+      updatedAt: Value(updatedAt),
     ));
+    await _ref.read(syncServiceProvider).queueOperation(
+      entityType: 'expected_income',
+      entityId: id,
+      operation: 'upsert',
+    );
   }
 }

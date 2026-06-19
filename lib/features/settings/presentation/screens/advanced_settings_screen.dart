@@ -1,10 +1,15 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/providers/mock_database.dart';
+import '../../../../core/providers/app_providers.dart';
+import '../../../../core/providers/dependency_provider.dart';
+import '../../../sync/presentation/providers/sync_status_provider.dart';
 
 class AdvancedSettingsScreen extends ConsumerStatefulWidget {
   const AdvancedSettingsScreen({super.key});
@@ -84,25 +89,61 @@ class _AdvancedSettingsScreenState extends ConsumerState<AdvancedSettingsScreen>
   }
 
   void _handleSync() {
-    setState(() {
-      _isSyncing = true;
-    });
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        setState(() {
-          _isSyncing = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Sync completed successfully.')),
-        );
-      }
-    });
+    ref.read(syncStatusProvider.notifier).forceSync();
   }
 
-  void _handleExport() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Exported backup file: worth_backup.json')),
-    );
+  void _handleExport() async {
+    try {
+      final backupService = ref.read(realBackupServiceProvider);
+      final passphrase = ref.read(databasePassphraseProvider);
+      
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(18)),
+          ),
+          content: Row(
+            children: [
+              CircularProgressIndicator(color: AppColors.darkPrimary),
+              SizedBox(width: 20),
+              Text('Exporting backup...', style: TextStyle(color: Colors.white)),
+            ],
+          ),
+        ),
+      );
+
+      final encryptedJson = await backupService.exportBackup(passphrase);
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/worth_backup.json');
+      await file.writeAsString(encryptedJson);
+
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Exported backup file to: ${file.path}'),
+            duration: const Duration(seconds: 8),
+            action: SnackBarAction(
+              label: 'DISMISS',
+              textColor: AppColors.darkPrimary,
+              onPressed: () {},
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context); // Close loading if open
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to export backup: $e')),
+        );
+      }
+    }
   }
 
   void _handleImport() {
@@ -110,8 +151,63 @@ class _AdvancedSettingsScreenState extends ConsumerState<AdvancedSettingsScreen>
       title: 'Import Backup?',
       content: 'Importing worth_backup.json will overwrite all local ledger history, lots, and details. This action cannot be undone.',
       confirmText: 'Import',
-      onConfirm: () {
-        _handleRecalculate();
+      onConfirm: () async {
+        try {
+          final dir = await getApplicationDocumentsDirectory();
+          final file = File('${dir.path}/worth_backup.json');
+          if (!await file.exists()) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('No backup file found at: ${file.path}')),
+              );
+            }
+            return;
+          }
+
+          // Show loading dialog
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => const AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(18)),
+              ),
+              content: Row(
+                children: [
+                  CircularProgressIndicator(color: AppColors.darkPrimary),
+                  SizedBox(width: 20),
+                  Text('Importing backup...', style: TextStyle(color: Colors.white)),
+                ],
+              ),
+            ),
+          );
+
+          final encryptedJson = await file.readAsString();
+          final backupService = ref.read(realBackupServiceProvider);
+          final passphrase = ref.read(databasePassphraseProvider);
+
+          await backupService.restoreBackup(encryptedJson, passphrase);
+
+          // Rebuild caches and reload database state
+          await ref.read(mockDatabaseProvider.notifier).loadStateFromDatabase();
+          ref.read(mockDatabaseProvider.notifier).recalculateBalances();
+
+          // Close loading dialog
+          if (mounted) Navigator.pop(context);
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Backup imported and database restored successfully.')),
+            );
+          }
+        } catch (e) {
+          if (mounted) Navigator.pop(context); // Close loading if open
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to import backup: $e')),
+            );
+          }
+        }
       },
     );
   }
@@ -281,14 +377,14 @@ class _AdvancedSettingsScreenState extends ConsumerState<AdvancedSettingsScreen>
                     icon: Icons.sync_rounded,
                     title: 'Sync Now',
                     subtitle: 'Triggers a push/pull sync with the remote cloud replica.',
-                    trailingWidget: _isSyncing
+                    trailingWidget: ref.watch(syncStatusProvider).status == SyncStatusType.syncing
                         ? const SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(color: AppColors.darkPrimary, strokeWidth: 2),
                           )
                         : null,
-                    onTap: _isSyncing ? () {} : _handleSync,
+                    onTap: ref.watch(syncStatusProvider).status == SyncStatusType.syncing ? () {} : _handleSync,
                   ),
                   const Divider(color: AppColors.glassBorder, height: 1),
                   _buildActionTile(

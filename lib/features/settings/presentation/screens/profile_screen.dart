@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/asset_paths.dart';
 import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/providers/mock_database.dart';
 import '../../../../features/auth/providers/auth_providers.dart';
@@ -118,7 +119,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       CircleAvatar(
                         radius: 38,
                         backgroundColor: tierColor.withOpacity(0.12),
-                        child: Icon(Icons.radar_rounded, size: 40, color: tierColor),
+                        child: Center(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(30),
+                            child: Image.asset(
+                              AssetPaths.logoMark,
+                              width: 44,
+                              height: 44,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Text(

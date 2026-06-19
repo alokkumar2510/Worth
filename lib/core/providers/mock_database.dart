@@ -38,6 +38,10 @@ class MockDatabaseState {
   final List<Sip> sips;
   final List<String> categories;
   final List<String> customLabels;
+  final List<PortfolioHistory> portfolioHistory;
+  final List<PortfolioSnapshot> portfolioSnapshots;
+  final List<RecoveryAllocation> recoveryAllocations;
+  final List<RecoveryDestination> recoveryDestinations;
   
   // Settings & Auth State
   final String currency;
@@ -78,6 +82,10 @@ class MockDatabaseState {
     required this.sips,
     required this.categories,
     required this.customLabels,
+    required this.portfolioHistory,
+    required this.portfolioSnapshots,
+    required this.recoveryAllocations,
+    required this.recoveryDestinations,
     required this.currency,
     required this.themeMode,
     required this.appLockEnabled,
@@ -117,6 +125,10 @@ class MockDatabaseState {
     List<Sip>? sips,
     List<String>? categories,
     List<String>? customLabels,
+    List<PortfolioHistory>? portfolioHistory,
+    List<PortfolioSnapshot>? portfolioSnapshots,
+    List<RecoveryAllocation>? recoveryAllocations,
+    List<RecoveryDestination>? recoveryDestinations,
     String? currency,
     String? themeMode,
     bool? appLockEnabled,
@@ -155,6 +167,10 @@ class MockDatabaseState {
       sips: sips ?? this.sips,
       categories: categories ?? this.categories,
       customLabels: customLabels ?? this.customLabels,
+      portfolioHistory: portfolioHistory ?? this.portfolioHistory,
+      portfolioSnapshots: portfolioSnapshots ?? this.portfolioSnapshots,
+      recoveryAllocations: recoveryAllocations ?? this.recoveryAllocations,
+      recoveryDestinations: recoveryDestinations ?? this.recoveryDestinations,
       currency: currency ?? this.currency,
       themeMode: themeMode ?? this.themeMode,
       appLockEnabled: appLockEnabled ?? this.appLockEnabled,
@@ -421,6 +437,95 @@ class MockDatabaseState {
     }
     return total;
   }
+
+  MockDatabaseState reconstructPortfolioOnDate(DateTime targetDate) {
+    // 1. Filter transactions on or before targetDate
+    final filteredTxs = transactions.where((tx) => !tx.transactionDate.isAfter(targetDate)).toList();
+    final filteredTxIds = filteredTxs.map((t) => t.id).toSet();
+    
+    // 2. Filter adjustments on or before targetDate
+    final filteredAdjustments = adjustments.where((adj) => !adj.createdAt.isAfter(targetDate)).toList();
+
+    // 3. Reconstruct investment lots as of targetDate
+    final reconstructedLots = investmentLots.where((lot) => !lot.purchaseDate.isAfter(targetDate)).map((lot) {
+      double consumedBeforeTarget = 0.0;
+      for (final cons in investmentLotConsumptions) {
+        if (cons.lotId == lot.id && filteredTxIds.contains(cons.sellTransactionId)) {
+          consumedBeforeTarget += cons.unitsConsumed;
+        }
+      }
+      return lot.copyWith(
+        unitsRemaining: lot.unitsPurchased - consumedBeforeTarget,
+      );
+    }).toList();
+
+    // 4. Reconstruct expected incomes as of targetDate
+    final reconstructedExpectedIncomes = expectedIncomes.where((i) => !i.createdAt.isAfter(targetDate)).map((i) {
+      final isReceivedAfterTarget = i.status == 'received' && 
+          i.receivedTransactionId != null && 
+          !filteredTxIds.contains(i.receivedTransactionId);
+      if (isReceivedAfterTarget) {
+        return i.copyWith(status: 'pending');
+      }
+      return i;
+    }).toList();
+
+    // 5. Reconstruct MTF positions as of targetDate
+    final reconstructedMtf = mtfPositions.where((p) => !p.openingDate.isAfter(targetDate)).map((p) {
+      final closedDateVal = p.closedDate;
+      final isClosedAfterTarget = p.isClosed == 1 && 
+          closedDateVal != null && 
+          closedDateVal.isAfter(targetDate);
+      if (isClosedAfterTarget) {
+        return p.copyWith(isClosed: 0, closedDate: const Value(null));
+      }
+      return p;
+    }).toList();
+
+    // 6. Return a reconstructed MockDatabaseState
+    return MockDatabaseState(
+      accounts: accounts.where((a) => !a.createdAt.isAfter(targetDate)).toList(),
+      people: people.where((p) => !p.createdAt.isAfter(targetDate)).toList(),
+      investments: investments.where((i) => !i.createdAt.isAfter(targetDate)).toList(),
+      investmentLots: reconstructedLots,
+      investmentLotConsumptions: investmentLotConsumptions.where((c) => filteredTxIds.contains(c.sellTransactionId)).toList(),
+      transactions: filteredTxs,
+      expectedIncomes: reconstructedExpectedIncomes,
+      goals: goals.where((g) => !g.createdAt.isAfter(targetDate)).toList(),
+      snapshots: snapshots.where((s) => !s.snapshotDate.isAfter(targetDate)).toList(),
+      adjustments: filteredAdjustments,
+      ipoPools: ipoPools.where((p) => !p.createdAt.isAfter(targetDate)).toList(),
+      mtfPositions: reconstructedMtf,
+      sips: sips.where((s) => !s.startDate.isAfter(targetDate)).toList(),
+      categories: categories,
+      customLabels: customLabels,
+      portfolioHistory: portfolioHistory.where((h) => !h.createdAt.isAfter(targetDate)).toList(),
+      portfolioSnapshots: portfolioSnapshots.where((s) => !s.snapshotDate.isAfter(targetDate)).toList(),
+      recoveryAllocations: recoveryAllocations.where((a) => !a.createdAt.isAfter(targetDate)).toList(),
+      recoveryDestinations: recoveryDestinations.where((d) => !d.createdAt.isAfter(targetDate)).toList(),
+      currency: currency,
+      themeMode: themeMode,
+      appLockEnabled: appLockEnabled,
+      appLockPin: appLockPin,
+      appLockTimeout: appLockTimeout,
+      isLoggedIn: isLoggedIn,
+      isOnboarded: isOnboarded,
+      onboardingCompleted: onboardingCompleted,
+      firstAccountCreated: firstAccountCreated,
+      checkInEnabled: checkInEnabled,
+      checkInTimes: checkInTimes,
+      checkInReminderCount: checkInReminderCount,
+      checkInCompletedDate: checkInCompletedDate,
+      lastTriggeredCheckIn: lastTriggeredCheckIn,
+      notificationsEnabled: notificationsEnabled,
+      notificationPrefTransactions: notificationPrefTransactions,
+      notificationPrefCheckIns: notificationPrefCheckIns,
+      notificationPrefSip: notificationPrefSip,
+      notificationPrefGoals: notificationPrefGoals,
+      notificationsAsked: notificationsAsked,
+      userCreatedAt: userCreatedAt,
+    );
+  }
 }
 
 class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
@@ -435,6 +540,207 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         loadStateFromDatabase();
       });
     }
+  }
+
+  Future<void> _logHistory({
+    required String action,
+    required String entityType,
+    required String entityId,
+    required String entityName,
+    required String valueChanged,
+    String? previousValue,
+    String? newValue,
+    String? detailsJson,
+  }) async {
+    final isMock = _ref.read(mockModeProvider);
+    final now = DateTime.now().toUtc();
+    final historyId = _uuid.v4();
+    
+    final historyEntry = PortfolioHistory(
+      id: historyId,
+      createdAt: now,
+      action: action,
+      entityType: entityType,
+      entityId: entityId,
+      entityTitle: entityName,
+      valueChanged: valueChanged,
+      previousValue: previousValue,
+      newValue: newValue,
+      detailsJson: detailsJson,
+    );
+    
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await db.into(db.portfolioHistories).insert(historyEntry);
+    } else {
+      state = state.copyWith(
+        portfolioHistory: [historyEntry, ...state.portfolioHistory],
+      );
+    }
+  }
+
+  MockDatabaseState _calculatePortfolioSnapshots(MockDatabaseState value) {
+    final now = DateTime.now();
+    final todayMidnight = DateTime(now.year, now.month, now.day);
+    
+    final dailyDate = todayMidnight;
+    final weeklyDate = todayMidnight.subtract(Duration(days: todayMidnight.weekday - 1));
+    final monthlyDate = DateTime(todayMidnight.year, todayMidnight.month, 1);
+    
+    final netWorthVal = value.netWorth;
+    final assetsVal = value.totalAssets;
+    final liabilitiesVal = value.totalLiabilities;
+    final investmentsVal = value.totalInvestedCapital;
+    
+    double receivablesVal = 0.0;
+    for (final p in value.people) {
+      if (p.isArchived == 0) {
+        receivablesVal += value.getPersonReceivableBalance(p.id);
+      }
+    }
+    
+    final List<PortfolioSnapshot> currentSnaps = List.from(value.portfolioSnapshots);
+    bool changed = false;
+    
+    void processType(String type, DateTime date) {
+      final idx = currentSnaps.indexWhere((s) => s.snapshotType == type && s.snapshotDate.year == date.year && s.snapshotDate.month == date.month && s.snapshotDate.day == date.day);
+      if (idx == -1) {
+        final newSnap = PortfolioSnapshot(
+          id: _uuid.v4(),
+          snapshotDate: date,
+          snapshotType: type,
+          netWorth: netWorthVal,
+          assets: assetsVal,
+          liabilities: liabilitiesVal,
+          investments: investmentsVal,
+          receivables: receivablesVal,
+          createdAt: now.toUtc(),
+        );
+        currentSnaps.add(newSnap);
+        changed = true;
+        
+        final isMock = _ref.read(mockModeProvider);
+        if (!isMock) {
+          final db = _ref.read(realDatabaseProvider);
+          db.into(db.portfolioSnapshots).insert(newSnap).catchError((_) => 0);
+        }
+      } else {
+        final existing = currentSnaps[idx];
+        if (existing.netWorth != netWorthVal ||
+            existing.assets != assetsVal ||
+            existing.liabilities != liabilitiesVal ||
+            existing.investments != investmentsVal ||
+            existing.receivables != receivablesVal) {
+          final updated = PortfolioSnapshot(
+            id: existing.id,
+            snapshotDate: existing.snapshotDate,
+            snapshotType: existing.snapshotType,
+            netWorth: netWorthVal,
+            assets: assetsVal,
+            liabilities: liabilitiesVal,
+            investments: investmentsVal,
+            receivables: receivablesVal,
+            createdAt: existing.createdAt,
+          );
+          currentSnaps[idx] = updated;
+          changed = true;
+          
+          final isMock = _ref.read(mockModeProvider);
+          if (!isMock) {
+            final db = _ref.read(realDatabaseProvider);
+            db.into(db.portfolioSnapshots).insertOnConflictUpdate(updated).catchError((_) => 0);
+          }
+        }
+      }
+    }
+    
+    processType('daily', dailyDate);
+    processType('weekly', weeklyDate);
+    processType('monthly', monthlyDate);
+    
+    if (changed) {
+      currentSnaps.sort((a, b) => b.snapshotDate.compareTo(a.snapshotDate));
+      return value.copyWith(portfolioSnapshots: currentSnaps);
+    }
+    return value;
+  }
+
+  @override
+  set state(MockDatabaseState value) {
+    // 1. Set the new state first
+    super.state = value;
+
+    // 2. Compute today's values
+    final now = DateTime.now();
+    final todayMidnight = DateTime(now.year, now.month, now.day);
+    final assetsVal = value.totalAssets;
+    final liabilitiesVal = value.totalLiabilities;
+    final netWorthVal = value.netWorth;
+    final investedCapitalVal = value.totalInvestedCapital;
+    final expectedIncomeVal = value.totalExpectedIncome;
+
+    double receivablesVal = 0.0;
+    for (final p in value.people) {
+      if (p.isArchived == 0) {
+        receivablesVal += value.getPersonReceivableBalance(p.id);
+      }
+    }
+
+    final existingIndex = value.snapshots.indexWhere((s) {
+      final sDate = s.snapshotDate;
+      return sDate.year == todayMidnight.year && sDate.month == todayMidnight.month && sDate.day == todayMidnight.day;
+    });
+
+    bool needsUpdate = false;
+    if (existingIndex == -1) {
+      needsUpdate = true;
+    } else {
+      final existing = value.snapshots[existingIndex];
+      if (existing.netWorth != netWorthVal ||
+          existing.assets != assetsVal ||
+          existing.liabilities != liabilitiesVal ||
+          existing.receivables != receivablesVal ||
+          existing.investedCapital != investedCapitalVal ||
+          existing.expectedIncome != expectedIncomeVal) {
+        needsUpdate = true;
+      }
+    }
+
+    List<Snapshot> updatedSnapshots = value.snapshots;
+    if (needsUpdate) {
+      final List<Snapshot> newList = List.from(value.snapshots);
+      if (existingIndex != -1) {
+        newList[existingIndex] = newList[existingIndex].copyWith(
+          netWorth: netWorthVal,
+          assets: assetsVal,
+          liabilities: liabilitiesVal,
+          receivables: receivablesVal,
+          investedCapital: investedCapitalVal,
+          expectedIncome: expectedIncomeVal,
+          updatedAt: now,
+        );
+      } else {
+        newList.add(Snapshot(
+          id: _uuid.v4(),
+          snapshotDate: todayMidnight,
+          netWorth: netWorthVal,
+          assets: assetsVal,
+          liabilities: liabilitiesVal,
+          receivables: receivablesVal,
+          investedCapital: investedCapitalVal,
+          expectedIncome: expectedIncomeVal,
+          createdAt: now,
+          updatedAt: now,
+          syncStatus: 'pending',
+        ));
+      }
+      updatedSnapshots = newList;
+    }
+
+    final valueWithSnaps = value.copyWith(snapshots: updatedSnapshots);
+    final valueWithPortfolioSnaps = _calculatePortfolioSnapshots(valueWithSnaps);
+    
+    super.state = valueWithPortfolioSnaps;
   }
 
   void _queueSync(String entityType, String entityId, String operation) {
@@ -468,6 +774,10 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final settingsList = await db.select(db.settings).get();
       final rawMtfPositions = await db.select(db.mtfPositions).get();
       final rawSips = await db.select(db.sips).get();
+      final rawPortfolioHistory = await db.select(db.portfolioHistories).get();
+      final rawPortfolioSnapshots = await db.select(db.portfolioSnapshots).get();
+      final rawRecoveryAllocations = await db.select(db.recoveryAllocations).get();
+      final rawRecoveryDestinations = await db.select(db.recoveryDestinations).get();
 
       final accounts = rawAccounts.where((x) => x.deletedAt == null).toList();
       final people = rawPeople.where((x) => x.deletedAt == null).toList();
@@ -477,6 +787,8 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final goals = rawGoals.where((x) => x.deletedAt == null).toList();
       final mtfPositions = rawMtfPositions.where((x) => x.deletedAt == null).toList();
       final sips = rawSips.where((x) => x.deletedAt == null).toList();
+      final portfolioHistory = rawPortfolioHistory.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      final portfolioSnapshots = rawPortfolioSnapshots.toList()..sort((a, b) => b.snapshotDate.compareTo(a.snapshotDate));
 
       final settingsMap = {for (var s in settingsList) s.key: s.value};
 
@@ -596,6 +908,10 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         sips: sips,
         categories: categories,
         customLabels: customLabels,
+        portfolioHistory: portfolioHistory,
+        portfolioSnapshots: portfolioSnapshots,
+        recoveryAllocations: rawRecoveryAllocations.toList(),
+        recoveryDestinations: rawRecoveryDestinations.toList(),
         currency: currency,
         themeMode: themeMode,
         appLockEnabled: appLockEnabled,
@@ -880,6 +1196,15 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       }
     }
 
+    _logHistory(
+      action: type == 'credit' ? 'Added Liability' : 'Added Asset',
+      entityType: type == 'credit' ? 'Liability' : 'Asset',
+      entityId: actualId,
+      entityName: name,
+      valueChanged: 'Opening Balance: ${state.currency}${openingBalance.toStringAsFixed(0)}',
+      newValue: '${state.currency}${openingBalance.toStringAsFixed(0)}',
+    );
+
     return newAccount;
   }
 
@@ -910,6 +1235,14 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         }).toList(),
       );
     }
+    final account = state.accounts.firstWhere((a) => a.id == accountId);
+    _logHistory(
+      action: account.type == 'credit' ? 'Deleted Liability' : 'Deleted Asset',
+      entityType: account.type == 'credit' ? 'Liability' : 'Asset',
+      entityId: accountId,
+      entityName: account.name,
+      valueChanged: 'Archived',
+    );
   }
 
   Future<void> updateAccount(String id, String name, String type, String? notes) async {
@@ -943,21 +1276,50 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         }).toList(),
       );
     }
+    final account = state.accounts.firstWhere((a) => a.id == id);
+    _logHistory(
+      action: account.type == 'credit' ? 'Edited Liability' : 'Edited Asset',
+      entityType: account.type == 'credit' ? 'Liability' : 'Asset',
+      entityId: id,
+      entityName: name,
+      valueChanged: 'Details updated',
+      previousValue: account.name,
+      newValue: name,
+    );
   }
 
   Future<bool> deleteAccountEmpty(String id) async {
+    final account = state.accounts.firstWhereOrNull((a) => a.id == id);
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
       final countQuery = db.select(db.transactions)..where((tbl) => tbl.fromAccountId.equals(id) | tbl.toAccountId.equals(id));
       final count = (await countQuery.get()).length;
       if (count > 0) return false;
+      if (account != null) {
+        _logHistory(
+          action: account.type == 'credit' ? 'Deleted Liability' : 'Deleted Asset',
+          entityType: account.type == 'credit' ? 'Liability' : 'Asset',
+          entityId: id,
+          entityName: account.name,
+          valueChanged: 'Permanently Deleted',
+        );
+      }
       await (db.delete(db.accounts)..where((tbl) => tbl.id.equals(id))).go();
       _queueSync('account', id, 'delete');
       return true;
     } else {
       final count = state.transactions.where((t) => t.fromAccountId == id || t.toAccountId == id).length;
       if (count > 0) return false;
+      if (account != null) {
+        _logHistory(
+          action: account.type == 'credit' ? 'Deleted Liability' : 'Deleted Asset',
+          entityType: account.type == 'credit' ? 'Liability' : 'Asset',
+          entityId: id,
+          entityName: account.name,
+          valueChanged: 'Permanently Deleted',
+        );
+      }
       state = state.copyWith(accounts: state.accounts.where((a) => a.id != id).toList());
       return true;
     }
@@ -1147,14 +1509,151 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     );
   }
 
-  Future<void> addRecoverTransaction(String personId, String toAccountId, double amount, String? notes, DateTime date) async {
-    await addTransaction(
+  Future<String> addRecoverTransaction(String personId, String toAccountId, double amount, String? notes, DateTime date) async {
+    final tx = await addTransaction(
       type: 'recover_money',
       amount: amount,
       toAccountId: toAccountId,
       personId: personId,
       notes: notes,
       date: date,
+    );
+    return tx.id;
+  }
+
+  /// Represents a single allocation destination for a recovery event.
+  /// destinationType: Cash | BankAccount | Investment | MTFPosition | EmergencyFund | Goal | Asset | Custom
+  Future<void> addRecoveryAllocation({
+    required String personId,
+    required String sourceTransactionId,
+    required double totalAmount,
+    required List<Map<String, dynamic>> destinations,
+    // Each destination: {type, destinationId?, destinationLabel, amount}
+    String? notes,
+  }) async {
+    final now = DateTime.now().toUtc();
+    final allocationId = _uuid.v4();
+    final double allocatedAmount = destinations.fold(0.0, (sum, d) => sum + (d['amount'] as double));
+    final double unallocatedAmount = (totalAmount - allocatedAmount).clamp(0.0, double.infinity);
+
+    final allocationRecord = RecoveryAllocation(
+      id: allocationId,
+      personId: personId,
+      sourceTransactionId: sourceTransactionId,
+      totalAmount: totalAmount,
+      allocatedAmount: allocatedAmount,
+      unallocatedAmount: unallocatedAmount,
+      notes: notes,
+      createdAt: now,
+    );
+
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await db.into(db.recoveryAllocations).insert(allocationRecord);
+    }
+
+    final List<RecoveryDestination> destRecords = [];
+    for (final dest in destinations) {
+      final destId = _uuid.v4();
+      final destType = dest['type'] as String;
+      final destLabel = dest['destinationLabel'] as String;
+      final destAmount = dest['amount'] as double;
+      final destEntityId = dest['destinationId'] as String?;
+
+      String? linkedTxId;
+
+      // Create the actual linked transaction for this destination
+      switch (destType) {
+        case 'BankAccount':
+        case 'Asset':
+        case 'EmergencyFund':
+          // Transfer money into the destination account
+          if (destEntityId != null) {
+            final linkedTx = await addTransaction(
+              type: 'transfer',
+              amount: destAmount,
+              toAccountId: destEntityId,
+              notes: 'Recovery allocation → $destLabel',
+              date: now,
+            );
+            linkedTxId = linkedTx.id;
+          }
+          break;
+        case 'Investment':
+          if (destEntityId != null) {
+            final linkedTx = await addTransaction(
+              type: 'investment_buy',
+              amount: destAmount,
+              investmentId: destEntityId,
+              notes: 'Recovery allocation → $destLabel',
+              date: now,
+            );
+            linkedTxId = linkedTx.id;
+          }
+          break;
+        case 'Goal':
+          if (destEntityId != null) {
+            // Add contribution to goal currentAmount
+            final goal = state.goals.firstWhereOrNull((g) => g.id == destEntityId);
+            if (goal != null) {
+              final newAmount = goal.currentAmount + destAmount;
+              final db2 = isMock ? null : _ref.read(realDatabaseProvider);
+              if (!isMock && db2 != null) {
+                await (db2.update(db2.goals)
+                  ..where((tbl) => tbl.id.equals(destEntityId)))
+                  .write(GoalsCompanion(currentAmount: Value(newAmount), updatedAt: Value(now)));
+              } else {
+                final updated = goal.copyWith(currentAmount: newAmount, updatedAt: now);
+                state = state.copyWith(
+                  goals: state.goals.map((g) => g.id == destEntityId ? updated : g).toList(),
+                );
+              }
+            }
+          }
+          break;
+        case 'Cash':
+        case 'Custom':
+        default:
+          // No linked transaction needed — just record the allocation destination
+          break;
+      }
+
+      final destRecord = RecoveryDestination(
+        id: destId,
+        allocationId: allocationId,
+        destinationType: destType,
+        destinationId: destEntityId,
+        destinationLabel: destLabel,
+        amount: destAmount,
+        linkedTransactionId: linkedTxId,
+        createdAt: now,
+      );
+      destRecords.add(destRecord);
+
+      if (!isMock) {
+        final db = _ref.read(realDatabaseProvider);
+        await db.into(db.recoveryDestinations).insert(destRecord);
+      }
+    }
+
+    // Update in-memory state
+    state = state.copyWith(
+      recoveryAllocations: [allocationRecord, ...state.recoveryAllocations],
+      recoveryDestinations: [...destRecords, ...state.recoveryDestinations],
+    );
+
+    // Log to portfolio history
+    final person = state.people.firstWhereOrNull((p) => p.id == personId);
+    final personName = person?.name ?? 'Unknown';
+    final destSummary = destinations.map((d) => '${d["destinationLabel"]}: ${state.currency}${(d["amount"] as double).toStringAsFixed(0)}').join(', ');
+    _logHistory(
+      action: 'Recovery Allocated',
+      entityType: 'Receivable',
+      entityId: personId,
+      entityName: personName,
+      valueChanged: 'Recovered ${state.currency}${totalAmount.toStringAsFixed(0)} → $destSummary',
+      newValue: '${state.currency}${allocatedAmount.toStringAsFixed(0)} allocated',
     );
   }
 
@@ -1193,6 +1692,14 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     } else {
       state = state.copyWith(investments: [...state.investments, newInvestment]);
     }
+    _logHistory(
+      action: 'Added Investment',
+      entityType: 'Investment',
+      entityId: id,
+      entityName: name,
+      valueChanged: 'Initial market value: ${state.currency}${marketValue.toStringAsFixed(0)}',
+      newValue: '${state.currency}${marketValue.toStringAsFixed(0)}',
+    );
     return newInvestment;
   }
 
@@ -1223,6 +1730,16 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         }).toList(),
       );
     }
+    final investment = state.investments.firstWhere((i) => i.id == investmentId);
+    _logHistory(
+      action: 'Edited Investment',
+      entityType: 'Investment',
+      entityId: investmentId,
+      entityName: investment.name,
+      valueChanged: 'Market Value: ${state.currency}${newValue.toStringAsFixed(0)}',
+      previousValue: '${state.currency}${(investment.marketValue ?? 0.0).toStringAsFixed(0)}',
+      newValue: '${state.currency}${newValue.toStringAsFixed(0)}',
+    );
   }
 
   Future<void> updateInvestment(
@@ -1266,21 +1783,103 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         }).toList(),
       );
     }
+    final investment = state.investments.firstWhere((i) => i.id == id);
+    _logHistory(
+      action: 'Edited Investment',
+      entityType: 'Investment',
+      entityId: id,
+      entityName: name,
+      valueChanged: 'Details updated',
+      previousValue: investment.name,
+      newValue: name,
+    );
+  }
+
+  Future<void> updateInvestmentUnits(String investmentId, double newUnits) async {
+    final isMock = _ref.read(mockModeProvider);
+    final lotIndex = state.investmentLots.indexWhere((l) => l.investmentId == investmentId);
+    if (lotIndex == -1) return;
+    
+    final lot = state.investmentLots[lotIndex];
+    final costPerUnit = lot.costPerUnit;
+    final newAmount = newUnits * costPerUnit;
+    
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await (db.update(db.investmentLots)..where((tbl) => tbl.id.equals(lot.id)))
+        .write(InvestmentLotsCompanion(
+          unitsPurchased: Value(newUnits),
+          unitsRemaining: Value(newUnits),
+          updatedAt: Value(DateTime.now().toUtc()),
+        ));
+      
+      await (db.update(db.transactions)..where((tbl) => tbl.id.equals(lot.buyTransactionId)))
+        .write(TransactionsCompanion(
+          units: Value(newUnits),
+          amount: Value(newAmount),
+          updatedAt: Value(DateTime.now().toUtc()),
+        ));
+      
+      _queueSync('investment_lot', lot.id, 'upsert');
+      _queueSync('transaction', lot.buyTransactionId, 'upsert');
+    }
+    
+    state = state.copyWith(
+      investmentLots: state.investmentLots.map((l) {
+        if (l.id == lot.id) {
+          return l.copyWith(
+            unitsPurchased: newUnits,
+            unitsRemaining: newUnits,
+            updatedAt: DateTime.now().toUtc(),
+          );
+        }
+        return l;
+      }).toList(),
+      transactions: state.transactions.map((t) {
+        if (t.id == lot.buyTransactionId) {
+          return t.copyWith(
+            units: Value(newUnits),
+            amount: newAmount,
+            updatedAt: DateTime.now().toUtc(),
+          );
+        }
+        return t;
+      }).toList(),
+    );
   }
 
   Future<bool> deleteInvestment(String id) async {
+    final investment = state.investments.firstWhereOrNull((i) => i.id == id);
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
       final countQuery = db.select(db.investmentLots)..where((tbl) => tbl.investmentId.equals(id));
       final count = (await countQuery.get()).length;
       if (count > 0) return false;
+      if (investment != null) {
+        _logHistory(
+          action: 'Deleted Investment',
+          entityType: 'Investment',
+          entityId: id,
+          entityName: investment.name,
+          valueChanged: 'Permanently Deleted',
+        );
+      }
       await (db.delete(db.investments)..where((tbl) => tbl.id.equals(id))).go();
       _queueSync('investment', id, 'delete');
       return true;
     } else {
       final count = state.investmentLots.where((l) => l.investmentId == id).length;
       if (count > 0) return false;
+      if (investment != null) {
+        _logHistory(
+          action: 'Deleted Investment',
+          entityType: 'Investment',
+          entityId: id,
+          entityName: investment.name,
+          valueChanged: 'Permanently Deleted',
+        );
+      }
       state = state.copyWith(
         investments: state.investments.where((i) => i.id != id).toList(),
       );
@@ -1308,6 +1907,14 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         }).toList(),
       );
     }
+    final investment = state.investments.firstWhere((i) => i.id == id);
+    _logHistory(
+      action: 'Deleted Investment',
+      entityType: 'Investment',
+      entityId: id,
+      entityName: investment.name,
+      valueChanged: 'Archived',
+    );
   }
 
   void buyInvestment(String investmentId, String fromAccountId, double units, double pricePerUnit, String? notes, DateTime date) {
@@ -1348,6 +1955,14 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
 
       state = state.copyWith(investmentLots: [...state.investmentLots, newLot]);
     }
+    final investment = state.investments.firstWhere((i) => i.id == investmentId);
+    _logHistory(
+      action: 'Edited Investment',
+      entityType: 'Investment',
+      entityId: investmentId,
+      entityName: investment.name,
+      valueChanged: 'Bought: $units units @ ${state.currency}${pricePerUnit.toStringAsFixed(0)} (Total: ${state.currency}${(units * pricePerUnit).toStringAsFixed(0)})',
+    );
   }
 
   void sellInvestment(String investmentId, String toAccountId, double unitsToSell, double salePricePerUnit, String? notes, DateTime date) {
@@ -1427,11 +2042,20 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         investmentLotConsumptions: [...state.investmentLotConsumptions, ...consumptions],
       );
     }
+    final investment = state.investments.firstWhere((i) => i.id == investmentId);
+    _logHistory(
+      action: 'Edited Investment',
+      entityType: 'Investment',
+      entityId: investmentId,
+      entityName: investment.name,
+      valueChanged: 'Sold: $unitsToSell units @ ${state.currency}${salePricePerUnit.toStringAsFixed(0)} (Total: ${state.currency}${(unitsToSell * salePricePerUnit).toStringAsFixed(0)})',
+    );
   }
 
   void addExpectedIncome(String source, double amount, DateTime? expectedDate, String? notes, {DateTime? createdAt}) {
     final isMock = _ref.read(mockModeProvider);
     final creationDate = createdAt ?? DateTime.now().toUtc();
+    final id = _uuid.v4();
     if (!isMock) {
       _ref.read(realExpectedIncomeServiceProvider).addExpectedIncome(
         source: source,
@@ -1441,7 +2065,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       );
     } else {
       final newInc = ExpectedIncome(
-        id: _uuid.v4(),
+        id: id,
         source: source,
         amount: amount,
         status: 'pending',
@@ -1454,6 +2078,14 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
 
       state = state.copyWith(expectedIncomes: [...state.expectedIncomes, newInc]);
     }
+    _logHistory(
+      action: 'Added Expected Income',
+      entityType: 'Expected Income',
+      entityId: id,
+      entityName: source,
+      valueChanged: 'Expected: ${state.currency}${amount.toStringAsFixed(0)}',
+      newValue: '${state.currency}${amount.toStringAsFixed(0)}',
+    );
   }
 
   void markExpectedIncomeReceived(String incomeId, String destinationAccountId) {
@@ -1490,6 +2122,15 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         }).toList(),
       );
     }
+    final inc = state.expectedIncomes.firstWhere((i) => i.id == incomeId);
+    _logHistory(
+      action: 'Received Expected Income',
+      entityType: 'Expected Income',
+      entityId: incomeId,
+      entityName: inc.source,
+      valueChanged: 'Received: ${state.currency}${inc.amount.toStringAsFixed(0)}',
+      newValue: 'Received',
+    );
   }
 
   void markExpectedIncomeExpired(String incomeId) {
@@ -1559,6 +2200,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
 
   void addGoal(String name, double targetAmount, DateTime? deadline, String? notes) {
     final isMock = _ref.read(mockModeProvider);
+    final id = _uuid.v4();
     if (!isMock) {
       _ref.read(realGoalServiceProvider).createGoal(
         name: name,
@@ -1568,7 +2210,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       );
     } else {
       final newGoal = Goal(
-        id: _uuid.v4(),
+        id: id,
         name: name,
         targetAmount: targetAmount,
         currentAmount: 0.0,
@@ -1582,6 +2224,14 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
 
       state = state.copyWith(goals: [...state.goals, newGoal]);
     }
+    _logHistory(
+      action: 'Added Goal',
+      entityType: 'Goal',
+      entityId: id,
+      entityName: name,
+      valueChanged: 'Target: ${state.currency}${targetAmount.toStringAsFixed(0)}',
+      newValue: '${state.currency}${targetAmount.toStringAsFixed(0)}',
+    );
   }
 
   Future<void> updateGoal(Goal goal) async {
@@ -1607,15 +2257,42 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         goals: state.goals.map((g) => g.id == goal.id ? goal : g).toList(),
       );
     }
+    _logHistory(
+      action: 'Edited Goal',
+      entityType: 'Goal',
+      entityId: goal.id,
+      entityName: goal.name,
+      valueChanged: 'Target: ${state.currency}${goal.targetAmount.toStringAsFixed(0)}',
+      newValue: '${state.currency}${goal.targetAmount.toStringAsFixed(0)}',
+    );
   }
 
   Future<void> deleteGoal(String id) async {
+    final goal = state.goals.firstWhereOrNull((g) => g.id == id);
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
+      if (goal != null) {
+        _logHistory(
+          action: 'Deleted Goal',
+          entityType: 'Goal',
+          entityId: id,
+          entityName: goal.name,
+          valueChanged: 'Permanently Deleted',
+        );
+      }
       await (db.delete(db.goals)..where((tbl) => tbl.id.equals(id))).go();
       _queueSync('goal', id, 'delete');
     } else {
+      if (goal != null) {
+        _logHistory(
+          action: 'Deleted Goal',
+          entityType: 'Goal',
+          entityId: id,
+          entityName: goal.name,
+          valueChanged: 'Permanently Deleted',
+        );
+      }
       state = state.copyWith(
         goals: state.goals.where((g) => g.id != id).toList(),
       );
@@ -1640,6 +2317,16 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
           }
           return g;
         }).toList(),
+      );
+    }
+    final goal = state.goals.firstWhereOrNull((g) => g.id == id);
+    if (goal != null) {
+      _logHistory(
+        action: 'Deleted Goal',
+        entityType: 'Goal',
+        entityId: id,
+        entityName: goal.name,
+        valueChanged: 'Archived',
       );
     }
   }
@@ -1859,8 +2546,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     required DateTime date,
   }) async {
     final isMock = _ref.read(mockModeProvider);
+    final Transaction tx;
     if (!isMock) {
-      final tx = Transaction(
+      tx = Transaction(
         id: _uuid.v4(),
         type: type,
         amount: amount,
@@ -1891,9 +2579,8 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       );
       await _ref.read(realTransactionServiceProvider).createTransaction(companion);
       _queueSync('transaction', tx.id, 'upsert');
-      return tx;
     } else {
-      return _createTransactionInternal(
+      tx = _createTransactionInternal(
         type: type,
         amount: amount,
         category: category,
@@ -1905,6 +2592,68 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         date: date,
       );
     }
+
+    final isBuyOrSellOrIncomeReceived = ['investment_buy', 'investment_sell', 'expected_income_received'].contains(type);
+    final isOpeningBalance = notes != null && (notes.contains('Initial deposit') || notes.contains('Opening Balance Owed') || notes.contains('Opening Balance') || notes.contains('Initial funding'));
+    
+    if (!isBuyOrSellOrIncomeReceived && !isOpeningBalance) {
+      String action = 'Transaction';
+      String entityType = 'Transaction';
+      String entityName = category ?? type;
+      String valChanged = '${state.currency}${amount.toStringAsFixed(0)}';
+
+      if (type == 'lend_money') {
+        action = 'Lend Money';
+        entityType = 'Receivable';
+        final person = state.people.firstWhereOrNull((p) => p.id == personId);
+        entityName = person?.name ?? 'Someone';
+        valChanged = 'Lent: ${state.currency}${amount.toStringAsFixed(0)}';
+      } else if (type == 'borrow_money') {
+        action = 'Borrow Money';
+        entityType = 'Liability';
+        final person = state.people.firstWhereOrNull((p) => p.id == personId);
+        entityName = person?.name ?? 'Someone';
+        valChanged = 'Borrowed: ${state.currency}${amount.toStringAsFixed(0)}';
+      } else if (type == 'repay_money') {
+        action = 'Repay Loan';
+        entityType = 'Settlement';
+        final person = state.people.firstWhereOrNull((p) => p.id == personId);
+        entityName = person?.name ?? 'Someone';
+        valChanged = 'Repaid: ${state.currency}${amount.toStringAsFixed(0)}';
+      } else if (type == 'recover_money') {
+        action = 'Recover Debt';
+        entityType = 'Recoveries';
+        final person = state.people.firstWhereOrNull((p) => p.id == personId);
+        entityName = person?.name ?? 'Someone';
+        valChanged = 'Recovered: ${state.currency}${amount.toStringAsFixed(0)}';
+      } else if (type == 'income') {
+        action = 'Added Income';
+        entityType = 'Transaction';
+        entityName = category ?? 'Income';
+        valChanged = 'Received: ${state.currency}${amount.toStringAsFixed(0)}';
+      } else if (type == 'expense') {
+        action = 'Added Expense';
+        entityType = 'Transaction';
+        entityName = category ?? 'Expense';
+        valChanged = 'Paid: ${state.currency}${amount.toStringAsFixed(0)}';
+      } else if (type == 'transfer') {
+        action = 'Transfer Funds';
+        entityType = 'Transaction';
+        entityName = 'Transfer';
+        valChanged = 'Transferred: ${state.currency}${amount.toStringAsFixed(0)}';
+      }
+
+      _logHistory(
+        action: action,
+        entityType: entityType,
+        entityId: tx.id,
+        entityName: entityName,
+        valueChanged: valChanged,
+        newValue: notes,
+      );
+    }
+
+    return tx;
   }
 
   void voidTransaction(String transactionId) {
@@ -2009,6 +2758,17 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       }).toList();
 
       state = state.copyWith(transactions: [voidTx, ...updatedTxs]);
+    }
+
+    final orig = state.transactions.firstWhereOrNull((t) => t.id == transactionId);
+    if (orig != null) {
+      _logHistory(
+        action: 'Voided Transaction',
+        entityType: 'Transaction',
+        entityId: transactionId,
+        entityName: orig.category ?? orig.type,
+        valueChanged: 'Voided: ${state.currency}${orig.amount.toStringAsFixed(0)}',
+      );
     }
   }
 
@@ -2234,15 +2994,30 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     final updatedList = [...state.ipoPools, pool];
     state = state.copyWith(ipoPools: updatedList);
     await _saveIpoPoolsToDb();
+    _logHistory(
+      action: 'IPO Activities',
+      entityType: 'IPO Activity',
+      entityId: pool.id,
+      entityName: pool.name,
+      valueChanged: 'Created IPO Pool',
+    );
   }
 
   Future<void> updateIpoPool(IpoPool pool) async {
     final updatedList = state.ipoPools.map((p) => p.id == pool.id ? pool : p).toList();
     state = state.copyWith(ipoPools: updatedList);
     await _saveIpoPoolsToDb();
+    _logHistory(
+      action: 'IPO Activities',
+      entityType: 'IPO Activity',
+      entityId: pool.id,
+      entityName: pool.name,
+      valueChanged: 'Updated IPO Pool status/details',
+    );
   }
 
   Future<void> deleteIpoPool(String id) async {
+    final pool = state.ipoPools.firstWhereOrNull((p) => p.id == id);
     final updatedList = state.ipoPools.map((p) {
       if (p.id == id) {
         return p.copyWith(deletedAt: () => DateTime.now());
@@ -2251,6 +3026,15 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     }).toList();
     state = state.copyWith(ipoPools: updatedList);
     await _saveIpoPoolsToDb();
+    if (pool != null) {
+      _logHistory(
+        action: 'IPO Activities',
+        entityType: 'IPO Activity',
+        entityId: id,
+        entityName: pool.name,
+        valueChanged: 'Deleted IPO Pool',
+      );
+    }
   }
 
   Future<void> restoreIpoPool(IpoPool pool) async {
@@ -2384,6 +3168,15 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     // 4. Add Borrow Transaction (deposits borrowedCapital back to offset cash)
     await addBorrowTransaction('person_broker_uuid_placeholder', 'acc_primary_bank_uuid', borrowedCapital, 'MTF Borrowed Funding for $instrument', openingDate);
 
+    _logHistory(
+      action: 'MTF Positions',
+      entityType: 'MTF Position',
+      entityId: id,
+      entityName: instrument,
+      valueChanged: 'Created MTF Position: ${state.currency}${borrowedCapital.toStringAsFixed(0)} borrowed',
+      newValue: 'Broker: $broker, Rate: $interestRate%',
+    );
+
     // Run auto accrual for any days since opening date
     await runAutoInterestAccrual();
   }
@@ -2430,6 +3223,15 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     state = state.copyWith(
       mtfPositions: state.mtfPositions.map((p) => p.id == pos.id ? pos : p).toList(),
     );
+
+    _logHistory(
+      action: 'MTF Positions',
+      entityType: 'MTF Position',
+      entityId: pos.id,
+      entityName: pos.instrument,
+      valueChanged: 'Updated MTF Position',
+      newValue: 'Broker: ${pos.broker}, Rate: ${pos.interestRate}%',
+    );
   }
 
   Future<void> closeMtfPosition(String id, double salePrice, DateTime date) async {
@@ -2467,10 +3269,19 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
 
     // 3. Repay Borrowed Capital (decreases cash by borrowedCapital)
     await addRepayTransaction('person_broker_uuid_placeholder', 'acc_primary_bank_uuid', pos.borrowedCapital, 'MTF Loan Repayment for ${pos.instrument}', date);
+
+    _logHistory(
+      action: 'MTF Positions',
+      entityType: 'MTF Position',
+      entityId: id,
+      entityName: pos.instrument,
+      valueChanged: 'Closed MTF Position',
+      newValue: 'Sale price: ${state.currency}${salePrice.toStringAsFixed(0)}',
+    );
   }
 
   Future<void> deleteMtfPosition(String id) async {
-    final pos = state.mtfPositions.firstWhere((p) => p.id == id);
+    final pos = state.mtfPositions.firstWhereOrNull((p) => p.id == id);
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
@@ -2481,8 +3292,17 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       mtfPositions: state.mtfPositions.where((p) => p.id != id).toList(),
     );
 
-    // Also delete/archive associated investment and transactions
-    await deleteInvestment(pos.investmentId);
+    if (pos != null) {
+      _logHistory(
+        action: 'MTF Positions',
+        entityType: 'MTF Position',
+        entityId: id,
+        entityName: pos.instrument,
+        valueChanged: 'Permanently Deleted',
+      );
+      // Also delete/archive associated investment and transactions
+      await deleteInvestment(pos.investmentId);
+    }
   }
 
   // --- SOFT DELETE, RESTORE & DUPLICATE FUNCTIONS ---
@@ -2697,6 +3517,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
 
   Future<void> deleteMtfPositionSoft(String id) async {
     final now = DateTime.now().toUtc();
+    final pos = state.mtfPositions.firstWhereOrNull((p) => p.id == id);
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
@@ -2708,6 +3529,15 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     state = state.copyWith(
       mtfPositions: state.mtfPositions.where((p) => p.id != id).toList(),
     );
+    if (pos != null) {
+      _logHistory(
+        action: 'MTF Positions',
+        entityType: 'MTF Position',
+        entityId: id,
+        entityName: pos.instrument,
+        valueChanged: 'Deleted MTF Position',
+      );
+    }
   }
 
   Future<void> restoreMtfPosition(MtfPosition item) async {
@@ -2886,6 +3716,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
 
   Future<void> deleteSipSoft(String id) async {
     final now = DateTime.now().toUtc();
+    final sip = state.sips.firstWhereOrNull((s) => s.id == id);
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
@@ -2897,6 +3728,16 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     state = state.copyWith(
       sips: state.sips.where((s) => s.id != id).toList(),
     );
+    if (sip != null) {
+      final investment = state.investments.firstWhereOrNull((i) => i.id == sip.investmentId);
+      _logHistory(
+        action: 'SIP Events',
+        entityType: 'SIP Event',
+        entityId: id,
+        entityName: investment?.name ?? 'SIP',
+        valueChanged: 'Deleted SIP',
+      );
+    }
   }
 
   Future<void> restoreSip(Sip item) async {
@@ -3120,6 +3961,16 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       state = state.copyWith(sips: [...state.sips, newSip]);
     }
 
+    final investment = state.investments.firstWhereOrNull((i) => i.id == investmentId);
+    _logHistory(
+      action: 'SIP Events',
+      entityType: 'SIP Event',
+      entityId: id,
+      entityName: investment?.name ?? 'SIP',
+      valueChanged: 'Created SIP: ${state.currency}${amount.toStringAsFixed(0)}',
+      newValue: 'Frequency: $frequency, Day: $sipDate',
+    );
+
     // Check if we should process it immediately
     await runAutoSipProcessing();
   }
@@ -3150,9 +4001,19 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         sips: state.sips.map((s) => s.id == sip.id ? updatedSip : s).toList(),
       );
     }
+    final investment = state.investments.firstWhereOrNull((i) => i.id == sip.investmentId);
+    _logHistory(
+      action: 'SIP Events',
+      entityType: 'SIP Event',
+      entityId: sip.id,
+      entityName: investment?.name ?? 'SIP',
+      valueChanged: 'Updated SIP: ${state.currency}${sip.amount.toStringAsFixed(0)}',
+      newValue: 'Frequency: ${sip.frequency}, Day: ${sip.sipDate}',
+    );
   }
 
   Future<void> deleteSip(String id) async {
+    final sip = state.sips.firstWhereOrNull((s) => s.id == id);
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
       final repo = _ref.read(realSipRepositoryProvider);
@@ -3161,6 +4022,16 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     } else {
       state = state.copyWith(
         sips: state.sips.where((s) => s.id != id).toList(),
+      );
+    }
+    if (sip != null) {
+      final investment = state.investments.firstWhereOrNull((i) => i.id == sip.investmentId);
+      _logHistory(
+        action: 'SIP Events',
+        entityType: 'SIP Event',
+        entityId: id,
+        entityName: investment?.name ?? 'SIP',
+        valueChanged: 'Deleted SIP',
       );
     }
   }
@@ -3294,6 +4165,10 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         'Investment Return', 'Miscellaneous'
       ],
       customLabels: const ['Urgent', 'Personal', 'Tax Deductible', 'Business'],
+      portfolioHistory: const [],
+      portfolioSnapshots: const [],
+      recoveryAllocations: const [],
+      recoveryDestinations: const [],
       currency: mockCurrency,
       themeMode: 'dark', // Premium Dark Theme by default
       appLockEnabled: false,

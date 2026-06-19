@@ -265,9 +265,9 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
               Navigator.pop(context); // close dialog
               final notifier = ref.read(mockDatabaseProvider.notifier);
               if (isAccount) {
-                await notifier.deleteAccountSoft(originalItem.id);
+                await notifier.deleteAccountSoft((originalItem as Account).id);
               } else {
-                await notifier.deletePersonSoft(originalItem.id);
+                await notifier.deletePersonSoft((originalItem as Person).id);
               }
               context.pop(); // pop details screen
               ScaffoldMessenger.of(context).showSnackBar(
@@ -278,9 +278,9 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
                     textColor: AppColors.darkPrimary,
                     onPressed: () {
                       if (isAccount) {
-                        ref.read(mockDatabaseProvider.notifier).restoreAccount(originalItem);
+                        ref.read(mockDatabaseProvider.notifier).restoreAccount(originalItem as Account);
                       } else {
-                        ref.read(mockDatabaseProvider.notifier).restorePerson(originalItem);
+                        ref.read(mockDatabaseProvider.notifier).restorePerson(originalItem as Person);
                       }
                     },
                   ),
@@ -627,33 +627,31 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
                 ),
               const SizedBox(height: 24),
               GlassCard(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'AUDIT LOG INFORMATION',
-                        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Created At', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
-                          Text(createdStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Last Edited', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
-                          Text(updatedStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
-                        ],
-                      ),
-                    ],
-                  ),
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'AUDIT LOG INFORMATION',
+                      style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Created At', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                        Text(createdStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Last Edited', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                        Text(updatedStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],

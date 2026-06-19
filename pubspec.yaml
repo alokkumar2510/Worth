@@ -1,6 +1,6 @@
 name: worth
 description: A personal wealth operating system.
-version: 1.5.0+5
+version: 1.7.0+7
 
 publish_to: 'none'
 
@@ -24,6 +24,11 @@ dependencies:
   cloud_firestore: ^5.1.0
   google_sign_in: ^6.2.1
   connectivity_plus: ^6.0.1
+  http: ^1.2.0
+
+  # Local Caching Database
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
 
   # Database & Encryption
   drift: ^2.20.0
@@ -33,6 +38,7 @@ dependencies:
 
   # Data Visualization
   fl_chart: ^0.68.0
+  pdf: ^3.10.8
 
   # Fonts & UI Utilities
   google_fonts: ^6.2.1
@@ -61,6 +67,7 @@ dev_dependencies:
   freezed: ^2.5.2
   riverpod_generator: ^2.4.0
   json_serializable: ^6.8.0
+  hive_generator: ^2.0.1
 
   # Lints
   flutter_lints: ^3.0.1

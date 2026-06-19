@@ -43,6 +43,8 @@ import '../../features/spending/presentation/screens/spending_screen.dart';
 import '../../features/portfolio/presentation/screens/mtf_detail_screen.dart';
 import '../../features/settings/presentation/screens/categories_labels_screen.dart';
 import '../../features/settings/presentation/screens/archive_center_screen.dart';
+import '../../features/history/presentation/screens/portfolio_history_archive_screen.dart';
+import '../../features/recovery/presentation/screens/recovery_allocation_report_screen.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -251,6 +253,12 @@ class RouterNotifier extends ChangeNotifier {
     final path = state.matchedLocation;
     final dbState = _ref.read(mockDatabaseProvider);
 
+    final isRestoring = _ref.read(isRestoringProvider);
+    if (isRestoring) {
+      debugPrint('[ROUTING] Data restore in progress. Blocking redirection.');
+      return null;
+    }
+
     // Auth state is still loading — stay on splash, do NOT redirect in a loop
     // Return null so the user sees the SplashScreen while we wait.
     if (_authState.isLoading) {
@@ -318,6 +326,14 @@ final routerNotifierProvider = ChangeNotifierProvider<RouterNotifier>((ref) {
 
   ref.listen<MockDatabaseState>(
     mockDatabaseProvider,
+    (_, next) {
+      notifier.notifyListeners();
+    },
+    fireImmediately: true,
+  );
+
+  ref.listen<bool>(
+    isRestoringProvider,
     (_, next) {
       notifier.notifyListeners();
     },
@@ -656,6 +672,22 @@ final routerProvider = Provider<GoRouter>((ref) {
                         },
                       ),
                     ],
+                  ),
+                  GoRoute(
+                    path: 'history_archive',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) => buildPremiumTransitionPage(
+                      state: state,
+                      child: const PortfolioHistoryArchiveScreen(),
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'recovery_report',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) => buildPremiumTransitionPage(
+                      state: state,
+                      child: const RecoveryAllocationReportScreen(),
+                    ),
                   ),
                 ],
               ),

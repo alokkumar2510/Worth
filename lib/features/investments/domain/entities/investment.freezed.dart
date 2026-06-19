@@ -35,12 +35,8 @@ mixin _$Investment {
   DateTime get updatedAt => throw _privateConstructorUsedError;
   String get syncStatus => throw _privateConstructorUsedError;
 
-  /// Serializes this Investment to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of Investment
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $InvestmentCopyWith<Investment> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -77,8 +73,6 @@ class _$InvestmentCopyWithImpl<$Res, $Val extends Investment>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of Investment
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -185,8 +179,6 @@ class __$$InvestmentImplCopyWithImpl<$Res>
       _$InvestmentImpl _value, $Res Function(_$InvestmentImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of Investment
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -344,7 +336,7 @@ class _$InvestmentImpl implements _Investment {
                 other.syncStatus == syncStatus));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
       runtimeType,
@@ -362,9 +354,7 @@ class _$InvestmentImpl implements _Investment {
       updatedAt,
       syncStatus);
 
-  /// Create a copy of Investment
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$InvestmentImplCopyWith<_$InvestmentImpl> get copyWith =>
@@ -402,9 +392,8 @@ abstract class _Investment implements Investment {
   @override
   String get name;
   @override
-  String
-      get type; // stock | mutual_fund | etf | gold | crypto | bond | fd | other
-  @override
+  String get type;
+  @override // stock | mutual_fund | etf | gold | crypto | bond | fd | other
   String? get symbol;
   @override
   double? get marketValue;
@@ -424,11 +413,8 @@ abstract class _Investment implements Investment {
   DateTime get updatedAt;
   @override
   String get syncStatus;
-
-  /// Create a copy of Investment
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$InvestmentImplCopyWith<_$InvestmentImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
