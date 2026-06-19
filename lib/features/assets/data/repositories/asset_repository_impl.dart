@@ -282,14 +282,21 @@ class AssetRepositoryImpl implements AssetRepository {
   Future<void> updateAsset(domain.Asset asset) async {
     await _database.transaction(() async {
       if (asset.type == 'receivable') {
+        final existing = await (_database.select(_database.people)..where((tbl) => tbl.id.equals(asset.id))).getSingleOrNull();
         await _database.update(_database.people).replace(db.Person(
               id: asset.id,
               name: asset.name,
+              phone: existing?.phone,
               notes: asset.notes,
               isArchived: asset.isArchived,
               createdAt: asset.createdAt,
               updatedAt: asset.updatedAt,
               syncStatus: asset.syncStatus,
+              lastSyncedAt: existing?.lastSyncedAt,
+              deviceId: existing?.deviceId,
+              deletedAt: existing?.deletedAt,
+              deletedBy: existing?.deletedBy,
+              type: existing?.type ?? 'personal_loan',
             ));
       } else if (['stock', 'mutual_fund', 'etf', 'gold', 'crypto', 'bond', 'fd'].contains(asset.type)) {
         await _database.update(_database.investments).replace(db.Investment(

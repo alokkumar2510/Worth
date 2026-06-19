@@ -35,6 +35,10 @@ mixin _$Sip {
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
   String get syncStatus => throw _privateConstructorUsedError;
+  String get importMode =>
+      throw _privateConstructorUsedError; // paid | manual | today
+  int get completedInstallmentsOverride => throw _privateConstructorUsedError;
+  DateTime? get worthCreationDate => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
@@ -58,7 +62,10 @@ abstract class $SipCopyWith<$Res> {
       int isActive,
       DateTime createdAt,
       DateTime updatedAt,
-      String syncStatus});
+      String syncStatus,
+      String importMode,
+      int completedInstallmentsOverride,
+      DateTime? worthCreationDate});
 }
 
 /// @nodoc
@@ -85,6 +92,9 @@ class _$SipCopyWithImpl<$Res, $Val extends Sip> implements $SipCopyWith<$Res> {
     Object? createdAt = null,
     Object? updatedAt = null,
     Object? syncStatus = null,
+    Object? importMode = null,
+    Object? completedInstallmentsOverride = null,
+    Object? worthCreationDate = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -135,6 +145,18 @@ class _$SipCopyWithImpl<$Res, $Val extends Sip> implements $SipCopyWith<$Res> {
           ? _value.syncStatus
           : syncStatus // ignore: cast_nullable_to_non_nullable
               as String,
+      importMode: null == importMode
+          ? _value.importMode
+          : importMode // ignore: cast_nullable_to_non_nullable
+              as String,
+      completedInstallmentsOverride: null == completedInstallmentsOverride
+          ? _value.completedInstallmentsOverride
+          : completedInstallmentsOverride // ignore: cast_nullable_to_non_nullable
+              as int,
+      worthCreationDate: freezed == worthCreationDate
+          ? _value.worthCreationDate
+          : worthCreationDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ) as $Val);
   }
 }
@@ -157,7 +179,10 @@ abstract class _$$SipImplCopyWith<$Res> implements $SipCopyWith<$Res> {
       int isActive,
       DateTime createdAt,
       DateTime updatedAt,
-      String syncStatus});
+      String syncStatus,
+      String importMode,
+      int completedInstallmentsOverride,
+      DateTime? worthCreationDate});
 }
 
 /// @nodoc
@@ -181,6 +206,9 @@ class __$$SipImplCopyWithImpl<$Res> extends _$SipCopyWithImpl<$Res, _$SipImpl>
     Object? createdAt = null,
     Object? updatedAt = null,
     Object? syncStatus = null,
+    Object? importMode = null,
+    Object? completedInstallmentsOverride = null,
+    Object? worthCreationDate = freezed,
   }) {
     return _then(_$SipImpl(
       id: null == id
@@ -231,6 +259,18 @@ class __$$SipImplCopyWithImpl<$Res> extends _$SipCopyWithImpl<$Res, _$SipImpl>
           ? _value.syncStatus
           : syncStatus // ignore: cast_nullable_to_non_nullable
               as String,
+      importMode: null == importMode
+          ? _value.importMode
+          : importMode // ignore: cast_nullable_to_non_nullable
+              as String,
+      completedInstallmentsOverride: null == completedInstallmentsOverride
+          ? _value.completedInstallmentsOverride
+          : completedInstallmentsOverride // ignore: cast_nullable_to_non_nullable
+              as int,
+      worthCreationDate: freezed == worthCreationDate
+          ? _value.worthCreationDate
+          : worthCreationDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ));
   }
 }
@@ -250,7 +290,10 @@ class _$SipImpl implements _Sip {
       required this.isActive,
       required this.createdAt,
       required this.updatedAt,
-      this.syncStatus = 'pending'});
+      this.syncStatus = 'pending',
+      this.importMode = 'paid',
+      this.completedInstallmentsOverride = 0,
+      this.worthCreationDate});
 
   factory _$SipImpl.fromJson(Map<String, dynamic> json) =>
       _$$SipImplFromJson(json);
@@ -284,10 +327,19 @@ class _$SipImpl implements _Sip {
   @override
   @JsonKey()
   final String syncStatus;
+  @override
+  @JsonKey()
+  final String importMode;
+// paid | manual | today
+  @override
+  @JsonKey()
+  final int completedInstallmentsOverride;
+  @override
+  final DateTime? worthCreationDate;
 
   @override
   String toString() {
-    return 'Sip(id: $id, investmentId: $investmentId, amount: $amount, frequency: $frequency, sipDate: $sipDate, startDate: $startDate, endDate: $endDate, autoCreate: $autoCreate, isActive: $isActive, createdAt: $createdAt, updatedAt: $updatedAt, syncStatus: $syncStatus)';
+    return 'Sip(id: $id, investmentId: $investmentId, amount: $amount, frequency: $frequency, sipDate: $sipDate, startDate: $startDate, endDate: $endDate, autoCreate: $autoCreate, isActive: $isActive, createdAt: $createdAt, updatedAt: $updatedAt, syncStatus: $syncStatus, importMode: $importMode, completedInstallmentsOverride: $completedInstallmentsOverride, worthCreationDate: $worthCreationDate)';
   }
 
   @override
@@ -314,7 +366,15 @@ class _$SipImpl implements _Sip {
             (identical(other.updatedAt, updatedAt) ||
                 other.updatedAt == updatedAt) &&
             (identical(other.syncStatus, syncStatus) ||
-                other.syncStatus == syncStatus));
+                other.syncStatus == syncStatus) &&
+            (identical(other.importMode, importMode) ||
+                other.importMode == importMode) &&
+            (identical(other.completedInstallmentsOverride,
+                    completedInstallmentsOverride) ||
+                other.completedInstallmentsOverride ==
+                    completedInstallmentsOverride) &&
+            (identical(other.worthCreationDate, worthCreationDate) ||
+                other.worthCreationDate == worthCreationDate));
   }
 
   @JsonKey(ignore: true)
@@ -332,7 +392,10 @@ class _$SipImpl implements _Sip {
       isActive,
       createdAt,
       updatedAt,
-      syncStatus);
+      syncStatus,
+      importMode,
+      completedInstallmentsOverride,
+      worthCreationDate);
 
   @JsonKey(ignore: true)
   @override
@@ -361,7 +424,10 @@ abstract class _Sip implements Sip {
       required final int isActive,
       required final DateTime createdAt,
       required final DateTime updatedAt,
-      final String syncStatus}) = _$SipImpl;
+      final String syncStatus,
+      final String importMode,
+      final int completedInstallmentsOverride,
+      final DateTime? worthCreationDate}) = _$SipImpl;
 
   factory _Sip.fromJson(Map<String, dynamic> json) = _$SipImpl.fromJson;
 
@@ -389,6 +455,12 @@ abstract class _Sip implements Sip {
   DateTime get updatedAt;
   @override
   String get syncStatus;
+  @override
+  String get importMode;
+  @override // paid | manual | today
+  int get completedInstallmentsOverride;
+  @override
+  DateTime? get worthCreationDate;
   @override
   @JsonKey(ignore: true)
   _$$SipImplCopyWith<_$SipImpl> get copyWith =>

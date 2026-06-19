@@ -1250,7 +1250,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // 2. Missed SIPs
     final List<Map<String, dynamic>> missedSipsList = [];
     for (final sip in activeSips) {
-      final pastOccurrences = _getScheduledDates(sip, sip.startDate, today.subtract(const Duration(days: 1)));
+      final creationDate = sip.worthCreationDate ?? sip.createdAt;
+      final checkStartDate = creationDate.isAfter(sip.startDate) ? creationDate : sip.startDate;
+      final pastOccurrences = _getScheduledDates(sip, checkStartDate, today.subtract(const Duration(days: 1)));
       for (final occ in pastOccurrences) {
         final hasTx = dbState.transactions.any((t) {
           final isSameInv = t.investmentId == sip.investmentId;

@@ -21,6 +21,12 @@ _$SipImpl _$$SipImplFromJson(Map<String, dynamic> json) => _$SipImpl(
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       syncStatus: json['syncStatus'] as String? ?? 'pending',
+      importMode: json['importMode'] as String? ?? 'paid',
+      completedInstallmentsOverride:
+          (json['completedInstallmentsOverride'] as num?)?.toInt() ?? 0,
+      worthCreationDate: json['worthCreationDate'] == null
+          ? null
+          : DateTime.parse(json['worthCreationDate'] as String),
     );
 
 Map<String, dynamic> _$$SipImplToJson(_$SipImpl instance) => <String, dynamic>{
@@ -36,4 +42,7 @@ Map<String, dynamic> _$$SipImplToJson(_$SipImpl instance) => <String, dynamic>{
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),
       'syncStatus': instance.syncStatus,
+      'importMode': instance.importMode,
+      'completedInstallmentsOverride': instance.completedInstallmentsOverride,
+      'worthCreationDate': instance.worthCreationDate?.toIso8601String(),
     };

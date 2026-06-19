@@ -362,6 +362,7 @@ class ImportService {
             createdAt: createdAt,
             updatedAt: updatedAt,
             syncStatus: map['syncStatus'] ?? 'pending',
+            type: 'personal_loan',
           );
           await _db.into(_db.people).insertOnConflictUpdate(person);
         } else if (['stock', 'mutual_fund', 'etf', 'gold', 'crypto', 'bond', 'fd'].contains(type)) {
@@ -423,6 +424,7 @@ class ImportService {
             createdAt: createdAt,
             updatedAt: updatedAt,
             syncStatus: map['syncStatus'] ?? 'pending',
+            type: 'personal_loan',
           );
           await _db.into(_db.people).insertOnConflictUpdate(person);
         } else {
@@ -492,6 +494,7 @@ class ImportService {
           createdAt: DateTime.parse(map['createdAt']!),
           updatedAt: DateTime.parse(map['updatedAt']!),
           syncStatus: map['syncStatus'] ?? 'pending',
+          type: 'personal_loan',
         );
 
         await _db.into(_db.people).insertOnConflictUpdate(person);

@@ -302,6 +302,16 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     final notesController = TextEditingController();
     DateTime selectedDate = DateTime.now();
     TimeOfDay selectedTime = TimeOfDay.now();
+    String selectedType = 'personal_loan';
+
+    final dbState = ref.read(mockDatabaseProvider);
+    final activeAccounts = dbState.accounts.where((a) => a.isArchived == 0).toList();
+    final cashAccounts = activeAccounts.where((a) => a.type != 'credit').toList();
+
+    // Default select
+    String? selectedAccountId = cashAccounts.isNotEmpty
+        ? cashAccounts.first.id
+        : (activeAccounts.isNotEmpty ? activeAccounts.first.id : 'acc_primary_bank_uuid');
 
     showDialog(
       context: context,
@@ -324,6 +334,48 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(labelText: 'Outstanding Amount', labelStyle: TextStyle(color: AppColors.grey500)),
                 ),
+                if (!isLending) ...[
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: selectedType,
+                    dropdownColor: AppColors.layer1,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Liability Type',
+                      labelStyle: TextStyle(color: AppColors.grey500),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'personal_loan', child: Text('Personal Loan')),
+                      DropdownMenuItem(value: 'borrowing', child: Text('Borrowing')),
+                      DropdownMenuItem(value: 'education_loan', child: Text('Education Loan')),
+                      DropdownMenuItem(value: 'manual_liability', child: Text('Manual Liability')),
+                    ],
+                    onChanged: (val) => setState(() => selectedType = val ?? 'personal_loan'),
+                  ),
+                ],
+                if (activeAccounts.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: activeAccounts.any((a) => a.id == selectedAccountId) ? selectedAccountId : null,
+                    dropdownColor: AppColors.layer1,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: isLending ? 'Source Account (Paid From)' : 'Destination Account (Received Into)',
+                      labelStyle: const TextStyle(color: AppColors.grey500),
+                    ),
+                    items: activeAccounts.map((acc) => DropdownMenuItem(
+                      value: acc.id,
+                      child: Text('${acc.name} (${acc.type.toUpperCase()})'),
+                    )).toList(),
+                    onChanged: (val) => setState(() => selectedAccountId = val),
+                  ),
+                ] else ...[
+                  const SizedBox(height: 12),
+                  const Text(
+                    'No active accounts found. Please add an asset account first.',
+                    style: TextStyle(color: AppColors.darkDanger, fontSize: 12),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 TextField(
                   controller: notesController,
@@ -381,8 +433,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                 final amount = double.tryParse(amountController.text.trim()) ?? 0.0;
                 final notes = notesController.text.trim();
                 if (name.isNotEmpty) {
+                  final finalAccountId = selectedAccountId ?? 'acc_primary_bank_uuid';
                   final notifier = ref.read(mockDatabaseProvider.notifier);
-                  final person = await notifier.addPerson(name, null, notes.isNotEmpty ? notes : null);
                   final txDateTime = DateTime(
                     selectedDate.year,
                     selectedDate.month,
@@ -391,9 +443,11 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                     selectedTime.minute,
                   );
                   if (isLending) {
-                    await notifier.addLendTransaction(person.id, null, amount, notes.isNotEmpty ? notes : 'Initial lend', txDateTime);
+                    final person = await notifier.addPerson(name, null, notes.isNotEmpty ? notes : null, 'receivable');
+                    await notifier.addLendTransaction(person.id, finalAccountId, amount, notes.isNotEmpty ? notes : 'Initial lend', txDateTime);
                   } else {
-                    await notifier.addBorrowTransaction(person.id, null, amount, notes.isNotEmpty ? notes : 'Initial borrow', txDateTime);
+                    final person = await notifier.addPerson(name, null, notes.isNotEmpty ? notes : null, selectedType);
+                    await notifier.addBorrowTransaction(person.id, finalAccountId, amount, notes.isNotEmpty ? notes : 'Initial borrow', txDateTime);
                   }
                   if (context.mounted) {
                     Navigator.pop(context);
@@ -1654,25 +1708,69 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     final peopleLiabilities = state.people.where((p) => p.isArchived == 0 && state.getPersonLiabilityBalance(p.id) > 0).toList();
 
     final totalCount = ccLiabilities.length + peopleLiabilities.length;
-    if (ccLiabilities.isEmpty && peopleLiabilities.isEmpty) {
-      return EmptyStateWidget(
-        icon: Icons.trending_down_outlined,
-        title: 'No Liabilities Yet',
-        description: 'You have zero outstanding dues and your debt balance is empty.',
-        action: _buildAddButton('Add New Liability', () => _showAddPersonDialog(false)),
-      );
-    }
+    final int itemCount = totalCount == 0 ? 3 : totalCount + 2;
 
     return ListView.builder(
       padding: const EdgeInsets.all(16.0),
-      itemCount: totalCount + 1,
+      itemCount: itemCount,
       itemBuilder: (context, index) {
-        if (index == totalCount) {
+        if (index == 0) {
+          // Calculation Inspector Banner/Button!
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            child: GlassCard(
+              onTap: () => context.push('/settings/calculation_inspector'),
+              borderColor: AppColors.darkPrimary.withOpacity(0.5),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: AppColors.darkPrimary.withOpacity(0.12),
+                      child: const Icon(Icons.calculate_outlined, color: AppColors.darkPrimary),
+                    ),
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Calculation Inspector', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
+                          SizedBox(height: 2),
+                          Text('Verify liability formulas and ledger balances', style: TextStyle(fontSize: 11, color: AppColors.grey500)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        if (totalCount == 0) {
+          if (index == 1) {
+            return Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              child: EmptyStateWidget(
+                icon: Icons.trending_down_outlined,
+                title: 'No Liabilities Yet',
+                description: 'You have zero outstanding dues and your debt balance is empty.',
+                action: const SizedBox.shrink(),
+              ),
+            );
+          }
           return _buildAddButton('Add New Liability', () => _showAddPersonDialog(false));
         }
 
-        if (index < ccLiabilities.length) {
-          final acc = ccLiabilities[index];
+        final adjustedIndex = index - 1;
+
+        if (adjustedIndex == totalCount) {
+          return _buildAddButton('Add New Liability', () => _showAddPersonDialog(false));
+        }
+
+        if (adjustedIndex < ccLiabilities.length) {
+          final acc = ccLiabilities[adjustedIndex];
           final bal = state.getAccountLiabilityBalance(acc.id);
           return _buildDismissibleItem<Account>(
             id: acc.id,
@@ -1685,7 +1783,6 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                    
                     title: const Text('Cannot Delete Account', style: TextStyle(color: Colors.white)),
                     content: const Text('This account is not empty. Please clear its transactions or merge it first.', style: TextStyle(color: AppColors.grey400)),
                     actions: [
@@ -1731,7 +1828,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
             ),
           );
         } else {
-          final person = peopleLiabilities[index - ccLiabilities.length];
+          final person = peopleLiabilities[adjustedIndex - ccLiabilities.length];
           final bal = state.getPersonLiabilityBalance(person.id);
           return _buildDismissibleItem<Person>(
             id: person.id,
@@ -1744,7 +1841,6 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                    
                     title: const Text('Cannot Delete Person', style: TextStyle(color: Colors.white)),
                     content: const Text('This person has associated transactions. Please delete or archive them instead.', style: TextStyle(color: AppColors.grey400)),
                     actions: [
@@ -1773,7 +1869,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         children: [
                           Text(person.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                           const SizedBox(height: 4),
-                          Text('${person.notes ?? "INDIVIDUAL"} • Tap to view details', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
+                          Text('${person.type.replaceAll('_', ' ').toUpperCase()} • Tap to view details', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
                         ],
                       ),
                     ),

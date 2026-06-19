@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 import 'package:collection/collection.dart';
 import '../../database/database.dart';
+import 'liability_calculation_service.dart';
 
 class NetWorthService {
   final AppDatabase _db;
@@ -129,8 +130,21 @@ class NetWorthService {
       debtFundedAssets += _getDebtPortion(source, inv?.fundingDetails, bal);
     }
 
+    // Fetch active MTF positions
+    final activeMtfs = await (_db.select(_db.mtfPositions)
+          ..where((tbl) => tbl.isClosed.equals(0) & tbl.deletedAt.isNull()))
+        .get();
+    
+    // Fetch transactions to compute interest / repayments if any
+    final rawTxs = await _db.select(_db.transactions).get();
+    
+    double mtfLiabilities = 0.0;
+    for (final pos in activeMtfs) {
+      mtfLiabilities += LiabilityCalculationService.calculateMtfPosition(pos, rawTxs, DateTime.now()).finalBalance;
+    }
+
     final double totalAssets = cashAssets + receivables + investedCapital;
-    final double totalLiabilities = personLiabilities + creditLiabilities;
+    final double totalLiabilities = personLiabilities + creditLiabilities + mtfLiabilities;
     final double netWorth = totalAssets - totalLiabilities;
 
     return NetWorthData(

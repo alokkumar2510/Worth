@@ -14,6 +14,7 @@ import '../../../../database/database.dart';
 import '../widgets/adjustment_widgets.dart';
 import '../../../../features/investments/domain/entities/sip.dart' as domain;
 import '../../../../core/providers/dependency_provider.dart';
+import '../../../../core/utils/sip_calculator.dart';
 
 class InvestmentDetailScreen extends ConsumerStatefulWidget {
   final String investmentId;
@@ -1416,6 +1417,9 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
     DateTime? endDate = existingSip?.endDate;
     bool autoCreate = (existingSip?.autoCreate ?? 1) == 1;
 
+    String importMode = 'paid';
+    final completedInstallmentsController = TextEditingController(text: '0');
+
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -1575,12 +1579,77 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                     contentPadding: EdgeInsets.zero,
                     onChanged: (val) => setDialogState(() => autoCreate = val),
                   ),
+                  if (existingSip == null && startDate.isBefore(DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day))) ...[
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: importMode,
+                      dropdownColor: AppColors.layer1,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Historical Import Mode',
+                        labelStyle: TextStyle(color: AppColors.grey500),
+                        helperText: 'How should past installments be recorded?',
+                        helperStyle: TextStyle(color: AppColors.grey500, fontSize: 10),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'paid', child: Text('Assume all past installments paid')),
+                        DropdownMenuItem(value: 'manual', child: Text('Manually enter completed installments')),
+                        DropdownMenuItem(value: 'today', child: Text('Track only from today')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() {
+                            importMode = val;
+                          });
+                        }
+                      },
+                    ),
+                    if (importMode == 'manual') ...[
+                      const SizedBox(height: 16),
+                      Builder(
+                        builder: (context) {
+                          final todayMidnight = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+                          final maxOccurrences = SipCalculator.calculateScheduledDates(
+                            startDate: startDate,
+                            frequency: frequency,
+                            sipDate: sipDate,
+                            startLimit: startDate,
+                            endLimit: todayMidnight,
+                            endDate: endDate,
+                          ).length;
+                          return TextField(
+                            controller: completedInstallmentsController,
+                            keyboardType: TextInputType.number,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              labelText: 'Completed Installments',
+                              labelStyle: const TextStyle(color: AppColors.grey500),
+                              helperText: 'Max possible: $maxOccurrences (based on schedule)',
+                              helperStyle: const TextStyle(color: AppColors.grey500, fontSize: 10),
+                            ),
+                            onChanged: (val) {
+                              final parsed = int.tryParse(val) ?? 0;
+                              if (parsed > maxOccurrences) {
+                                completedInstallmentsController.text = maxOccurrences.toString();
+                                completedInstallmentsController.selection = TextSelection.fromPosition(
+                                  TextPosition(offset: completedInstallmentsController.text.length),
+                                );
+                              }
+                            },
+                          );
+                        },
+                      ),
+                    ],
+                  ],
                 ],
               ),
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  completedInstallmentsController.dispose();
+                  Navigator.pop(context);
+                },
                 child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
               ),
               ElevatedButton(
@@ -1588,6 +1657,7 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                   final amount = double.tryParse(amountController.text.trim()) ?? 0.0;
                   if (amount > 0) {
                     if (existingSip == null) {
+                      final completedOverride = int.tryParse(completedInstallmentsController.text.trim()) ?? 0;
                       ref.read(sipServiceProvider).addSip(
                         investmentId: inv.id,
                         amount: amount,
@@ -1596,6 +1666,9 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                         startDate: startDate,
                         endDate: endDate,
                         autoCreate: autoCreate ? 1 : 0,
+                        importMode: importMode,
+                        completedInstallmentsOverride: completedOverride,
+                        worthCreationDate: DateTime.now(),
                       );
                     } else {
                       final updated = existingSip.copyWith(
@@ -1608,6 +1681,7 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                       );
                       ref.read(sipServiceProvider).editSip(updated);
                     }
+                    completedInstallmentsController.dispose();
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text(existingSip == null ? 'SIP created successfully.' : 'SIP updated successfully.')),

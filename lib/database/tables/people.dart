@@ -13,6 +13,7 @@ class People extends Table {
   TextColumn get deviceId => text().nullable()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
   TextColumn get deletedBy => text().nullable()();
+  TextColumn get type => text().withDefault(const Constant('personal_loan'))();
 
   @override
   Set<Column> get primaryKey => {id};

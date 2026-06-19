@@ -342,7 +342,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 
     String fromAccName = dbState.accounts.firstWhere((a) => a.id == tx.fromAccountId, orElse: () => Account(id: '', name: 'None', type: 'bank', notes: null, isArchived: 0, createdAt: DateTime.now(), updatedAt: DateTime.now(), syncStatus: 'synced')).name;
     String toAccName = dbState.accounts.firstWhere((a) => a.id == tx.toAccountId, orElse: () => Account(id: '', name: 'None', type: 'bank', notes: null, isArchived: 0, createdAt: DateTime.now(), updatedAt: DateTime.now(), syncStatus: 'synced')).name;
-    String linkedPerson = tx.personId != null ? dbState.people.firstWhere((p) => p.id == tx.personId, orElse: () => Person(id: '', name: 'Unknown', phone: null, notes: null, isArchived: 0, createdAt: DateTime.now(), updatedAt: DateTime.now(), syncStatus: 'synced')).name : 'None';
+    String linkedPerson = tx.personId != null ? dbState.people.firstWhere((p) => p.id == tx.personId, orElse: () => Person(id: '', name: 'Unknown', phone: null, notes: null, isArchived: 0, createdAt: DateTime.now(), updatedAt: DateTime.now(), syncStatus: 'synced', type: 'personal_loan')).name : 'None';
     String linkedInvestment = tx.investmentId != null ? dbState.investments.firstWhere((i) => i.id == tx.investmentId, orElse: () => Investment(id: '', name: 'None', type: 'mutual_fund', symbol: '', marketValue: 0.0, marketValueUpdatedAt: DateTime.now(), isArchived: 0, notes: null, createdAt: DateTime.now(), updatedAt: DateTime.now(), syncStatus: 'synced')).name : 'None';
 
     showModalBottomSheet(

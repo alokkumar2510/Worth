@@ -500,7 +500,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                    child: _buildInfoRow('Version', '1.7.4 (Build 8)'),
+                    child: _buildInfoRow('Version', '1.8.0 (Build 9)'),
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),

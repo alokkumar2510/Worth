@@ -46,6 +46,7 @@ import '../../features/settings/presentation/screens/categories_labels_screen.da
 import '../../features/settings/presentation/screens/archive_center_screen.dart';
 import '../../features/history/presentation/screens/portfolio_history_archive_screen.dart';
 import '../../features/recovery/presentation/screens/recovery_allocation_report_screen.dart';
+import '../../features/settings/presentation/screens/financial_calculation_inspector_screen.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -696,6 +697,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                     pageBuilder: (context, state) => buildPremiumTransitionPage(
                       state: state,
                       child: const RecoveryAllocationReportScreen(),
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'calculation_inspector',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) => buildPremiumTransitionPage(
+                      state: state,
+                      child: const FinancialCalculationInspectorScreen(),
                     ),
                   ),
                 ],

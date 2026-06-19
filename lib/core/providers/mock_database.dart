@@ -21,6 +21,8 @@ import '../mock_data/mock_snapshots.dart';
 import '../mock_data/mock_transactions.dart';
 import '../../features/ipo_pool/domain/entities/ipo_pool_models.dart';
 import '../../features/investments/domain/entities/sip.dart' as domain;
+import '../utils/sip_calculator.dart';
+import '../calculation/liability_calculation_service.dart';
 
 class MockDatabaseState {
   final List<Account> accounts;
@@ -67,45 +69,45 @@ class MockDatabaseState {
   final DateTime? userCreatedAt;
 
   MockDatabaseState({
-    required this.accounts,
-    required this.people,
-    required this.investments,
-    required this.investmentLots,
-    required this.investmentLotConsumptions,
-    required this.transactions,
-    required this.expectedIncomes,
-    required this.goals,
-    required this.snapshots,
-    required this.adjustments,
-    required this.ipoPools,
-    required this.mtfPositions,
-    required this.sips,
-    required this.categories,
-    required this.customLabels,
-    required this.portfolioHistory,
-    required this.portfolioSnapshots,
-    required this.recoveryAllocations,
-    required this.recoveryDestinations,
-    required this.currency,
-    required this.themeMode,
-    required this.appLockEnabled,
-    required this.appLockPin,
-    required this.appLockTimeout,
-    required this.isLoggedIn,
-    required this.isOnboarded,
-    required this.onboardingCompleted,
-    required this.firstAccountCreated,
-    required this.checkInEnabled,
-    required this.checkInTimes,
-    required this.checkInReminderCount,
-    required this.checkInCompletedDate,
-    required this.lastTriggeredCheckIn,
-    required this.notificationsEnabled,
-    required this.notificationPrefTransactions,
-    required this.notificationPrefCheckIns,
-    required this.notificationPrefSip,
-    required this.notificationPrefGoals,
-    required this.notificationsAsked,
+    this.accounts = const [],
+    this.people = const [],
+    this.investments = const [],
+    this.investmentLots = const [],
+    this.investmentLotConsumptions = const [],
+    this.transactions = const [],
+    this.expectedIncomes = const [],
+    this.goals = const [],
+    this.snapshots = const [],
+    this.adjustments = const [],
+    this.ipoPools = const [],
+    this.mtfPositions = const [],
+    this.sips = const [],
+    this.categories = const [],
+    this.customLabels = const [],
+    this.portfolioHistory = const [],
+    this.portfolioSnapshots = const [],
+    this.recoveryAllocations = const [],
+    this.recoveryDestinations = const [],
+    this.currency = '₹',
+    this.themeMode = 'dark',
+    this.appLockEnabled = false,
+    this.appLockPin = '',
+    this.appLockTimeout = 30000,
+    this.isLoggedIn = true,
+    this.isOnboarded = true,
+    this.onboardingCompleted = true,
+    this.firstAccountCreated = true,
+    this.checkInEnabled = false,
+    this.checkInTimes = '',
+    this.checkInReminderCount = '0',
+    this.checkInCompletedDate = '',
+    this.lastTriggeredCheckIn = '',
+    this.notificationsEnabled = false,
+    this.notificationPrefTransactions = false,
+    this.notificationPrefCheckIns = false,
+    this.notificationPrefSip = false,
+    this.notificationPrefGoals = false,
+    this.notificationsAsked = false,
     this.userCreatedAt,
   });
 
@@ -276,7 +278,7 @@ class MockDatabaseState {
       if (tx.voidedTransactionId != null || tx.type == 'void') continue;
 
       if (tx.personId == personId) {
-        if (tx.type == 'borrow_money') {
+        if (tx.type == 'borrow_money' || tx.type == 'interest_accrued') {
           balance += tx.amount;
         } else if (tx.type == 'repay_money') {
           balance -= tx.amount;
@@ -376,35 +378,11 @@ class MockDatabaseState {
   }
 
   double get totalLiabilities {
-    // 1. Person liabilities (borrowed money)
-    double borrowed = 0.0;
-    for (final p in people) {
-      if (p.isArchived == 0) {
-        borrowed += getPersonLiabilityBalance(p.id);
-      }
-    }
-
-    // 2. Credit Card outstanding dues
-    double credit = 0.0;
-    for (final acc in accounts) {
-      if (acc.isArchived == 0 && acc.type == 'credit') {
-        credit += getAccountLiabilityBalance(acc.id);
-      }
-    }
-
-    // 3. MTF Borrowed Capital
-    double mtfTotal = 0.0;
-    for (final mtf in mtfPositions) {
-      if (mtf.isClosed == 0) {
-        mtfTotal += mtf.borrowedCapital;
-      }
-    }
-
-    return borrowed + credit + mtfTotal;
+    return LiabilityCalculationService.calculateTotalLiabilities(this);
   }
 
   double get netWorth {
-    return totalAssets - totalLiabilities;
+    return LiabilityCalculationService.calculateNetWorth(this);
   }
 
   double get debtFundedAssets {
@@ -1513,7 +1491,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     }
   }
 
-  Future<Person> addPerson(String name, String? phone, String? notes) async {
+  Future<Person> addPerson(String name, String? phone, String? notes, [String type = 'personal_loan']) async {
     final id = _uuid.v4();
     final now = DateTime.now().toUtc();
     final newPerson = Person(
@@ -1525,6 +1503,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       createdAt: now,
       updatedAt: now,
       syncStatus: 'pending',
+      type: type,
     );
 
     final isMock = _ref.read(mockModeProvider);
@@ -1563,6 +1542,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
               createdAt: p.createdAt,
               updatedAt: DateTime.now().toUtc(),
               syncStatus: p.syncStatus,
+              type: p.type,
             );
           }
           return p;
@@ -1614,6 +1594,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
               createdAt: p.createdAt,
               updatedAt: DateTime.now().toUtc(),
               syncStatus: p.syncStatus,
+              type: p.type,
             );
           }
           return p;
@@ -4109,9 +4090,13 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     required DateTime startDate,
     DateTime? endDate,
     required int autoCreate,
+    String importMode = 'paid',
+    int completedInstallmentsOverride = 0,
+    DateTime? worthCreationDate,
   }) async {
     final id = _uuid.v4();
     final now = DateTime.now().toUtc();
+    final worthCreation = worthCreationDate ?? now;
 
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
@@ -4129,6 +4114,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         createdAt: now,
         updatedAt: now,
         syncStatus: 'pending',
+        importMode: importMode,
+        completedInstallmentsOverride: completedInstallmentsOverride,
+        worthCreationDate: worthCreation,
       );
       await repo.createSip(domainSip);
       _queueSync('sip', id, 'upsert');
@@ -4146,6 +4134,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         createdAt: now,
         updatedAt: now,
         syncStatus: 'pending',
+        importMode: importMode,
+        completedInstallmentsOverride: completedInstallmentsOverride,
+        worthCreationDate: worthCreation,
       );
       state = state.copyWith(sips: [...state.sips, newSip]);
     }
@@ -4159,6 +4150,64 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       valueChanged: 'Created SIP: ${state.currency}${amount.toStringAsFixed(0)}',
       newValue: 'Frequency: $frequency, Day: $sipDate',
     );
+
+    // Pre-populate historical transactions based on import mode
+    final todayMidnight = DateTime(now.year, now.month, now.day);
+    if (startDate.isBefore(todayMidnight)) {
+      final scheduledDates = SipCalculator.calculateScheduledDates(
+        startDate: startDate,
+        frequency: frequency,
+        sipDate: sipDate,
+        startLimit: startDate,
+        endLimit: todayMidnight,
+        endDate: endDate,
+      );
+
+      List<DateTime> datesToGenerate = [];
+      if (importMode == 'paid') {
+        datesToGenerate = scheduledDates;
+      } else if (importMode == 'manual' && completedInstallmentsOverride > 0) {
+        final N = completedInstallmentsOverride;
+        datesToGenerate = scheduledDates.length > N
+            ? scheduledDates.sublist(scheduledDates.length - N)
+            : scheduledDates;
+      }
+
+      if (datesToGenerate.isNotEmpty) {
+        final fromAcc = state.accounts.firstWhereOrNull((a) => a.id == 'acc_primary_bank_uuid') ?? state.accounts.firstOrNull;
+        final marketPrice = investment?.marketValue ?? 1.0;
+        final price = marketPrice > 0 ? marketPrice : 1.0;
+        final units = amount / price;
+        final invName = investment?.name ?? 'Investment';
+
+        for (final date in datesToGenerate) {
+          await buyInvestment(
+            investmentId,
+            fromAcc?.id,
+            units,
+            price,
+            'SIP Auto-Invest: $invName (SIP ID: $id)',
+            date,
+          );
+        }
+
+        // Auto-update earliest purchase date of the investment if not already set or if earlier than current purchaseDate
+        if (investment != null) {
+          final earliestDate = datesToGenerate.first;
+          if (investment.purchaseDate == null || investment.purchaseDate!.isAfter(earliestDate)) {
+            await updateInvestment(
+              investmentId,
+              investment.name,
+              investment.type,
+              investment.symbol,
+              investment.notes,
+              purchaseDate: earliestDate,
+              purchaseTime: investment.purchaseTime,
+            );
+          }
+        }
+      }
+    }
 
     // Check if we should process it immediately
     await runAutoSipProcessing();

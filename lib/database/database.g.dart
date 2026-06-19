@@ -819,6 +819,13 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PeopleData> {
   late final GeneratedColumn<String> deletedBy = GeneratedColumn<String>(
       'deleted_by', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+      'type', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('personal_loan'));
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -832,7 +839,8 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PeopleData> {
         lastSyncedAt,
         deviceId,
         deletedAt,
-        deletedBy
+        deletedBy,
+        type
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -905,6 +913,10 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PeopleData> {
       context.handle(_deletedByMeta,
           deletedBy.isAcceptableOrUnknown(data['deleted_by']!, _deletedByMeta));
     }
+    if (data.containsKey('type')) {
+      context.handle(
+          _typeMeta, type.isAcceptableOrUnknown(data['type']!, _typeMeta));
+    }
     return context;
   }
 
@@ -938,6 +950,8 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PeopleData> {
           .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
       deletedBy: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}deleted_by']),
+      type: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}type'])!,
     );
   }
 
@@ -960,6 +974,7 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
   final String? deviceId;
   final DateTime? deletedAt;
   final String? deletedBy;
+  final String type;
   const PeopleData(
       {required this.id,
       required this.name,
@@ -972,7 +987,8 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       this.lastSyncedAt,
       this.deviceId,
       this.deletedAt,
-      this.deletedBy});
+      this.deletedBy,
+      required this.type});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1000,6 +1016,7 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
     if (!nullToAbsent || deletedBy != null) {
       map['deleted_by'] = Variable<String>(deletedBy);
     }
+    map['type'] = Variable<String>(type);
     return map;
   }
 
@@ -1027,6 +1044,7 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       deletedBy: deletedBy == null && nullToAbsent
           ? const Value.absent()
           : Value(deletedBy),
+      type: Value(type),
     );
   }
 
@@ -1046,6 +1064,7 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       deviceId: serializer.fromJson<String?>(json['deviceId']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
       deletedBy: serializer.fromJson<String?>(json['deletedBy']),
+      type: serializer.fromJson<String>(json['type']),
     );
   }
   @override
@@ -1064,6 +1083,7 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       'deviceId': serializer.toJson<String?>(deviceId),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
       'deletedBy': serializer.toJson<String?>(deletedBy),
+      'type': serializer.toJson<String>(type),
     };
   }
 
@@ -1079,7 +1099,8 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
           Value<DateTime?> lastSyncedAt = const Value.absent(),
           Value<String?> deviceId = const Value.absent(),
           Value<DateTime?> deletedAt = const Value.absent(),
-          Value<String?> deletedBy = const Value.absent()}) =>
+          Value<String?> deletedBy = const Value.absent(),
+          String? type}) =>
       PeopleData(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -1094,6 +1115,7 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
         deviceId: deviceId.present ? deviceId.value : this.deviceId,
         deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
         deletedBy: deletedBy.present ? deletedBy.value : this.deletedBy,
+        type: type ?? this.type,
       );
   PeopleData copyWithCompanion(PeopleCompanion data) {
     return PeopleData(
@@ -1113,6 +1135,7 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
       deletedBy: data.deletedBy.present ? data.deletedBy.value : this.deletedBy,
+      type: data.type.present ? data.type.value : this.type,
     );
   }
 
@@ -1130,14 +1153,27 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
           ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('deviceId: $deviceId, ')
           ..write('deletedAt: $deletedAt, ')
-          ..write('deletedBy: $deletedBy')
+          ..write('deletedBy: $deletedBy, ')
+          ..write('type: $type')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, phone, notes, isArchived, createdAt,
-      updatedAt, syncStatus, lastSyncedAt, deviceId, deletedAt, deletedBy);
+  int get hashCode => Object.hash(
+      id,
+      name,
+      phone,
+      notes,
+      isArchived,
+      createdAt,
+      updatedAt,
+      syncStatus,
+      lastSyncedAt,
+      deviceId,
+      deletedAt,
+      deletedBy,
+      type);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1153,7 +1189,8 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
           other.lastSyncedAt == this.lastSyncedAt &&
           other.deviceId == this.deviceId &&
           other.deletedAt == this.deletedAt &&
-          other.deletedBy == this.deletedBy);
+          other.deletedBy == this.deletedBy &&
+          other.type == this.type);
 }
 
 class PeopleCompanion extends UpdateCompanion<PeopleData> {
@@ -1169,6 +1206,7 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
   final Value<String?> deviceId;
   final Value<DateTime?> deletedAt;
   final Value<String?> deletedBy;
+  final Value<String> type;
   final Value<int> rowid;
   const PeopleCompanion({
     this.id = const Value.absent(),
@@ -1183,6 +1221,7 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
     this.deviceId = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.deletedBy = const Value.absent(),
+    this.type = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PeopleCompanion.insert({
@@ -1198,6 +1237,7 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
     this.deviceId = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.deletedBy = const Value.absent(),
+    this.type = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -1216,6 +1256,7 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
     Expression<String>? deviceId,
     Expression<DateTime>? deletedAt,
     Expression<String>? deletedBy,
+    Expression<String>? type,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1231,6 +1272,7 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
       if (deviceId != null) 'device_id': deviceId,
       if (deletedAt != null) 'deleted_at': deletedAt,
       if (deletedBy != null) 'deleted_by': deletedBy,
+      if (type != null) 'type': type,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1248,6 +1290,7 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
       Value<String?>? deviceId,
       Value<DateTime?>? deletedAt,
       Value<String?>? deletedBy,
+      Value<String>? type,
       Value<int>? rowid}) {
     return PeopleCompanion(
       id: id ?? this.id,
@@ -1262,6 +1305,7 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
       deviceId: deviceId ?? this.deviceId,
       deletedAt: deletedAt ?? this.deletedAt,
       deletedBy: deletedBy ?? this.deletedBy,
+      type: type ?? this.type,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1305,6 +1349,9 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
     if (deletedBy.present) {
       map['deleted_by'] = Variable<String>(deletedBy.value);
     }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1326,6 +1373,7 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
           ..write('deviceId: $deviceId, ')
           ..write('deletedAt: $deletedAt, ')
           ..write('deletedBy: $deletedBy, ')
+          ..write('type: $type, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -12353,6 +12401,29 @@ class $SipsTable extends Sips with TableInfo<$SipsTable, Sip> {
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('pending'));
+  static const VerificationMeta _importModeMeta =
+      const VerificationMeta('importMode');
+  @override
+  late final GeneratedColumn<String> importMode = GeneratedColumn<String>(
+      'import_mode', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('paid'));
+  static const VerificationMeta _completedInstallmentsOverrideMeta =
+      const VerificationMeta('completedInstallmentsOverride');
+  @override
+  late final GeneratedColumn<int> completedInstallmentsOverride =
+      GeneratedColumn<int>(
+          'completed_installments_override', aliasedName, false,
+          type: DriftSqlType.int,
+          requiredDuringInsert: false,
+          defaultValue: const Constant(0));
+  static const VerificationMeta _worthCreationDateMeta =
+      const VerificationMeta('worthCreationDate');
+  @override
+  late final GeneratedColumn<DateTime> worthCreationDate =
+      GeneratedColumn<DateTime>('worth_creation_date', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _lastSyncedAtMeta =
       const VerificationMeta('lastSyncedAt');
   @override
@@ -12391,6 +12462,9 @@ class $SipsTable extends Sips with TableInfo<$SipsTable, Sip> {
         createdAt,
         updatedAt,
         syncStatus,
+        importMode,
+        completedInstallmentsOverride,
+        worthCreationDate,
         lastSyncedAt,
         deviceId,
         deletedAt,
@@ -12475,6 +12549,25 @@ class $SipsTable extends Sips with TableInfo<$SipsTable, Sip> {
           syncStatus.isAcceptableOrUnknown(
               data['sync_status']!, _syncStatusMeta));
     }
+    if (data.containsKey('import_mode')) {
+      context.handle(
+          _importModeMeta,
+          importMode.isAcceptableOrUnknown(
+              data['import_mode']!, _importModeMeta));
+    }
+    if (data.containsKey('completed_installments_override')) {
+      context.handle(
+          _completedInstallmentsOverrideMeta,
+          completedInstallmentsOverride.isAcceptableOrUnknown(
+              data['completed_installments_override']!,
+              _completedInstallmentsOverrideMeta));
+    }
+    if (data.containsKey('worth_creation_date')) {
+      context.handle(
+          _worthCreationDateMeta,
+          worthCreationDate.isAcceptableOrUnknown(
+              data['worth_creation_date']!, _worthCreationDateMeta));
+    }
     if (data.containsKey('last_synced_at')) {
       context.handle(
           _lastSyncedAtMeta,
@@ -12526,6 +12619,13 @@ class $SipsTable extends Sips with TableInfo<$SipsTable, Sip> {
           .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
       syncStatus: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}sync_status'])!,
+      importMode: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}import_mode'])!,
+      completedInstallmentsOverride: attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}completed_installments_override'])!,
+      worthCreationDate: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}worth_creation_date']),
       lastSyncedAt: attachedDatabase.typeMapping.read(
           DriftSqlType.dateTime, data['${effectivePrefix}last_synced_at']),
       deviceId: attachedDatabase.typeMapping
@@ -12556,6 +12656,9 @@ class Sip extends DataClass implements Insertable<Sip> {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String syncStatus;
+  final String importMode;
+  final int completedInstallmentsOverride;
+  final DateTime? worthCreationDate;
   final DateTime? lastSyncedAt;
   final String? deviceId;
   final DateTime? deletedAt;
@@ -12573,6 +12676,9 @@ class Sip extends DataClass implements Insertable<Sip> {
       required this.createdAt,
       required this.updatedAt,
       required this.syncStatus,
+      required this.importMode,
+      required this.completedInstallmentsOverride,
+      this.worthCreationDate,
       this.lastSyncedAt,
       this.deviceId,
       this.deletedAt,
@@ -12594,6 +12700,12 @@ class Sip extends DataClass implements Insertable<Sip> {
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['sync_status'] = Variable<String>(syncStatus);
+    map['import_mode'] = Variable<String>(importMode);
+    map['completed_installments_override'] =
+        Variable<int>(completedInstallmentsOverride);
+    if (!nullToAbsent || worthCreationDate != null) {
+      map['worth_creation_date'] = Variable<DateTime>(worthCreationDate);
+    }
     if (!nullToAbsent || lastSyncedAt != null) {
       map['last_synced_at'] = Variable<DateTime>(lastSyncedAt);
     }
@@ -12625,6 +12737,11 @@ class Sip extends DataClass implements Insertable<Sip> {
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       syncStatus: Value(syncStatus),
+      importMode: Value(importMode),
+      completedInstallmentsOverride: Value(completedInstallmentsOverride),
+      worthCreationDate: worthCreationDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(worthCreationDate),
       lastSyncedAt: lastSyncedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(lastSyncedAt),
@@ -12656,6 +12773,11 @@ class Sip extends DataClass implements Insertable<Sip> {
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       syncStatus: serializer.fromJson<String>(json['syncStatus']),
+      importMode: serializer.fromJson<String>(json['importMode']),
+      completedInstallmentsOverride:
+          serializer.fromJson<int>(json['completedInstallmentsOverride']),
+      worthCreationDate:
+          serializer.fromJson<DateTime?>(json['worthCreationDate']),
       lastSyncedAt: serializer.fromJson<DateTime?>(json['lastSyncedAt']),
       deviceId: serializer.fromJson<String?>(json['deviceId']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
@@ -12678,6 +12800,10 @@ class Sip extends DataClass implements Insertable<Sip> {
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'syncStatus': serializer.toJson<String>(syncStatus),
+      'importMode': serializer.toJson<String>(importMode),
+      'completedInstallmentsOverride':
+          serializer.toJson<int>(completedInstallmentsOverride),
+      'worthCreationDate': serializer.toJson<DateTime?>(worthCreationDate),
       'lastSyncedAt': serializer.toJson<DateTime?>(lastSyncedAt),
       'deviceId': serializer.toJson<String?>(deviceId),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
@@ -12698,6 +12824,9 @@ class Sip extends DataClass implements Insertable<Sip> {
           DateTime? createdAt,
           DateTime? updatedAt,
           String? syncStatus,
+          String? importMode,
+          int? completedInstallmentsOverride,
+          Value<DateTime?> worthCreationDate = const Value.absent(),
           Value<DateTime?> lastSyncedAt = const Value.absent(),
           Value<String?> deviceId = const Value.absent(),
           Value<DateTime?> deletedAt = const Value.absent(),
@@ -12715,6 +12844,12 @@ class Sip extends DataClass implements Insertable<Sip> {
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         syncStatus: syncStatus ?? this.syncStatus,
+        importMode: importMode ?? this.importMode,
+        completedInstallmentsOverride:
+            completedInstallmentsOverride ?? this.completedInstallmentsOverride,
+        worthCreationDate: worthCreationDate.present
+            ? worthCreationDate.value
+            : this.worthCreationDate,
         lastSyncedAt:
             lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
         deviceId: deviceId.present ? deviceId.value : this.deviceId,
@@ -12739,6 +12874,14 @@ class Sip extends DataClass implements Insertable<Sip> {
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       syncStatus:
           data.syncStatus.present ? data.syncStatus.value : this.syncStatus,
+      importMode:
+          data.importMode.present ? data.importMode.value : this.importMode,
+      completedInstallmentsOverride: data.completedInstallmentsOverride.present
+          ? data.completedInstallmentsOverride.value
+          : this.completedInstallmentsOverride,
+      worthCreationDate: data.worthCreationDate.present
+          ? data.worthCreationDate.value
+          : this.worthCreationDate,
       lastSyncedAt: data.lastSyncedAt.present
           ? data.lastSyncedAt.value
           : this.lastSyncedAt,
@@ -12763,6 +12906,10 @@ class Sip extends DataClass implements Insertable<Sip> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('syncStatus: $syncStatus, ')
+          ..write('importMode: $importMode, ')
+          ..write(
+              'completedInstallmentsOverride: $completedInstallmentsOverride, ')
+          ..write('worthCreationDate: $worthCreationDate, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('deviceId: $deviceId, ')
           ..write('deletedAt: $deletedAt, ')
@@ -12785,6 +12932,9 @@ class Sip extends DataClass implements Insertable<Sip> {
       createdAt,
       updatedAt,
       syncStatus,
+      importMode,
+      completedInstallmentsOverride,
+      worthCreationDate,
       lastSyncedAt,
       deviceId,
       deletedAt,
@@ -12805,6 +12955,10 @@ class Sip extends DataClass implements Insertable<Sip> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.syncStatus == this.syncStatus &&
+          other.importMode == this.importMode &&
+          other.completedInstallmentsOverride ==
+              this.completedInstallmentsOverride &&
+          other.worthCreationDate == this.worthCreationDate &&
           other.lastSyncedAt == this.lastSyncedAt &&
           other.deviceId == this.deviceId &&
           other.deletedAt == this.deletedAt &&
@@ -12824,6 +12978,9 @@ class SipsCompanion extends UpdateCompanion<Sip> {
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<String> syncStatus;
+  final Value<String> importMode;
+  final Value<int> completedInstallmentsOverride;
+  final Value<DateTime?> worthCreationDate;
   final Value<DateTime?> lastSyncedAt;
   final Value<String?> deviceId;
   final Value<DateTime?> deletedAt;
@@ -12842,6 +12999,9 @@ class SipsCompanion extends UpdateCompanion<Sip> {
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.syncStatus = const Value.absent(),
+    this.importMode = const Value.absent(),
+    this.completedInstallmentsOverride = const Value.absent(),
+    this.worthCreationDate = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
     this.deviceId = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -12861,6 +13021,9 @@ class SipsCompanion extends UpdateCompanion<Sip> {
     required DateTime createdAt,
     required DateTime updatedAt,
     this.syncStatus = const Value.absent(),
+    this.importMode = const Value.absent(),
+    this.completedInstallmentsOverride = const Value.absent(),
+    this.worthCreationDate = const Value.absent(),
     this.lastSyncedAt = const Value.absent(),
     this.deviceId = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -12887,6 +13050,9 @@ class SipsCompanion extends UpdateCompanion<Sip> {
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<String>? syncStatus,
+    Expression<String>? importMode,
+    Expression<int>? completedInstallmentsOverride,
+    Expression<DateTime>? worthCreationDate,
     Expression<DateTime>? lastSyncedAt,
     Expression<String>? deviceId,
     Expression<DateTime>? deletedAt,
@@ -12906,6 +13072,10 @@ class SipsCompanion extends UpdateCompanion<Sip> {
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (syncStatus != null) 'sync_status': syncStatus,
+      if (importMode != null) 'import_mode': importMode,
+      if (completedInstallmentsOverride != null)
+        'completed_installments_override': completedInstallmentsOverride,
+      if (worthCreationDate != null) 'worth_creation_date': worthCreationDate,
       if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
       if (deviceId != null) 'device_id': deviceId,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -12927,6 +13097,9 @@ class SipsCompanion extends UpdateCompanion<Sip> {
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt,
       Value<String>? syncStatus,
+      Value<String>? importMode,
+      Value<int>? completedInstallmentsOverride,
+      Value<DateTime?>? worthCreationDate,
       Value<DateTime?>? lastSyncedAt,
       Value<String?>? deviceId,
       Value<DateTime?>? deletedAt,
@@ -12945,6 +13118,10 @@ class SipsCompanion extends UpdateCompanion<Sip> {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       syncStatus: syncStatus ?? this.syncStatus,
+      importMode: importMode ?? this.importMode,
+      completedInstallmentsOverride:
+          completedInstallmentsOverride ?? this.completedInstallmentsOverride,
+      worthCreationDate: worthCreationDate ?? this.worthCreationDate,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       deviceId: deviceId ?? this.deviceId,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -12992,6 +13169,16 @@ class SipsCompanion extends UpdateCompanion<Sip> {
     if (syncStatus.present) {
       map['sync_status'] = Variable<String>(syncStatus.value);
     }
+    if (importMode.present) {
+      map['import_mode'] = Variable<String>(importMode.value);
+    }
+    if (completedInstallmentsOverride.present) {
+      map['completed_installments_override'] =
+          Variable<int>(completedInstallmentsOverride.value);
+    }
+    if (worthCreationDate.present) {
+      map['worth_creation_date'] = Variable<DateTime>(worthCreationDate.value);
+    }
     if (lastSyncedAt.present) {
       map['last_synced_at'] = Variable<DateTime>(lastSyncedAt.value);
     }
@@ -13025,6 +13212,10 @@ class SipsCompanion extends UpdateCompanion<Sip> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('syncStatus: $syncStatus, ')
+          ..write('importMode: $importMode, ')
+          ..write(
+              'completedInstallmentsOverride: $completedInstallmentsOverride, ')
+          ..write('worthCreationDate: $worthCreationDate, ')
           ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('deviceId: $deviceId, ')
           ..write('deletedAt: $deletedAt, ')
@@ -16427,6 +16618,7 @@ typedef $$PeopleTableCreateCompanionBuilder = PeopleCompanion Function({
   Value<String?> deviceId,
   Value<DateTime?> deletedAt,
   Value<String?> deletedBy,
+  Value<String> type,
   Value<int> rowid,
 });
 typedef $$PeopleTableUpdateCompanionBuilder = PeopleCompanion Function({
@@ -16442,6 +16634,7 @@ typedef $$PeopleTableUpdateCompanionBuilder = PeopleCompanion Function({
   Value<String?> deviceId,
   Value<DateTime?> deletedAt,
   Value<String?> deletedBy,
+  Value<String> type,
   Value<int> rowid,
 });
 
@@ -16513,6 +16706,9 @@ class $$PeopleTableFilterComposer
   ColumnFilters<String> get deletedBy => $composableBuilder(
       column: $table.deletedBy, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<String> get type => $composableBuilder(
+      column: $table.type, builder: (column) => ColumnFilters(column));
+
   Expression<bool> personBalanceCachesRefs(
       Expression<bool> Function($$PersonBalanceCachesTableFilterComposer f) f) {
     final $$PersonBalanceCachesTableFilterComposer composer = $composerBuilder(
@@ -16580,6 +16776,9 @@ class $$PeopleTableOrderingComposer
 
   ColumnOrderings<String> get deletedBy => $composableBuilder(
       column: $table.deletedBy, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get type => $composableBuilder(
+      column: $table.type, builder: (column) => ColumnOrderings(column));
 }
 
 class $$PeopleTableAnnotationComposer
@@ -16626,6 +16825,9 @@ class $$PeopleTableAnnotationComposer
 
   GeneratedColumn<String> get deletedBy =>
       $composableBuilder(column: $table.deletedBy, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
 
   Expression<T> personBalanceCachesRefs<T extends Object>(
       Expression<T> Function($$PersonBalanceCachesTableAnnotationComposer a)
@@ -16686,6 +16888,7 @@ class $$PeopleTableTableManager extends RootTableManager<
             Value<String?> deviceId = const Value.absent(),
             Value<DateTime?> deletedAt = const Value.absent(),
             Value<String?> deletedBy = const Value.absent(),
+            Value<String> type = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               PeopleCompanion(
@@ -16701,6 +16904,7 @@ class $$PeopleTableTableManager extends RootTableManager<
             deviceId: deviceId,
             deletedAt: deletedAt,
             deletedBy: deletedBy,
+            type: type,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -16716,6 +16920,7 @@ class $$PeopleTableTableManager extends RootTableManager<
             Value<String?> deviceId = const Value.absent(),
             Value<DateTime?> deletedAt = const Value.absent(),
             Value<String?> deletedBy = const Value.absent(),
+            Value<String> type = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               PeopleCompanion.insert(
@@ -16731,6 +16936,7 @@ class $$PeopleTableTableManager extends RootTableManager<
             deviceId: deviceId,
             deletedAt: deletedAt,
             deletedBy: deletedBy,
+            type: type,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -22986,6 +23192,9 @@ typedef $$SipsTableCreateCompanionBuilder = SipsCompanion Function({
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<String> syncStatus,
+  Value<String> importMode,
+  Value<int> completedInstallmentsOverride,
+  Value<DateTime?> worthCreationDate,
   Value<DateTime?> lastSyncedAt,
   Value<String?> deviceId,
   Value<DateTime?> deletedAt,
@@ -23005,6 +23214,9 @@ typedef $$SipsTableUpdateCompanionBuilder = SipsCompanion Function({
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<String> syncStatus,
+  Value<String> importMode,
+  Value<int> completedInstallmentsOverride,
+  Value<DateTime?> worthCreationDate,
   Value<DateTime?> lastSyncedAt,
   Value<String?> deviceId,
   Value<DateTime?> deletedAt,
@@ -23071,6 +23283,17 @@ class $$SipsTableFilterComposer extends Composer<_$AppDatabase, $SipsTable> {
 
   ColumnFilters<String> get syncStatus => $composableBuilder(
       column: $table.syncStatus, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get importMode => $composableBuilder(
+      column: $table.importMode, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get completedInstallmentsOverride => $composableBuilder(
+      column: $table.completedInstallmentsOverride,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get worthCreationDate => $composableBuilder(
+      column: $table.worthCreationDate,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get lastSyncedAt => $composableBuilder(
       column: $table.lastSyncedAt, builder: (column) => ColumnFilters(column));
@@ -23145,6 +23368,17 @@ class $$SipsTableOrderingComposer extends Composer<_$AppDatabase, $SipsTable> {
 
   ColumnOrderings<String> get syncStatus => $composableBuilder(
       column: $table.syncStatus, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get importMode => $composableBuilder(
+      column: $table.importMode, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get completedInstallmentsOverride => $composableBuilder(
+      column: $table.completedInstallmentsOverride,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get worthCreationDate => $composableBuilder(
+      column: $table.worthCreationDate,
+      builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<DateTime> get lastSyncedAt => $composableBuilder(
       column: $table.lastSyncedAt,
@@ -23222,6 +23456,16 @@ class $$SipsTableAnnotationComposer
   GeneratedColumn<String> get syncStatus => $composableBuilder(
       column: $table.syncStatus, builder: (column) => column);
 
+  GeneratedColumn<String> get importMode => $composableBuilder(
+      column: $table.importMode, builder: (column) => column);
+
+  GeneratedColumn<int> get completedInstallmentsOverride => $composableBuilder(
+      column: $table.completedInstallmentsOverride,
+      builder: (column) => column);
+
+  GeneratedColumn<DateTime> get worthCreationDate => $composableBuilder(
+      column: $table.worthCreationDate, builder: (column) => column);
+
   GeneratedColumn<DateTime> get lastSyncedAt => $composableBuilder(
       column: $table.lastSyncedAt, builder: (column) => column);
 
@@ -23290,6 +23534,9 @@ class $$SipsTableTableManager extends RootTableManager<
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
             Value<String> syncStatus = const Value.absent(),
+            Value<String> importMode = const Value.absent(),
+            Value<int> completedInstallmentsOverride = const Value.absent(),
+            Value<DateTime?> worthCreationDate = const Value.absent(),
             Value<DateTime?> lastSyncedAt = const Value.absent(),
             Value<String?> deviceId = const Value.absent(),
             Value<DateTime?> deletedAt = const Value.absent(),
@@ -23309,6 +23556,9 @@ class $$SipsTableTableManager extends RootTableManager<
             createdAt: createdAt,
             updatedAt: updatedAt,
             syncStatus: syncStatus,
+            importMode: importMode,
+            completedInstallmentsOverride: completedInstallmentsOverride,
+            worthCreationDate: worthCreationDate,
             lastSyncedAt: lastSyncedAt,
             deviceId: deviceId,
             deletedAt: deletedAt,
@@ -23328,6 +23578,9 @@ class $$SipsTableTableManager extends RootTableManager<
             required DateTime createdAt,
             required DateTime updatedAt,
             Value<String> syncStatus = const Value.absent(),
+            Value<String> importMode = const Value.absent(),
+            Value<int> completedInstallmentsOverride = const Value.absent(),
+            Value<DateTime?> worthCreationDate = const Value.absent(),
             Value<DateTime?> lastSyncedAt = const Value.absent(),
             Value<String?> deviceId = const Value.absent(),
             Value<DateTime?> deletedAt = const Value.absent(),
@@ -23347,6 +23600,9 @@ class $$SipsTableTableManager extends RootTableManager<
             createdAt: createdAt,
             updatedAt: updatedAt,
             syncStatus: syncStatus,
+            importMode: importMode,
+            completedInstallmentsOverride: completedInstallmentsOverride,
+            worthCreationDate: worthCreationDate,
             lastSyncedAt: lastSyncedAt,
             deviceId: deviceId,
             deletedAt: deletedAt,

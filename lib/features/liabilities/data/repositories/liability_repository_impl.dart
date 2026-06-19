@@ -80,7 +80,7 @@ class LiabilityRepositoryImpl implements LiabilityRepository {
           liabilities.add(domain.Liability(
             id: p.id,
             name: p.name,
-            type: 'personal_debt',
+            type: p.type,
             outstandingAmount: 0.0,
             notes: p.notes,
             isArchived: p.isArchived,
@@ -121,7 +121,7 @@ class LiabilityRepositoryImpl implements LiabilityRepository {
       liabilities.add(domain.Liability(
         id: p.id,
         name: p.name,
-        type: 'personal_debt',
+        type: p.type,
         outstandingAmount: 0.0,
         notes: p.notes,
         isArchived: p.isArchived,
@@ -159,7 +159,7 @@ class LiabilityRepositoryImpl implements LiabilityRepository {
       return domain.Liability(
         id: p.id,
         name: p.name,
-        type: 'personal_debt',
+        type: p.type,
         outstandingAmount: 0.0,
         notes: p.notes,
         isArchived: p.isArchived,
@@ -175,8 +175,9 @@ class LiabilityRepositoryImpl implements LiabilityRepository {
 
   @override
   Future<void> createLiability(domain.Liability liability) async {
+    final isPeer = liability.type != 'credit_card';
     await _database.transaction(() async {
-      if (liability.type == 'personal_debt') {
+      if (isPeer) {
         await _database.into(_database.people).insert(db.PeopleCompanion(
               id: Value(liability.id),
               name: Value(liability.name),
@@ -184,6 +185,7 @@ class LiabilityRepositoryImpl implements LiabilityRepository {
               isArchived: Value(liability.isArchived),
               createdAt: Value(liability.createdAt),
               updatedAt: Value(liability.updatedAt),
+              type: Value(liability.type),
             ));
       } else {
         await _database.into(_database.accounts).insert(db.AccountsCompanion(
@@ -198,7 +200,7 @@ class LiabilityRepositoryImpl implements LiabilityRepository {
       }
     });
     await _ref.read(syncServiceProvider).queueOperation(
-      entityType: liability.type == 'personal_debt' ? 'person' : 'account',
+      entityType: isPeer ? 'person' : 'account',
       entityId: liability.id,
       operation: 'upsert',
     );
@@ -206,8 +208,9 @@ class LiabilityRepositoryImpl implements LiabilityRepository {
 
   @override
   Future<void> updateLiability(domain.Liability liability) async {
+    final isPeer = liability.type != 'credit_card';
     await _database.transaction(() async {
-      if (liability.type == 'personal_debt') {
+      if (isPeer) {
         await _database.update(_database.people).replace(db.Person(
               id: liability.id,
               name: liability.name,
@@ -216,6 +219,7 @@ class LiabilityRepositoryImpl implements LiabilityRepository {
               createdAt: liability.createdAt,
               updatedAt: liability.updatedAt,
               syncStatus: liability.syncStatus,
+              type: liability.type,
             ));
       } else {
         await _database.update(_database.accounts).replace(db.Account(
@@ -231,7 +235,7 @@ class LiabilityRepositoryImpl implements LiabilityRepository {
       }
     });
     await _ref.read(syncServiceProvider).queueOperation(
-      entityType: liability.type == 'personal_debt' ? 'person' : 'account',
+      entityType: isPeer ? 'person' : 'account',
       entityId: liability.id,
       operation: 'upsert',
     );
@@ -247,7 +251,7 @@ class LiabilityRepositoryImpl implements LiabilityRepository {
       );
       await updateLiability(updated);
       await _ref.read(syncServiceProvider).queueOperation(
-        entityType: liability.type == 'personal_debt' ? 'person' : 'account',
+        entityType: liability.type != 'credit_card' ? 'person' : 'account',
         entityId: id,
         operation: 'delete',
       );
@@ -284,7 +288,7 @@ class LiabilityRepositoryImpl implements LiabilityRepository {
       liabilities.add(domain.Liability(
         id: p.id,
         name: p.name,
-        type: 'personal_debt',
+        type: p.type,
         outstandingAmount: 0.0,
         notes: p.notes,
         isArchived: p.isArchived,

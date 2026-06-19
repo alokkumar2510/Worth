@@ -11,6 +11,7 @@ import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/providers/mock_database.dart';
 import '../../../../database/database.dart';
 import '../widgets/adjustment_widgets.dart';
+import '../../../../core/calculation/liability_calculation_service.dart';
 
 class LiabilityDetailScreen extends ConsumerStatefulWidget {
   final String id; // prefixed with 'acc_' or 'person_'
@@ -489,68 +490,51 @@ class _LiabilityDetailScreenState extends ConsumerState<LiabilityDetailScreen> {
 
               Builder(
                 builder: (context) {
-                  if (isAccount) {
-                    final double openingBalance = txs
-                        .where((t) => t.toAccountId == cleanId && t.voidedTransactionId == null && t.type == 'borrow_money')
-                        .fold(0.0, (sum, t) => sum + t.amount);
-                    final double purchases = txs
-                        .where((t) => t.fromAccountId == cleanId && t.voidedTransactionId == null && t.type != 'void')
-                        .fold(0.0, (sum, t) => sum + t.amount);
-                    final double interest = txs
-                        .where((t) => t.toAccountId == cleanId && t.voidedTransactionId == null && t.type == 'interest_accrued')
-                        .fold(0.0, (sum, t) => sum + t.amount);
-                    final double payments = txs
-                        .where((t) => t.toAccountId == cleanId && t.voidedTransactionId == null && t.type != 'borrow_money' && t.type != 'interest_accrued' && t.type != 'void')
-                        .fold(0.0, (sum, t) => sum + t.amount);
-                    final double adjs = dbState.adjustments
-                        .where((a) => a.entityId == cleanId && a.entityType == 'account')
-                        .fold(0.0, (sum, a) => sum + a.adjustedAmount);
+                  final calc = LiabilityCalculationService.calculateSingleLiability(dbState, widget.id);
+                  if (calc == null) return const SizedBox.shrink();
 
+                  if (isAccount) {
                     return CalculationAuditPanel(
                       title: 'Verify Liability Calculation',
-                      formula: 'Outstanding Balance = Opening Balance + Purchases + Interest - Payments + Adjustments',
+                      formula: calc.formulaUsed,
                       inputs: {
-                        'Opening Balance': format.format(openingBalance),
-                        'Purchases / Spending': format.format(purchases),
-                        'Interest Accrued': format.format(interest),
-                        'Payments / Credits': format.format(payments),
-                        'Adjustments': format.format(adjs),
+                        'Opening Balance': format.format(calc.rawBalance),
+                        'Purchases': format.format(calc.purchases),
+                        'Interest Accrued': format.format(calc.interest),
+                        'Fees Charged': format.format(calc.fees),
+                        'Payments': format.format(calc.payments),
+                        'Credits / Refunds': format.format(calc.credits),
+                        'Adjustments': format.format(calc.adjustments),
                       },
-                      output: format.format(outstanding),
+                      output: format.format(calc.finalBalance),
                       steps: [
-                        'Start with opening balance (borrowings): ${format.format(openingBalance)}.',
-                        'Add purchases / spending on credit card: ${format.format(purchases)}.',
-                        'Add interest accrued: ${format.format(interest)}.',
-                        'Subtract payments and other credits received: ${format.format(payments)}.',
-                        'Add applied balance adjustments: ${format.format(adjs)}.',
-                        'Compute outstanding amount: Opening Balance (${format.format(openingBalance)}) + Purchases (${format.format(purchases)}) + Interest (${format.format(interest)}) - Payments (${format.format(payments)}) + Adjustments (${format.format(adjs)}) = ${format.format(outstanding)}.',
+                        'Start with opening balance (borrowings): ${format.format(calc.rawBalance)}.',
+                        'Add purchases / spending on credit card: ${format.format(calc.purchases)}.',
+                        'Add interest accrued: ${format.format(calc.interest)}.',
+                        'Add fees charged: ${format.format(calc.fees)}.',
+                        'Subtract payments: ${format.format(calc.payments)}.',
+                        'Subtract other credits / refunds received: ${format.format(calc.credits)}.',
+                        'Add applied balance adjustments: ${format.format(calc.adjustments)}.',
+                        'Compute outstanding amount: Opening Balance (${format.format(calc.rawBalance)}) + Purchases (${format.format(calc.purchases)}) + Interest (${format.format(calc.interest)}) + Fees (${format.format(calc.fees)}) - Payments (${format.format(calc.payments)}) - Credits (${format.format(calc.credits)}) + Adjustments (${format.format(calc.adjustments)}) = ${format.format(calc.finalBalance)}.',
                       ],
                     );
                   } else {
-                    final double borrowed = txs
-                        .where((t) => t.personId == cleanId && t.voidedTransactionId == null && t.type == 'borrow_money')
-                        .fold(0.0, (sum, t) => sum + t.amount);
-                    final double repayments = txs
-                        .where((t) => t.personId == cleanId && t.voidedTransactionId == null && t.type == 'repay_money')
-                        .fold(0.0, (sum, t) => sum + t.amount);
-                    final double adjs = dbState.adjustments
-                        .where((a) => a.entityId == cleanId && a.entityType == 'person_liability')
-                        .fold(0.0, (sum, a) => sum + a.adjustedAmount);
-
                     return CalculationAuditPanel(
                       title: 'Verify Loan Calculation',
-                      formula: 'Outstanding Balance = Borrowed - Repayments + Adjustments',
+                      formula: calc.formulaUsed,
                       inputs: {
-                        'Total Borrowed': format.format(borrowed),
-                        'Total Repayments': format.format(repayments),
-                        'Adjustments': format.format(adjs),
+                        'Total Principal': format.format(calc.rawBalance),
+                        'Accrued Interest': format.format(calc.interest),
+                        'Total Payments': format.format(calc.payments),
+                        'Adjustments': format.format(calc.adjustments),
                       },
-                      output: format.format(outstanding),
+                      output: format.format(calc.finalBalance),
                       steps: [
-                        'Sum all funds borrowed from this individual: ${format.format(borrowed)}.',
-                        'Sum all repayments made to this individual: ${format.format(repayments)}.',
-                        'Sum all adjustments applied to this liability: ${format.format(adjs)}.',
-                        'Calculate outstanding balance: Borrowed (${format.format(borrowed)}) - Repayments (${format.format(repayments)}) + Adjustments (${format.format(adjs)}) = ${format.format(outstanding)}.',
+                        'Sum all funds borrowed (Principal): ${format.format(calc.rawBalance)}.',
+                        'Sum all accrued interest: ${format.format(calc.interest)}.',
+                        'Sum all payments made: ${format.format(calc.payments)}.',
+                        'Sum all adjustments applied to this liability: ${format.format(calc.adjustments)}.',
+                        'Calculate outstanding balance: Principal (${format.format(calc.rawBalance)}) + Interest (${format.format(calc.interest)}) - Payments (${format.format(calc.payments)}) + Adjustments (${format.format(calc.adjustments)}) = ${format.format(calc.finalBalance)}.',
                       ],
                     );
                   }

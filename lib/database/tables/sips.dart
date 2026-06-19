@@ -15,6 +15,9 @@ class Sips extends Table {
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
+  TextColumn get importMode => text().withDefault(const Constant('paid'))(); // paid | manual | today
+  IntColumn get completedInstallmentsOverride => integer().withDefault(const Constant(0))();
+  DateTimeColumn get worthCreationDate => dateTime().nullable()();
   DateTimeColumn get lastSyncedAt => dateTime().nullable()();
   TextColumn get deviceId => text().nullable()();
   DateTimeColumn get deletedAt => dateTime().nullable()();

@@ -11,6 +11,7 @@ import '../../../../core/providers/mock_database.dart';
 import '../../../../core/providers/dependency_provider.dart';
 import '../../../../features/investments/domain/entities/sip.dart' as domain;
 import '../../../../database/database.dart';
+import '../../../../core/utils/sip_calculator.dart';
 
 class SipDashboardScreen extends ConsumerStatefulWidget {
   const SipDashboardScreen({super.key});
@@ -54,6 +55,9 @@ class _SipDashboardScreenState extends ConsumerState<SipDashboardScreen> with Si
       return list;
     }
 
+    final creationDate = sip.worthCreationDate ?? sip.createdAt;
+    final creationMidnight = DateTime(creationDate.year, creationDate.month, creationDate.day);
+
     int loops = 0;
     while ((current.isBefore(end) || current.isAtSameMomentAs(end)) && loops < 500) {
       loops++;
@@ -69,7 +73,7 @@ class _SipDashboardScreenState extends ConsumerState<SipDashboardScreen> with Si
           matches = true;
         }
       } else if (sip.frequency == 'quarterly') {
-        final monthDiff = current.month - sip.startDate.month;
+        final monthDiff = (current.year - sip.startDate.year) * 12 + (current.month - sip.startDate.month);
         if (monthDiff % 3 == 0) {
           final daysInMonth = DateTime(current.year, current.month + 1, 0).day;
           final targetDay = sip.sipDate > daysInMonth ? daysInMonth : sip.sipDate;
@@ -89,15 +93,20 @@ class _SipDashboardScreenState extends ConsumerState<SipDashboardScreen> with Si
             t.transactionDate.month == current.month &&
             t.transactionDate.day == current.day);
 
-        final isUpcoming = current.isAfter(today) || (current.isAtSameMomentAs(today) && !isCompleted);
-        final isMissed = current.isBefore(today) && !isCompleted;
+        final isAfterOrCreate = current.isAfter(creationMidnight) || current.isAtSameMomentAs(creationMidnight);
+        final isPast = current.isBefore(today);
 
-        list.add(SipOccurrence(
-          date: current,
-          isCompleted: isCompleted,
-          isMissed: isMissed,
-          isUpcoming: isUpcoming,
-        ));
+        if (!isPast || isCompleted || isAfterOrCreate) {
+          final isUpcoming = current.isAfter(today) || (current.isAtSameMomentAs(today) && !isCompleted);
+          final isMissed = isPast && !isCompleted && isAfterOrCreate;
+
+          list.add(SipOccurrence(
+            date: current,
+            isCompleted: isCompleted,
+            isMissed: isMissed,
+            isUpcoming: isUpcoming,
+          ));
+        }
       }
 
       current = current.add(const Duration(days: 1));
@@ -117,7 +126,7 @@ class _SipDashboardScreenState extends ConsumerState<SipDashboardScreen> with Si
           final targetDay = sip.sipDate > daysInMonth ? daysInMonth : sip.sipDate;
           if (nextOcc.day == targetDay) matches = true;
         } else if (sip.frequency == 'quarterly') {
-          final monthDiff = nextOcc.month - sip.startDate.month;
+          final monthDiff = (nextOcc.year - sip.startDate.year) * 12 + (nextOcc.month - sip.startDate.month);
           if (monthDiff % 3 == 0) {
             final daysInMonth = DateTime(nextOcc.year, nextOcc.month + 1, 0).day;
             final targetDay = sip.sipDate > daysInMonth ? daysInMonth : sip.sipDate;
@@ -389,6 +398,23 @@ class _SipDashboardScreenState extends ConsumerState<SipDashboardScreen> with Si
                                         daysRemaining = nextOcc.date.difference(today).inDays;
                                       }
 
+                                      final expectedDates = SipCalculator.calculateScheduledDates(
+                                        startDate: sip.startDate,
+                                        frequency: sip.frequency,
+                                        sipDate: sip.sipDate,
+                                        startLimit: sip.startDate,
+                                        endLimit: today,
+                                        endDate: sip.endDate,
+                                      );
+                                      final expectedInstallments = expectedDates.length;
+                                      final completedInstallments = sipTxs.length;
+                                      final ageMonths = SipCalculator.calculateMonthsBetween(sip.startDate, today);
+                                      final double avgMonthly = ageMonths > 0
+                                          ? (invested / ageMonths)
+                                          : (sip.frequency == 'weekly'
+                                              ? sip.amount * 4.33
+                                              : (sip.frequency == 'quarterly' ? sip.amount / 3 : sip.amount));
+
                                       return Container(
                                         margin: const EdgeInsets.only(bottom: 8),
                                         child: GlassCard(
@@ -414,18 +440,24 @@ class _SipDashboardScreenState extends ConsumerState<SipDashboardScreen> with Si
                                                   ),
                                                 ],
                                               ),
-                                              const SizedBox(height: 8),
-                                              Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              const SizedBox(height: 12),
+                                              // 2x3 Mini-Grid
+                                              GridView(
+                                                shrinkWrap: true,
+                                                physics: const NeverScrollableScrollPhysics(),
+                                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                                  crossAxisCount: 3,
+                                                  mainAxisSpacing: 10,
+                                                  crossAxisSpacing: 8,
+                                                  childAspectRatio: 2.2,
+                                                ),
                                                 children: [
-                                                  Text(
-                                                    '$frequencyLabel · $dateLabel',
-                                                    style: const TextStyle(color: AppColors.grey500, fontSize: 12),
-                                                  ),
-                                                  Text(
-                                                    'Invested: ${format.format(invested)}',
-                                                    style: const TextStyle(color: AppColors.grey500, fontSize: 12),
-                                                  ),
+                                                  _buildCardMiniMetric('Started', DateFormat('dd MMM yyyy').format(sip.startDate)),
+                                                  _buildCardMiniMetric('SIP Age', SipCalculator.formatAge(ageMonths)),
+                                                  _buildCardMiniMetric('Installments', '$completedInstallments / $expectedInstallments'),
+                                                  _buildCardMiniMetric('Total Invested', format.format(invested)),
+                                                  _buildCardMiniMetric('Avg Monthly', format.format(avgMonthly)),
+                                                  _buildCardMiniMetric('Expected Cont.', format.format(expectedInstallments * sip.amount)),
                                                 ],
                                               ),
                                               const Divider(color: AppColors.glassBorder, height: 16),
@@ -629,6 +661,35 @@ class _SipDashboardScreenState extends ConsumerState<SipDashboardScreen> with Si
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildCardMiniMetric(String label, String val) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: GoogleFonts.inter(
+            fontSize: 8,
+            fontWeight: FontWeight.bold,
+            color: AppColors.grey500,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          val,
+          style: GoogleFonts.outfit(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 }

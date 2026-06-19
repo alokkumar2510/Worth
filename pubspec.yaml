@@ -1,6 +1,6 @@
 name: worth
 description: A personal wealth operating system.
-version: 1.7.4+8
+version: 1.8.0+9
 
 publish_to: 'none'
 

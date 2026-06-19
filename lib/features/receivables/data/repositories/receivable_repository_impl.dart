@@ -69,14 +69,21 @@ class ReceivableRepositoryImpl implements ReceivableRepository {
 
   @override
   Future<void> updateReceivable(domain.Receivable receivable) async {
+    final existing = await (_database.select(_database.people)..where((tbl) => tbl.id.equals(receivable.id))).getSingleOrNull();
     await _database.update(_database.people).replace(db.Person(
           id: receivable.id,
           name: receivable.personName,
+          phone: existing?.phone,
           notes: receivable.notes,
           isArchived: receivable.isArchived,
           createdAt: receivable.createdAt,
           updatedAt: receivable.updatedAt,
           syncStatus: receivable.syncStatus,
+          lastSyncedAt: existing?.lastSyncedAt,
+          deviceId: existing?.deviceId,
+          deletedAt: existing?.deletedAt,
+          deletedBy: existing?.deletedBy,
+          type: existing?.type ?? 'personal_loan',
         ));
     await _ref.read(syncServiceProvider).queueOperation(
       entityType: 'person',

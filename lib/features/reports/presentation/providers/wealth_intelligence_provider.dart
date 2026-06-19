@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:collection/collection.dart';
 import '../../../../core/providers/mock_database.dart';
 import '../../../../database/database.dart';
+import '../../../../core/calculation/liability_calculation_service.dart';
 
 class TimelineItem {
   final String month;
@@ -236,14 +237,20 @@ final wealthIntelligenceProvider = Provider<WealthIntelligenceData>((ref) {
   final Map<String, double> liabilityAllocation = {};
   for (final acc in dbState.accounts) {
     if (acc.isArchived == 0 && acc.type == 'credit') {
-      final bal = dbState.getAccountLiabilityBalance(acc.id);
+      final bal = LiabilityCalculationService.calculateCreditCard(acc, dbState.transactions, dbState.adjustments).finalBalance;
       if (bal > 0) liabilityAllocation[acc.name] = bal;
     }
   }
   for (final p in dbState.people) {
     if (p.isArchived == 0) {
-      final bal = dbState.getPersonLiabilityBalance(p.id);
+      final bal = LiabilityCalculationService.calculatePeerLiability(p, dbState.transactions, dbState.adjustments).finalBalance;
       if (bal > 0) liabilityAllocation[p.name] = bal;
+    }
+  }
+  for (final m in dbState.mtfPositions) {
+    if (m.isClosed == 0 && m.deletedAt == null) {
+      final bal = LiabilityCalculationService.calculateMtfPosition(m, dbState.transactions, DateTime.now()).finalBalance;
+      if (bal > 0) liabilityAllocation[m.instrument] = bal;
     }
   }
 
@@ -617,6 +624,9 @@ List<_SipOccurrence> _getSipOccurrences(Sip sip, List<Transaction> transactions,
 
   if (current.isAfter(end)) return list;
 
+  final creationDate = sip.worthCreationDate ?? sip.createdAt;
+  final creationMidnight = DateTime(creationDate.year, creationDate.month, creationDate.day);
+
   int loops = 0;
   while ((current.isBefore(end) || current.isAtSameMomentAs(end)) && loops < 500) {
     loops++;
@@ -628,7 +638,7 @@ List<_SipOccurrence> _getSipOccurrences(Sip sip, List<Transaction> transactions,
       final targetDay = sip.sipDate > daysInMonth ? daysInMonth : sip.sipDate;
       if (current.day == targetDay) matches = true;
     } else if (sip.frequency == 'quarterly') {
-      final monthDiff = current.month - sip.startDate.month;
+      final monthDiff = (current.year - sip.startDate.year) * 12 + (current.month - sip.startDate.month);
       if (monthDiff % 3 == 0) {
         final daysInMonth = DateTime(current.year, current.month + 1, 0).day;
         final targetDay = sip.sipDate > daysInMonth ? daysInMonth : sip.sipDate;
@@ -647,10 +657,13 @@ List<_SipOccurrence> _getSipOccurrences(Sip sip, List<Transaction> transactions,
           t.transactionDate.day == current.day &&
           t.voidedTransactionId == null);
 
-      list.add(_SipOccurrence(
-        date: current,
-        isCompleted: isCompleted,
-      ));
+      final isAfterOrCreate = current.isAfter(creationMidnight) || current.isAtSameMomentAs(creationMidnight);
+      if (isCompleted || isAfterOrCreate) {
+        list.add(_SipOccurrence(
+          date: current,
+          isCompleted: isCompleted,
+        ));
+      }
     }
     current = current.add(const Duration(days: 1));
   }

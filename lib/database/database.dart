@@ -67,7 +67,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 15; // Bumped for source-of-funds tracking
+  int get schemaVersion => 17; // Bumped for People type column
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -217,6 +217,14 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(investmentLots, investmentLots.fundingSource);
             await m.addColumn(investmentLots, investmentLots.fundingLiabilityId);
             await m.addColumn(investmentLots, investmentLots.fundingDetails);
+          }
+          if (from < 16) {
+            await m.addColumn(sips, sips.importMode);
+            await m.addColumn(sips, sips.completedInstallmentsOverride);
+            await m.addColumn(sips, sips.worthCreationDate);
+          }
+          if (from < 17) {
+            await m.addColumn(people, people.type);
           }
         },
       );

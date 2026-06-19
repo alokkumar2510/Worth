@@ -344,6 +344,9 @@ final activeSipsProvider = StreamProvider<List<domain.Sip>>((ref) {
       createdAt: s.createdAt,
       updatedAt: s.updatedAt,
       syncStatus: s.syncStatus,
+      importMode: s.importMode,
+      completedInstallmentsOverride: s.completedInstallmentsOverride,
+      worthCreationDate: s.worthCreationDate,
     )).toList();
     return Stream.value(list);
   } else {
@@ -361,6 +364,9 @@ final activeSipsProvider = StreamProvider<List<domain.Sip>>((ref) {
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       syncStatus: entity.syncStatus,
+      importMode: entity.importMode,
+      completedInstallmentsOverride: entity.completedInstallmentsOverride,
+      worthCreationDate: entity.worthCreationDate,
     )).toList());
   }
 });
@@ -377,6 +383,9 @@ class MockSipService {
     required DateTime startDate,
     DateTime? endDate,
     required int autoCreate,
+    String importMode = 'paid',
+    int completedInstallmentsOverride = 0,
+    DateTime? worthCreationDate,
   }) async {
     await _ref.read(mockDatabaseProvider.notifier).addSip(
       investmentId: investmentId,
@@ -386,6 +395,9 @@ class MockSipService {
       startDate: startDate,
       endDate: endDate,
       autoCreate: autoCreate,
+      importMode: importMode,
+      completedInstallmentsOverride: completedInstallmentsOverride,
+      worthCreationDate: worthCreationDate,
     );
   }
 
@@ -403,6 +415,9 @@ class MockSipService {
       createdAt: sip.createdAt,
       updatedAt: sip.updatedAt,
       syncStatus: sip.syncStatus,
+      importMode: sip.importMode,
+      completedInstallmentsOverride: sip.completedInstallmentsOverride,
+      worthCreationDate: sip.worthCreationDate,
     );
     await _ref.read(mockDatabaseProvider.notifier).editSip(dbSip);
   }

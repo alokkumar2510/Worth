@@ -327,6 +327,7 @@ class SyncService {
             'phone': row.phone,
             'notes': row.notes,
             'isArchived': row.isArchived,
+            'type': row.type,
             'createdAt': Timestamp.fromDate(row.createdAt),
             'updatedAt': Timestamp.fromDate(row.updatedAt),
             'syncStatus': 'synced',
@@ -581,6 +582,9 @@ class SyncService {
             'endDate': row.endDate != null ? Timestamp.fromDate(row.endDate!) : null,
             'autoCreate': row.autoCreate,
             'isActive': row.isActive,
+            'importMode': row.importMode,
+            'completedInstallmentsOverride': row.completedInstallmentsOverride,
+            'worthCreationDate': row.worthCreationDate != null ? Timestamp.fromDate(row.worthCreationDate!) : null,
             'createdAt': Timestamp.fromDate(row.createdAt),
             'updatedAt': Timestamp.fromDate(row.updatedAt),
             'syncStatus': 'synced',
@@ -805,6 +809,7 @@ class SyncService {
       syncStatus: 'synced',
       lastSyncedAt: _parseNullableDateTime(data['lastSyncedAt']),
       deviceId: data['deviceId'] as String?,
+      type: data['type'] as String? ?? 'personal_loan',
     );
   }
 
@@ -973,6 +978,9 @@ class SyncService {
       endDate: _parseNullableDateTime(data['endDate']),
       autoCreate: data['autoCreate'] as int? ?? 0,
       isActive: data['isActive'] as int? ?? 1,
+      importMode: data['importMode'] as String? ?? 'paid',
+      completedInstallmentsOverride: data['completedInstallmentsOverride'] as int? ?? 0,
+      worthCreationDate: _parseNullableDateTime(data['worthCreationDate']),
       createdAt: _parseDateTime(data['createdAt']),
       updatedAt: _parseDateTime(data['updatedAt']),
       syncStatus: 'synced',

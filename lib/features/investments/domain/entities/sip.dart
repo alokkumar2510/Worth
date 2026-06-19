@@ -18,6 +18,9 @@ class Sip with _$Sip {
     required DateTime createdAt,
     required DateTime updatedAt,
     @Default('pending') String syncStatus,
+    @Default('paid') String importMode, // paid | manual | today
+    @Default(0) int completedInstallmentsOverride,
+    DateTime? worthCreationDate,
   }) = _Sip;
 
   factory Sip.fromJson(Map<String, dynamic> json) => _$SipFromJson(json);

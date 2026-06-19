@@ -1,5 +1,7 @@
 import 'package:drift/drift.dart';
 import '../../database/database.dart';
+import '../providers/mock_database.dart';
+import 'liability_calculation_service.dart';
 
 class FinancialCalculatorService {
   final AppDatabase _db;
@@ -35,45 +37,36 @@ class FinancialCalculatorService {
 
   // Sum of all outstanding credit card balances, debt owed to other people, and MTF borrowed capital
   Future<double> calculateLiabilities() async {
-    // 1. Credit Card Accounts
-    final ccQuery = _db.select(_db.accounts).join([
-      innerJoin(
-        _db.accountBalanceCaches,
-        _databaseAccountMatch,
-      ),
-    ])..where(_db.accounts.type.equals('credit') & _db.accounts.isArchived.equals(0));
+    final rawAccounts = await _db.select(_db.accounts).get();
+    final rawPeople = await _db.select(_db.people).get();
+    final rawTransactions = await _db.select(_db.transactions).get();
+    final rawAdjustments = await _db.select(_db.adjustments).get();
+    final rawMtf = await _db.select(_db.mtfPositions).get();
 
-    final ccRows = await ccQuery.get();
-    double ccTotal = 0.0;
-    for (final row in ccRows) {
-      final cache = row.readTable(_db.accountBalanceCaches);
-      ccTotal += cache.liabilityBalance;
-    }
+    final state = MockDatabaseState(
+      accounts: rawAccounts.where((x) => x.deletedAt == null).toList(),
+      people: rawPeople.where((x) => x.deletedAt == null).toList(),
+      transactions: rawTransactions.where((x) => x.deletedAt == null).toList(),
+      adjustments: rawAdjustments.toList(),
+      mtfPositions: rawMtf.where((x) => x.deletedAt == null).toList(),
+      investments: const [],
+      investmentLots: const [],
+      investmentLotConsumptions: const [],
+      expectedIncomes: const [],
+      goals: const [],
+      snapshots: const [],
+      ipoPools: const [],
+      sips: const [],
+      categories: const [],
+      customLabels: const [],
+      portfolioHistory: const [],
+      portfolioSnapshots: const [],
+      recoveryAllocations: const [],
+      recoveryDestinations: const [],
+      currency: '₹',
+    );
 
-    // 2. Personal Debt (Liability towards people)
-    final debtQuery = _db.select(_db.people).join([
-      innerJoin(
-        _db.personBalanceCaches,
-        _db.personBalanceCaches.personId.equalsExp(_db.people.id),
-      ),
-    ])..where(_db.people.isArchived.equals(0));
-
-    final debtRows = await debtQuery.get();
-    double debtTotal = 0.0;
-    for (final row in debtRows) {
-      final cache = row.readTable(_db.personBalanceCaches);
-      debtTotal += cache.liabilityBalance;
-    }
-
-    // 3. MTF Borrowed Capital
-    final mtfQuery = _db.select(_db.mtfPositions)..where((tbl) => tbl.isClosed.equals(0));
-    final mtfRows = await mtfQuery.get();
-    double mtfTotal = 0.0;
-    for (final row in mtfRows) {
-      mtfTotal += row.borrowedCapital;
-    }
-
-    return ccTotal + debtTotal + mtfTotal;
+    return LiabilityCalculationService.calculateTotalLiabilities(state);
   }
 
   // Sum of all outstanding loans/receivables owed to us by other people

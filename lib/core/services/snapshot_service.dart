@@ -5,6 +5,7 @@ import '../../database/database.dart';
 import '../providers/dependency_provider.dart';
 import '../providers/mock_database.dart';
 import '../providers/app_providers.dart';
+import '../calculation/liability_calculation_service.dart';
 
 class SnapshotService {
   final Ref _ref;
@@ -190,9 +191,132 @@ class SnapshotService {
     return ((snap2NetWorth - snap1.netWorth) / snap1.netWorth) * 100.0;
   }
 
+  Future<void> repairExistingSnapshots() async {
+    if (_isMock) return;
+    final allSnapshots = await _db.select(_db.snapshots).get();
+    for (final snap in allSnapshots) {
+      final lastDayOfMonth = DateTime(snap.snapshotDate.year, snap.snapshotDate.month + 1, 0, 23, 59, 59);
+      
+      final accounts = await (_db.select(_db.accounts)..where((tbl) => tbl.deletedAt.isNull() & tbl.createdAt.isSmallerOrEqualValue(lastDayOfMonth))).get();
+      final people = await (_db.select(_db.people)..where((tbl) => tbl.deletedAt.isNull() & tbl.createdAt.isSmallerOrEqualValue(lastDayOfMonth))).get();
+      final investments = await (_db.select(_db.investments)..where((tbl) => tbl.deletedAt.isNull() & tbl.createdAt.isSmallerOrEqualValue(lastDayOfMonth))).get();
+      final mtfPositions = await (_db.select(_db.mtfPositions)..where((tbl) => tbl.deletedAt.isNull() & tbl.createdAt.isSmallerOrEqualValue(lastDayOfMonth))).get();
+      final txs = await (_db.select(_db.transactions)..where((tbl) => tbl.deletedAt.isNull() & tbl.transactionDate.isSmallerOrEqualValue(lastDayOfMonth))).get();
+      final adjustments = await (_db.select(_db.adjustments)..where((tbl) => tbl.createdAt.isSmallerOrEqualValue(lastDayOfMonth))).get();
+      final pendingExpected = await (_db.select(_db.expectedIncomes)..where((tbl) => tbl.createdAt.isSmallerOrEqualValue(lastDayOfMonth) & tbl.status.equals('pending'))).get();
+
+      final state = MockDatabaseState(
+        accounts: accounts,
+        people: people,
+        investments: investments,
+        investmentLots: const [],
+        investmentLotConsumptions: const [],
+        transactions: txs,
+        expectedIncomes: pendingExpected,
+        adjustments: adjustments,
+        mtfPositions: mtfPositions,
+        goals: const [],
+        snapshots: const [],
+        ipoPools: const [],
+        sips: const [],
+        categories: const [],
+        customLabels: const [],
+        portfolioHistory: const [],
+        portfolioSnapshots: const [],
+        recoveryAllocations: const [],
+        recoveryDestinations: const [],
+        currency: '₹',
+      );
+
+      final double totalLiabilities = LiabilityCalculationService.calculateTotalLiabilities(state, lastDayOfMonth);
+
+      double receivables = 0.0;
+      for (final p in people) {
+        if (p.isArchived == 0) {
+          receivables += state.getPersonReceivableBalance(p.id);
+        }
+      }
+
+      double cashAssets = 0.0;
+      for (final acc in accounts) {
+        if (acc.isArchived == 0 && acc.type != 'credit') {
+          cashAssets += state.getAccountCashBalance(acc.id);
+        }
+      }
+
+      final double expectedIncomeSum = pendingExpected.fold(0.0, (sum, item) => sum + item.amount);
+
+      final Map<String, List<_LotState>> investmentLotsMap = {};
+      for (final tx in txs.where((t) => t.voidedTransactionId == null && t.type != 'void')) {
+        if (tx.investmentId != null) {
+          final invId = tx.investmentId!;
+          if (tx.type == 'investment_buy') {
+            final lots = investmentLotsMap[invId] ?? [];
+            final unitsVal = tx.units ?? tx.amount;
+            final priceVal = tx.pricePerUnit ?? 1.0;
+            lots.add(_LotState(tx.id, unitsVal, unitsVal * priceVal, unitsVal));
+            investmentLotsMap[invId] = lots;
+          } else if (tx.type == 'investment_sell') {
+            double sellUnitsRemaining = tx.units ?? tx.amount;
+            final lots = investmentLotsMap[invId] ?? [];
+            for (final lot in lots) {
+              if (sellUnitsRemaining <= 0) break;
+              if (lot.unitsRemaining > 0) {
+                final double consumed = lot.unitsRemaining >= sellUnitsRemaining ? sellUnitsRemaining : lot.unitsRemaining;
+                lot.unitsRemaining -= consumed;
+                sellUnitsRemaining -= consumed;
+              }
+            }
+          }
+        }
+      }
+
+      double investedCapital = 0.0;
+      investmentLotsMap.forEach((_, lots) {
+        for (final lot in lots) {
+          if (lot.unitsRemaining > 0) {
+            investedCapital += (lot.unitsRemaining / lot.unitsPurchased) * lot.costBasis;
+          }
+        }
+      });
+
+      for (final adj in adjustments) {
+        if (adj.entityType == 'investment_capital') {
+          investedCapital += adj.adjustedAmount;
+        }
+      }
+
+      final double totalAssets = cashAssets + receivables + investedCapital;
+      final double netWorth = totalAssets - totalLiabilities;
+
+      if (snap.netWorth != netWorth ||
+          snap.assets != totalAssets ||
+          snap.liabilities != totalLiabilities ||
+          snap.receivables != receivables ||
+          snap.investedCapital != investedCapital ||
+          snap.expectedIncome != expectedIncomeSum) {
+        
+        await (_db.update(_db.snapshots)..where((tbl) => tbl.id.equals(snap.id))).write(
+          SnapshotsCompanion(
+            netWorth: Value(netWorth),
+            assets: Value(totalAssets),
+            liabilities: Value(totalLiabilities),
+            receivables: Value(receivables),
+            investedCapital: Value(investedCapital),
+            expectedIncome: Value(expectedIncomeSum),
+            updatedAt: Value(DateTime.now().toUtc()),
+          ),
+        );
+      }
+    }
+  }
+
   // Lazily checks and backfills snapshots for all completed months since the last snapshot
   Future<void> triggerLazySnapshots() async {
     if (_isMock) return;
+
+    // Run the repair of all existing snapshots first to correct any bad data
+    await repairExistingSnapshots();
     
     final now = DateTime.now();
     final oldestTx = await (_db.select(_db.transactions)
@@ -217,58 +341,74 @@ class SnapshotService {
           .getSingleOrNull();
 
       if (existingSnapshot == null) {
-        // Calculate fields manually for snapshots history
-        final txs = await (_db.select(_db.transactions)
-              ..where((tbl) => tbl.transactionDate.isSmallerOrEqualValue(lastDayOfMonth) & tbl.type.equals('void').not() & tbl.voidedTransactionId.isNull()))
-            .get();
+        final accounts = await (_db.select(_db.accounts)..where((tbl) => tbl.deletedAt.isNull() & tbl.createdAt.isSmallerOrEqualValue(lastDayOfMonth))).get();
+        final people = await (_db.select(_db.people)..where((tbl) => tbl.deletedAt.isNull() & tbl.createdAt.isSmallerOrEqualValue(lastDayOfMonth))).get();
+        final investments = await (_db.select(_db.investments)..where((tbl) => tbl.deletedAt.isNull() & tbl.createdAt.isSmallerOrEqualValue(lastDayOfMonth))).get();
+        final mtfPositions = await (_db.select(_db.mtfPositions)..where((tbl) => tbl.deletedAt.isNull() & tbl.createdAt.isSmallerOrEqualValue(lastDayOfMonth))).get();
+        final txs = await (_db.select(_db.transactions)..where((tbl) => tbl.deletedAt.isNull() & tbl.transactionDate.isSmallerOrEqualValue(lastDayOfMonth))).get();
+        final adjustments = await (_db.select(_db.adjustments)..where((tbl) => tbl.createdAt.isSmallerOrEqualValue(lastDayOfMonth))).get();
+        final pendingExpected = await (_db.select(_db.expectedIncomes)..where((tbl) => tbl.createdAt.isSmallerOrEqualValue(lastDayOfMonth) & tbl.status.equals('pending'))).get();
 
-        double cashBalances = 0.0;
-        final Map<String, double> accountBalances = {};
-        final Map<String, double> personReceivables = {};
-        final Map<String, double> personLiabilities = {};
-        final Map<String, List<_LotState>> investmentLots = {};
+        // Construct mock state to perform calculations with the filtered data
+        final state = MockDatabaseState(
+          accounts: accounts,
+          people: people,
+          investments: investments,
+          investmentLots: const [],
+          investmentLotConsumptions: const [],
+          transactions: txs,
+          expectedIncomes: pendingExpected,
+          adjustments: adjustments,
+          mtfPositions: mtfPositions,
+          goals: const [],
+          snapshots: const [],
+          ipoPools: const [],
+          sips: const [],
+          categories: const [],
+          customLabels: const [],
+          portfolioHistory: const [],
+          portfolioSnapshots: const [],
+          recoveryAllocations: const [],
+          recoveryDestinations: const [],
+          currency: '₹',
+        );
 
-        final accounts = await _db.select(_db.accounts).get();
-        final Map<String, String> accountTypes = {for (var a in accounts) a.id: a.type};
+        // 1. Liabilities via LiabilityCalculationService
+        final double totalLiabilities = LiabilityCalculationService.calculateTotalLiabilities(state, lastDayOfMonth);
 
-        for (final tx in txs) {
-          if (tx.fromAccountId != null) {
-            final current = accountBalances[tx.fromAccountId!] ?? 0.0;
-            accountBalances[tx.fromAccountId!] = current - tx.amount;
+        // 2. Receivables from state
+        double receivables = 0.0;
+        for (final p in people) {
+          if (p.isArchived == 0) {
+            receivables += state.getPersonReceivableBalance(p.id);
           }
-          if (tx.toAccountId != null) {
-            final current = accountBalances[tx.toAccountId!] ?? 0.0;
-            accountBalances[tx.toAccountId!] = current + tx.amount;
-          }
+        }
 
-          if (tx.personId != null) {
-            switch (tx.type) {
-              case 'borrow_money':
-                personLiabilities[tx.personId!] = (personLiabilities[tx.personId!] ?? 0.0) + tx.amount;
-                break;
-              case 'repay_money':
-                personLiabilities[tx.personId!] = (personLiabilities[tx.personId!] ?? 0.0) - tx.amount;
-                break;
-              case 'lend_money':
-                personReceivables[tx.personId!] = (personReceivables[tx.personId!] ?? 0.0) + tx.amount;
-                break;
-              case 'recover_money':
-                personReceivables[tx.personId!] = (personReceivables[tx.personId!] ?? 0.0) - tx.amount;
-                break;
-            }
+        // 3. Cash Assets from state (accounts != credit)
+        double cashAssets = 0.0;
+        for (final acc in accounts) {
+          if (acc.isArchived == 0 && acc.type != 'credit') {
+            cashAssets += state.getAccountCashBalance(acc.id);
           }
+        }
 
+        // 4. Expected Income
+        final double expectedIncomeSum = pendingExpected.fold(0.0, (sum, item) => sum + item.amount);
+
+        // 5. Invested Capital via FIFO Simulation (same as original, but using the fetched txs list)
+        final Map<String, List<_LotState>> investmentLotsMap = {};
+        for (final tx in txs.where((t) => t.voidedTransactionId == null && t.type != 'void')) {
           if (tx.investmentId != null) {
             final invId = tx.investmentId!;
             if (tx.type == 'investment_buy') {
-              final lots = investmentLots[invId] ?? [];
+              final lots = investmentLotsMap[invId] ?? [];
               final unitsVal = tx.units ?? tx.amount;
               final priceVal = tx.pricePerUnit ?? 1.0;
               lots.add(_LotState(tx.id, unitsVal, unitsVal * priceVal, unitsVal));
-              investmentLots[invId] = lots;
+              investmentLotsMap[invId] = lots;
             } else if (tx.type == 'investment_sell') {
               double sellUnitsRemaining = tx.units ?? tx.amount;
-              final lots = investmentLots[invId] ?? [];
+              final lots = investmentLotsMap[invId] ?? [];
               for (final lot in lots) {
                 if (sellUnitsRemaining <= 0) break;
                 if (lot.unitsRemaining > 0) {
@@ -281,22 +421,8 @@ class SnapshotService {
           }
         }
 
-        double cashAssets = 0.0;
-        double creditLiabilities = 0.0;
-        accountBalances.forEach((accId, bal) {
-          final isCredit = accountTypes[accId] == 'credit';
-          if (isCredit) {
-            if (bal < 0) creditLiabilities += bal.abs();
-          } else {
-            cashAssets += bal;
-          }
-        });
-
-        double receivables = personReceivables.values.fold(0.0, (sum, val) => sum + (val > 0 ? val : 0.0));
-        double liabilities = personLiabilities.values.fold(0.0, (sum, val) => sum + (val > 0 ? val : 0.0)) + creditLiabilities;
-
         double investedCapital = 0.0;
-        investmentLots.forEach((_, lots) {
+        investmentLotsMap.forEach((_, lots) {
           for (final lot in lots) {
             if (lot.unitsRemaining > 0) {
               investedCapital += (lot.unitsRemaining / lot.unitsPurchased) * lot.costBasis;
@@ -304,13 +430,13 @@ class SnapshotService {
           }
         });
 
-        final pendingExpected = await (_db.select(_db.expectedIncomes)
-              ..where((tbl) => tbl.createdAt.isSmallerOrEqualValue(lastDayOfMonth) & tbl.status.equals('pending')))
-            .get();
-        final double expectedIncomeSum = pendingExpected.fold(0.0, (sum, item) => sum + item.amount);
+        for (final adj in adjustments) {
+          if (adj.entityType == 'investment_capital') {
+            investedCapital += adj.adjustedAmount;
+          }
+        }
 
         final double totalAssets = cashAssets + receivables + investedCapital;
-        final double totalLiabilities = liabilities;
         final double netWorth = totalAssets - totalLiabilities;
 
         await _db.into(_db.snapshots).insert(SnapshotsCompanion(
