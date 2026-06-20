@@ -22,6 +22,7 @@ import '../../features/settings/settings_screen.dart';
 import '../../features/settings/presentation/screens/profile_screen.dart';
 import '../../features/settings/presentation/screens/advanced_settings_screen.dart';
 import '../../features/settings/presentation/screens/founder_screen.dart';
+import '../../features/settings/presentation/screens/whats_new_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/ipo_pool/presentation/screens/ipo_dashboard_screen.dart';
 import '../../features/ipo_pool/presentation/screens/ipo_detail_screen.dart';
@@ -47,6 +48,8 @@ import '../../features/settings/presentation/screens/archive_center_screen.dart'
 import '../../features/history/presentation/screens/portfolio_history_archive_screen.dart';
 import '../../features/recovery/presentation/screens/recovery_allocation_report_screen.dart';
 import '../../features/settings/presentation/screens/financial_calculation_inspector_screen.dart';
+import '../../features/recovery/presentation/screens/debt_recovery_dashboard_screen.dart';
+import '../../features/recovery/presentation/screens/upi_settings_screen.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -411,6 +414,26 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
 
+      // Debt Recovery Dashboard Screen
+      GoRoute(
+        path: '/recovery/dashboard',
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => buildPremiumTransitionPage(
+          state: state,
+          child: const DebtRecoveryDashboardScreen(),
+        ),
+      ),
+
+      // UPI settings Screen
+      GoRoute(
+        path: '/recovery/upi_settings',
+        parentNavigatorKey: _rootNavigatorKey,
+        pageBuilder: (context, state) => buildPremiumTransitionPage(
+          state: state,
+          child: const UpiSettingsScreen(),
+        ),
+      ),
+
       // Monthly Snapshots Screen
       GoRoute(
         path: '/monthly_snapshot',
@@ -607,6 +630,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                     pageBuilder: (context, state) => buildPremiumTransitionPage(
                       state: state,
                       child: const FounderScreen(),
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'whats_new',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) => buildPremiumTransitionPage(
+                      state: state,
+                      child: const WhatsNewScreen(),
                     ),
                   ),
                   GoRoute(

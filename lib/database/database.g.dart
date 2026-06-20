@@ -826,6 +826,41 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PeopleData> {
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('personal_loan'));
+  static const VerificationMeta _whatsAppMeta =
+      const VerificationMeta('whatsApp');
+  @override
+  late final GeneratedColumn<String> whatsApp = GeneratedColumn<String>(
+      'whats_app', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _dueDateMeta =
+      const VerificationMeta('dueDate');
+  @override
+  late final GeneratedColumn<DateTime> dueDate = GeneratedColumn<DateTime>(
+      'due_date', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _borrowDateMeta =
+      const VerificationMeta('borrowDate');
+  @override
+  late final GeneratedColumn<DateTime> borrowDate = GeneratedColumn<DateTime>(
+      'borrow_date', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _upiIdMeta = const VerificationMeta('upiId');
+  @override
+  late final GeneratedColumn<String> upiId = GeneratedColumn<String>(
+      'upi_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _bankNameMeta =
+      const VerificationMeta('bankName');
+  @override
+  late final GeneratedColumn<String> bankName = GeneratedColumn<String>(
+      'bank_name', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _accountHolderNameMeta =
+      const VerificationMeta('accountHolderName');
+  @override
+  late final GeneratedColumn<String> accountHolderName =
+      GeneratedColumn<String>('account_holder_name', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -840,7 +875,13 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PeopleData> {
         deviceId,
         deletedAt,
         deletedBy,
-        type
+        type,
+        whatsApp,
+        dueDate,
+        borrowDate,
+        upiId,
+        bankName,
+        accountHolderName
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -917,6 +958,34 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PeopleData> {
       context.handle(
           _typeMeta, type.isAcceptableOrUnknown(data['type']!, _typeMeta));
     }
+    if (data.containsKey('whats_app')) {
+      context.handle(_whatsAppMeta,
+          whatsApp.isAcceptableOrUnknown(data['whats_app']!, _whatsAppMeta));
+    }
+    if (data.containsKey('due_date')) {
+      context.handle(_dueDateMeta,
+          dueDate.isAcceptableOrUnknown(data['due_date']!, _dueDateMeta));
+    }
+    if (data.containsKey('borrow_date')) {
+      context.handle(
+          _borrowDateMeta,
+          borrowDate.isAcceptableOrUnknown(
+              data['borrow_date']!, _borrowDateMeta));
+    }
+    if (data.containsKey('upi_id')) {
+      context.handle(
+          _upiIdMeta, upiId.isAcceptableOrUnknown(data['upi_id']!, _upiIdMeta));
+    }
+    if (data.containsKey('bank_name')) {
+      context.handle(_bankNameMeta,
+          bankName.isAcceptableOrUnknown(data['bank_name']!, _bankNameMeta));
+    }
+    if (data.containsKey('account_holder_name')) {
+      context.handle(
+          _accountHolderNameMeta,
+          accountHolderName.isAcceptableOrUnknown(
+              data['account_holder_name']!, _accountHolderNameMeta));
+    }
     return context;
   }
 
@@ -952,6 +1021,18 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PeopleData> {
           .read(DriftSqlType.string, data['${effectivePrefix}deleted_by']),
       type: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}type'])!,
+      whatsApp: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}whats_app']),
+      dueDate: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}due_date']),
+      borrowDate: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}borrow_date']),
+      upiId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}upi_id']),
+      bankName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}bank_name']),
+      accountHolderName: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}account_holder_name']),
     );
   }
 
@@ -975,6 +1056,12 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
   final DateTime? deletedAt;
   final String? deletedBy;
   final String type;
+  final String? whatsApp;
+  final DateTime? dueDate;
+  final DateTime? borrowDate;
+  final String? upiId;
+  final String? bankName;
+  final String? accountHolderName;
   const PeopleData(
       {required this.id,
       required this.name,
@@ -988,7 +1075,13 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       this.deviceId,
       this.deletedAt,
       this.deletedBy,
-      required this.type});
+      required this.type,
+      this.whatsApp,
+      this.dueDate,
+      this.borrowDate,
+      this.upiId,
+      this.bankName,
+      this.accountHolderName});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1017,6 +1110,24 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       map['deleted_by'] = Variable<String>(deletedBy);
     }
     map['type'] = Variable<String>(type);
+    if (!nullToAbsent || whatsApp != null) {
+      map['whats_app'] = Variable<String>(whatsApp);
+    }
+    if (!nullToAbsent || dueDate != null) {
+      map['due_date'] = Variable<DateTime>(dueDate);
+    }
+    if (!nullToAbsent || borrowDate != null) {
+      map['borrow_date'] = Variable<DateTime>(borrowDate);
+    }
+    if (!nullToAbsent || upiId != null) {
+      map['upi_id'] = Variable<String>(upiId);
+    }
+    if (!nullToAbsent || bankName != null) {
+      map['bank_name'] = Variable<String>(bankName);
+    }
+    if (!nullToAbsent || accountHolderName != null) {
+      map['account_holder_name'] = Variable<String>(accountHolderName);
+    }
     return map;
   }
 
@@ -1045,6 +1156,23 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
           ? const Value.absent()
           : Value(deletedBy),
       type: Value(type),
+      whatsApp: whatsApp == null && nullToAbsent
+          ? const Value.absent()
+          : Value(whatsApp),
+      dueDate: dueDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dueDate),
+      borrowDate: borrowDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(borrowDate),
+      upiId:
+          upiId == null && nullToAbsent ? const Value.absent() : Value(upiId),
+      bankName: bankName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bankName),
+      accountHolderName: accountHolderName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(accountHolderName),
     );
   }
 
@@ -1065,6 +1193,13 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
       deletedBy: serializer.fromJson<String?>(json['deletedBy']),
       type: serializer.fromJson<String>(json['type']),
+      whatsApp: serializer.fromJson<String?>(json['whatsApp']),
+      dueDate: serializer.fromJson<DateTime?>(json['dueDate']),
+      borrowDate: serializer.fromJson<DateTime?>(json['borrowDate']),
+      upiId: serializer.fromJson<String?>(json['upiId']),
+      bankName: serializer.fromJson<String?>(json['bankName']),
+      accountHolderName:
+          serializer.fromJson<String?>(json['accountHolderName']),
     );
   }
   @override
@@ -1084,6 +1219,12 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
       'deletedBy': serializer.toJson<String?>(deletedBy),
       'type': serializer.toJson<String>(type),
+      'whatsApp': serializer.toJson<String?>(whatsApp),
+      'dueDate': serializer.toJson<DateTime?>(dueDate),
+      'borrowDate': serializer.toJson<DateTime?>(borrowDate),
+      'upiId': serializer.toJson<String?>(upiId),
+      'bankName': serializer.toJson<String?>(bankName),
+      'accountHolderName': serializer.toJson<String?>(accountHolderName),
     };
   }
 
@@ -1100,7 +1241,13 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
           Value<String?> deviceId = const Value.absent(),
           Value<DateTime?> deletedAt = const Value.absent(),
           Value<String?> deletedBy = const Value.absent(),
-          String? type}) =>
+          String? type,
+          Value<String?> whatsApp = const Value.absent(),
+          Value<DateTime?> dueDate = const Value.absent(),
+          Value<DateTime?> borrowDate = const Value.absent(),
+          Value<String?> upiId = const Value.absent(),
+          Value<String?> bankName = const Value.absent(),
+          Value<String?> accountHolderName = const Value.absent()}) =>
       PeopleData(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -1116,6 +1263,14 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
         deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
         deletedBy: deletedBy.present ? deletedBy.value : this.deletedBy,
         type: type ?? this.type,
+        whatsApp: whatsApp.present ? whatsApp.value : this.whatsApp,
+        dueDate: dueDate.present ? dueDate.value : this.dueDate,
+        borrowDate: borrowDate.present ? borrowDate.value : this.borrowDate,
+        upiId: upiId.present ? upiId.value : this.upiId,
+        bankName: bankName.present ? bankName.value : this.bankName,
+        accountHolderName: accountHolderName.present
+            ? accountHolderName.value
+            : this.accountHolderName,
       );
   PeopleData copyWithCompanion(PeopleCompanion data) {
     return PeopleData(
@@ -1136,6 +1291,15 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
       deletedBy: data.deletedBy.present ? data.deletedBy.value : this.deletedBy,
       type: data.type.present ? data.type.value : this.type,
+      whatsApp: data.whatsApp.present ? data.whatsApp.value : this.whatsApp,
+      dueDate: data.dueDate.present ? data.dueDate.value : this.dueDate,
+      borrowDate:
+          data.borrowDate.present ? data.borrowDate.value : this.borrowDate,
+      upiId: data.upiId.present ? data.upiId.value : this.upiId,
+      bankName: data.bankName.present ? data.bankName.value : this.bankName,
+      accountHolderName: data.accountHolderName.present
+          ? data.accountHolderName.value
+          : this.accountHolderName,
     );
   }
 
@@ -1154,7 +1318,13 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
           ..write('deviceId: $deviceId, ')
           ..write('deletedAt: $deletedAt, ')
           ..write('deletedBy: $deletedBy, ')
-          ..write('type: $type')
+          ..write('type: $type, ')
+          ..write('whatsApp: $whatsApp, ')
+          ..write('dueDate: $dueDate, ')
+          ..write('borrowDate: $borrowDate, ')
+          ..write('upiId: $upiId, ')
+          ..write('bankName: $bankName, ')
+          ..write('accountHolderName: $accountHolderName')
           ..write(')'))
         .toString();
   }
@@ -1173,7 +1343,13 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       deviceId,
       deletedAt,
       deletedBy,
-      type);
+      type,
+      whatsApp,
+      dueDate,
+      borrowDate,
+      upiId,
+      bankName,
+      accountHolderName);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1190,7 +1366,13 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
           other.deviceId == this.deviceId &&
           other.deletedAt == this.deletedAt &&
           other.deletedBy == this.deletedBy &&
-          other.type == this.type);
+          other.type == this.type &&
+          other.whatsApp == this.whatsApp &&
+          other.dueDate == this.dueDate &&
+          other.borrowDate == this.borrowDate &&
+          other.upiId == this.upiId &&
+          other.bankName == this.bankName &&
+          other.accountHolderName == this.accountHolderName);
 }
 
 class PeopleCompanion extends UpdateCompanion<PeopleData> {
@@ -1207,6 +1389,12 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
   final Value<DateTime?> deletedAt;
   final Value<String?> deletedBy;
   final Value<String> type;
+  final Value<String?> whatsApp;
+  final Value<DateTime?> dueDate;
+  final Value<DateTime?> borrowDate;
+  final Value<String?> upiId;
+  final Value<String?> bankName;
+  final Value<String?> accountHolderName;
   final Value<int> rowid;
   const PeopleCompanion({
     this.id = const Value.absent(),
@@ -1222,6 +1410,12 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
     this.deletedAt = const Value.absent(),
     this.deletedBy = const Value.absent(),
     this.type = const Value.absent(),
+    this.whatsApp = const Value.absent(),
+    this.dueDate = const Value.absent(),
+    this.borrowDate = const Value.absent(),
+    this.upiId = const Value.absent(),
+    this.bankName = const Value.absent(),
+    this.accountHolderName = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PeopleCompanion.insert({
@@ -1238,6 +1432,12 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
     this.deletedAt = const Value.absent(),
     this.deletedBy = const Value.absent(),
     this.type = const Value.absent(),
+    this.whatsApp = const Value.absent(),
+    this.dueDate = const Value.absent(),
+    this.borrowDate = const Value.absent(),
+    this.upiId = const Value.absent(),
+    this.bankName = const Value.absent(),
+    this.accountHolderName = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -1257,6 +1457,12 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
     Expression<DateTime>? deletedAt,
     Expression<String>? deletedBy,
     Expression<String>? type,
+    Expression<String>? whatsApp,
+    Expression<DateTime>? dueDate,
+    Expression<DateTime>? borrowDate,
+    Expression<String>? upiId,
+    Expression<String>? bankName,
+    Expression<String>? accountHolderName,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1273,6 +1479,12 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
       if (deletedAt != null) 'deleted_at': deletedAt,
       if (deletedBy != null) 'deleted_by': deletedBy,
       if (type != null) 'type': type,
+      if (whatsApp != null) 'whats_app': whatsApp,
+      if (dueDate != null) 'due_date': dueDate,
+      if (borrowDate != null) 'borrow_date': borrowDate,
+      if (upiId != null) 'upi_id': upiId,
+      if (bankName != null) 'bank_name': bankName,
+      if (accountHolderName != null) 'account_holder_name': accountHolderName,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1291,6 +1503,12 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
       Value<DateTime?>? deletedAt,
       Value<String?>? deletedBy,
       Value<String>? type,
+      Value<String?>? whatsApp,
+      Value<DateTime?>? dueDate,
+      Value<DateTime?>? borrowDate,
+      Value<String?>? upiId,
+      Value<String?>? bankName,
+      Value<String?>? accountHolderName,
       Value<int>? rowid}) {
     return PeopleCompanion(
       id: id ?? this.id,
@@ -1306,6 +1524,12 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
       deletedAt: deletedAt ?? this.deletedAt,
       deletedBy: deletedBy ?? this.deletedBy,
       type: type ?? this.type,
+      whatsApp: whatsApp ?? this.whatsApp,
+      dueDate: dueDate ?? this.dueDate,
+      borrowDate: borrowDate ?? this.borrowDate,
+      upiId: upiId ?? this.upiId,
+      bankName: bankName ?? this.bankName,
+      accountHolderName: accountHolderName ?? this.accountHolderName,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1352,6 +1576,24 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
     if (type.present) {
       map['type'] = Variable<String>(type.value);
     }
+    if (whatsApp.present) {
+      map['whats_app'] = Variable<String>(whatsApp.value);
+    }
+    if (dueDate.present) {
+      map['due_date'] = Variable<DateTime>(dueDate.value);
+    }
+    if (borrowDate.present) {
+      map['borrow_date'] = Variable<DateTime>(borrowDate.value);
+    }
+    if (upiId.present) {
+      map['upi_id'] = Variable<String>(upiId.value);
+    }
+    if (bankName.present) {
+      map['bank_name'] = Variable<String>(bankName.value);
+    }
+    if (accountHolderName.present) {
+      map['account_holder_name'] = Variable<String>(accountHolderName.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1374,6 +1616,12 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
           ..write('deletedAt: $deletedAt, ')
           ..write('deletedBy: $deletedBy, ')
           ..write('type: $type, ')
+          ..write('whatsApp: $whatsApp, ')
+          ..write('dueDate: $dueDate, ')
+          ..write('borrowDate: $borrowDate, ')
+          ..write('upiId: $upiId, ')
+          ..write('bankName: $bankName, ')
+          ..write('accountHolderName: $accountHolderName, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -16113,6 +16361,525 @@ class RecoveryDestinationsCompanion
   }
 }
 
+class $ReceivableActivitiesTable extends ReceivableActivities
+    with TableInfo<$ReceivableActivitiesTable, ReceivableActivity> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ReceivableActivitiesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+      'id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _personIdMeta =
+      const VerificationMeta('personId');
+  @override
+  late final GeneratedColumn<String> personId = GeneratedColumn<String>(
+      'person_id', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _activityTypeMeta =
+      const VerificationMeta('activityType');
+  @override
+  late final GeneratedColumn<String> activityType = GeneratedColumn<String>(
+      'activity_type', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<double> amount = GeneratedColumn<double>(
+      'amount', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _channelMeta =
+      const VerificationMeta('channel');
+  @override
+  late final GeneratedColumn<String> channel = GeneratedColumn<String>(
+      'channel', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+      'notes', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _syncStatusMeta =
+      const VerificationMeta('syncStatus');
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+      'sync_status', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('pending'));
+  static const VerificationMeta _lastSyncedAtMeta =
+      const VerificationMeta('lastSyncedAt');
+  @override
+  late final GeneratedColumn<DateTime> lastSyncedAt = GeneratedColumn<DateTime>(
+      'last_synced_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _deviceIdMeta =
+      const VerificationMeta('deviceId');
+  @override
+  late final GeneratedColumn<String> deviceId = GeneratedColumn<String>(
+      'device_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        personId,
+        activityType,
+        amount,
+        channel,
+        notes,
+        createdAt,
+        syncStatus,
+        lastSyncedAt,
+        deviceId
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'receivable_activities';
+  @override
+  VerificationContext validateIntegrity(Insertable<ReceivableActivity> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('person_id')) {
+      context.handle(_personIdMeta,
+          personId.isAcceptableOrUnknown(data['person_id']!, _personIdMeta));
+    } else if (isInserting) {
+      context.missing(_personIdMeta);
+    }
+    if (data.containsKey('activity_type')) {
+      context.handle(
+          _activityTypeMeta,
+          activityType.isAcceptableOrUnknown(
+              data['activity_type']!, _activityTypeMeta));
+    } else if (isInserting) {
+      context.missing(_activityTypeMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(_amountMeta,
+          amount.isAcceptableOrUnknown(data['amount']!, _amountMeta));
+    }
+    if (data.containsKey('channel')) {
+      context.handle(_channelMeta,
+          channel.isAcceptableOrUnknown(data['channel']!, _channelMeta));
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+          _notesMeta, notes.isAcceptableOrUnknown(data['notes']!, _notesMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+          _syncStatusMeta,
+          syncStatus.isAcceptableOrUnknown(
+              data['sync_status']!, _syncStatusMeta));
+    }
+    if (data.containsKey('last_synced_at')) {
+      context.handle(
+          _lastSyncedAtMeta,
+          lastSyncedAt.isAcceptableOrUnknown(
+              data['last_synced_at']!, _lastSyncedAtMeta));
+    }
+    if (data.containsKey('device_id')) {
+      context.handle(_deviceIdMeta,
+          deviceId.isAcceptableOrUnknown(data['device_id']!, _deviceIdMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ReceivableActivity map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReceivableActivity(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
+      personId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}person_id'])!,
+      activityType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}activity_type'])!,
+      amount: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}amount']),
+      channel: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}channel']),
+      notes: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}notes']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      syncStatus: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}sync_status'])!,
+      lastSyncedAt: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime, data['${effectivePrefix}last_synced_at']),
+      deviceId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}device_id']),
+    );
+  }
+
+  @override
+  $ReceivableActivitiesTable createAlias(String alias) {
+    return $ReceivableActivitiesTable(attachedDatabase, alias);
+  }
+}
+
+class ReceivableActivity extends DataClass
+    implements Insertable<ReceivableActivity> {
+  final String id;
+  final String personId;
+  final String activityType;
+  final double? amount;
+  final String? channel;
+  final String? notes;
+  final DateTime createdAt;
+  final String syncStatus;
+  final DateTime? lastSyncedAt;
+  final String? deviceId;
+  const ReceivableActivity(
+      {required this.id,
+      required this.personId,
+      required this.activityType,
+      this.amount,
+      this.channel,
+      this.notes,
+      required this.createdAt,
+      required this.syncStatus,
+      this.lastSyncedAt,
+      this.deviceId});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['person_id'] = Variable<String>(personId);
+    map['activity_type'] = Variable<String>(activityType);
+    if (!nullToAbsent || amount != null) {
+      map['amount'] = Variable<double>(amount);
+    }
+    if (!nullToAbsent || channel != null) {
+      map['channel'] = Variable<String>(channel);
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['sync_status'] = Variable<String>(syncStatus);
+    if (!nullToAbsent || lastSyncedAt != null) {
+      map['last_synced_at'] = Variable<DateTime>(lastSyncedAt);
+    }
+    if (!nullToAbsent || deviceId != null) {
+      map['device_id'] = Variable<String>(deviceId);
+    }
+    return map;
+  }
+
+  ReceivableActivitiesCompanion toCompanion(bool nullToAbsent) {
+    return ReceivableActivitiesCompanion(
+      id: Value(id),
+      personId: Value(personId),
+      activityType: Value(activityType),
+      amount:
+          amount == null && nullToAbsent ? const Value.absent() : Value(amount),
+      channel: channel == null && nullToAbsent
+          ? const Value.absent()
+          : Value(channel),
+      notes:
+          notes == null && nullToAbsent ? const Value.absent() : Value(notes),
+      createdAt: Value(createdAt),
+      syncStatus: Value(syncStatus),
+      lastSyncedAt: lastSyncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSyncedAt),
+      deviceId: deviceId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deviceId),
+    );
+  }
+
+  factory ReceivableActivity.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReceivableActivity(
+      id: serializer.fromJson<String>(json['id']),
+      personId: serializer.fromJson<String>(json['personId']),
+      activityType: serializer.fromJson<String>(json['activityType']),
+      amount: serializer.fromJson<double?>(json['amount']),
+      channel: serializer.fromJson<String?>(json['channel']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      syncStatus: serializer.fromJson<String>(json['syncStatus']),
+      lastSyncedAt: serializer.fromJson<DateTime?>(json['lastSyncedAt']),
+      deviceId: serializer.fromJson<String?>(json['deviceId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'personId': serializer.toJson<String>(personId),
+      'activityType': serializer.toJson<String>(activityType),
+      'amount': serializer.toJson<double?>(amount),
+      'channel': serializer.toJson<String?>(channel),
+      'notes': serializer.toJson<String?>(notes),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'syncStatus': serializer.toJson<String>(syncStatus),
+      'lastSyncedAt': serializer.toJson<DateTime?>(lastSyncedAt),
+      'deviceId': serializer.toJson<String?>(deviceId),
+    };
+  }
+
+  ReceivableActivity copyWith(
+          {String? id,
+          String? personId,
+          String? activityType,
+          Value<double?> amount = const Value.absent(),
+          Value<String?> channel = const Value.absent(),
+          Value<String?> notes = const Value.absent(),
+          DateTime? createdAt,
+          String? syncStatus,
+          Value<DateTime?> lastSyncedAt = const Value.absent(),
+          Value<String?> deviceId = const Value.absent()}) =>
+      ReceivableActivity(
+        id: id ?? this.id,
+        personId: personId ?? this.personId,
+        activityType: activityType ?? this.activityType,
+        amount: amount.present ? amount.value : this.amount,
+        channel: channel.present ? channel.value : this.channel,
+        notes: notes.present ? notes.value : this.notes,
+        createdAt: createdAt ?? this.createdAt,
+        syncStatus: syncStatus ?? this.syncStatus,
+        lastSyncedAt:
+            lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
+        deviceId: deviceId.present ? deviceId.value : this.deviceId,
+      );
+  ReceivableActivity copyWithCompanion(ReceivableActivitiesCompanion data) {
+    return ReceivableActivity(
+      id: data.id.present ? data.id.value : this.id,
+      personId: data.personId.present ? data.personId.value : this.personId,
+      activityType: data.activityType.present
+          ? data.activityType.value
+          : this.activityType,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      channel: data.channel.present ? data.channel.value : this.channel,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      syncStatus:
+          data.syncStatus.present ? data.syncStatus.value : this.syncStatus,
+      lastSyncedAt: data.lastSyncedAt.present
+          ? data.lastSyncedAt.value
+          : this.lastSyncedAt,
+      deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReceivableActivity(')
+          ..write('id: $id, ')
+          ..write('personId: $personId, ')
+          ..write('activityType: $activityType, ')
+          ..write('amount: $amount, ')
+          ..write('channel: $channel, ')
+          ..write('notes: $notes, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
+          ..write('deviceId: $deviceId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, personId, activityType, amount, channel,
+      notes, createdAt, syncStatus, lastSyncedAt, deviceId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReceivableActivity &&
+          other.id == this.id &&
+          other.personId == this.personId &&
+          other.activityType == this.activityType &&
+          other.amount == this.amount &&
+          other.channel == this.channel &&
+          other.notes == this.notes &&
+          other.createdAt == this.createdAt &&
+          other.syncStatus == this.syncStatus &&
+          other.lastSyncedAt == this.lastSyncedAt &&
+          other.deviceId == this.deviceId);
+}
+
+class ReceivableActivitiesCompanion
+    extends UpdateCompanion<ReceivableActivity> {
+  final Value<String> id;
+  final Value<String> personId;
+  final Value<String> activityType;
+  final Value<double?> amount;
+  final Value<String?> channel;
+  final Value<String?> notes;
+  final Value<DateTime> createdAt;
+  final Value<String> syncStatus;
+  final Value<DateTime?> lastSyncedAt;
+  final Value<String?> deviceId;
+  final Value<int> rowid;
+  const ReceivableActivitiesCompanion({
+    this.id = const Value.absent(),
+    this.personId = const Value.absent(),
+    this.activityType = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.channel = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    this.deviceId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ReceivableActivitiesCompanion.insert({
+    required String id,
+    required String personId,
+    required String activityType,
+    this.amount = const Value.absent(),
+    this.channel = const Value.absent(),
+    this.notes = const Value.absent(),
+    required DateTime createdAt,
+    this.syncStatus = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    this.deviceId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  })  : id = Value(id),
+        personId = Value(personId),
+        activityType = Value(activityType),
+        createdAt = Value(createdAt);
+  static Insertable<ReceivableActivity> custom({
+    Expression<String>? id,
+    Expression<String>? personId,
+    Expression<String>? activityType,
+    Expression<double>? amount,
+    Expression<String>? channel,
+    Expression<String>? notes,
+    Expression<DateTime>? createdAt,
+    Expression<String>? syncStatus,
+    Expression<DateTime>? lastSyncedAt,
+    Expression<String>? deviceId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (personId != null) 'person_id': personId,
+      if (activityType != null) 'activity_type': activityType,
+      if (amount != null) 'amount': amount,
+      if (channel != null) 'channel': channel,
+      if (notes != null) 'notes': notes,
+      if (createdAt != null) 'created_at': createdAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
+      if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
+      if (deviceId != null) 'device_id': deviceId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ReceivableActivitiesCompanion copyWith(
+      {Value<String>? id,
+      Value<String>? personId,
+      Value<String>? activityType,
+      Value<double?>? amount,
+      Value<String?>? channel,
+      Value<String?>? notes,
+      Value<DateTime>? createdAt,
+      Value<String>? syncStatus,
+      Value<DateTime?>? lastSyncedAt,
+      Value<String?>? deviceId,
+      Value<int>? rowid}) {
+    return ReceivableActivitiesCompanion(
+      id: id ?? this.id,
+      personId: personId ?? this.personId,
+      activityType: activityType ?? this.activityType,
+      amount: amount ?? this.amount,
+      channel: channel ?? this.channel,
+      notes: notes ?? this.notes,
+      createdAt: createdAt ?? this.createdAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      deviceId: deviceId ?? this.deviceId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (personId.present) {
+      map['person_id'] = Variable<String>(personId.value);
+    }
+    if (activityType.present) {
+      map['activity_type'] = Variable<String>(activityType.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<double>(amount.value);
+    }
+    if (channel.present) {
+      map['channel'] = Variable<String>(channel.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    if (lastSyncedAt.present) {
+      map['last_synced_at'] = Variable<DateTime>(lastSyncedAt.value);
+    }
+    if (deviceId.present) {
+      map['device_id'] = Variable<String>(deviceId.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReceivableActivitiesCompanion(')
+          ..write('id: $id, ')
+          ..write('personId: $personId, ')
+          ..write('activityType: $activityType, ')
+          ..write('amount: $amount, ')
+          ..write('channel: $channel, ')
+          ..write('notes: $notes, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
+          ..write('deviceId: $deviceId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -16154,6 +16921,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $RecoveryAllocationsTable(this);
   late final $RecoveryDestinationsTable recoveryDestinations =
       $RecoveryDestinationsTable(this);
+  late final $ReceivableActivitiesTable receivableActivities =
+      $ReceivableActivitiesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -16186,7 +16955,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         portfolioHistories,
         portfolioSnapshots,
         recoveryAllocations,
-        recoveryDestinations
+        recoveryDestinations,
+        receivableActivities
       ];
 }
 
@@ -16619,6 +17389,12 @@ typedef $$PeopleTableCreateCompanionBuilder = PeopleCompanion Function({
   Value<DateTime?> deletedAt,
   Value<String?> deletedBy,
   Value<String> type,
+  Value<String?> whatsApp,
+  Value<DateTime?> dueDate,
+  Value<DateTime?> borrowDate,
+  Value<String?> upiId,
+  Value<String?> bankName,
+  Value<String?> accountHolderName,
   Value<int> rowid,
 });
 typedef $$PeopleTableUpdateCompanionBuilder = PeopleCompanion Function({
@@ -16635,6 +17411,12 @@ typedef $$PeopleTableUpdateCompanionBuilder = PeopleCompanion Function({
   Value<DateTime?> deletedAt,
   Value<String?> deletedBy,
   Value<String> type,
+  Value<String?> whatsApp,
+  Value<DateTime?> dueDate,
+  Value<DateTime?> borrowDate,
+  Value<String?> upiId,
+  Value<String?> bankName,
+  Value<String?> accountHolderName,
   Value<int> rowid,
 });
 
@@ -16709,6 +17491,25 @@ class $$PeopleTableFilterComposer
   ColumnFilters<String> get type => $composableBuilder(
       column: $table.type, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<String> get whatsApp => $composableBuilder(
+      column: $table.whatsApp, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get dueDate => $composableBuilder(
+      column: $table.dueDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get borrowDate => $composableBuilder(
+      column: $table.borrowDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get upiId => $composableBuilder(
+      column: $table.upiId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get bankName => $composableBuilder(
+      column: $table.bankName, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get accountHolderName => $composableBuilder(
+      column: $table.accountHolderName,
+      builder: (column) => ColumnFilters(column));
+
   Expression<bool> personBalanceCachesRefs(
       Expression<bool> Function($$PersonBalanceCachesTableFilterComposer f) f) {
     final $$PersonBalanceCachesTableFilterComposer composer = $composerBuilder(
@@ -16779,6 +17580,25 @@ class $$PeopleTableOrderingComposer
 
   ColumnOrderings<String> get type => $composableBuilder(
       column: $table.type, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get whatsApp => $composableBuilder(
+      column: $table.whatsApp, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get dueDate => $composableBuilder(
+      column: $table.dueDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get borrowDate => $composableBuilder(
+      column: $table.borrowDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get upiId => $composableBuilder(
+      column: $table.upiId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get bankName => $composableBuilder(
+      column: $table.bankName, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get accountHolderName => $composableBuilder(
+      column: $table.accountHolderName,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$PeopleTableAnnotationComposer
@@ -16828,6 +17648,24 @@ class $$PeopleTableAnnotationComposer
 
   GeneratedColumn<String> get type =>
       $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get whatsApp =>
+      $composableBuilder(column: $table.whatsApp, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get dueDate =>
+      $composableBuilder(column: $table.dueDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get borrowDate => $composableBuilder(
+      column: $table.borrowDate, builder: (column) => column);
+
+  GeneratedColumn<String> get upiId =>
+      $composableBuilder(column: $table.upiId, builder: (column) => column);
+
+  GeneratedColumn<String> get bankName =>
+      $composableBuilder(column: $table.bankName, builder: (column) => column);
+
+  GeneratedColumn<String> get accountHolderName => $composableBuilder(
+      column: $table.accountHolderName, builder: (column) => column);
 
   Expression<T> personBalanceCachesRefs<T extends Object>(
       Expression<T> Function($$PersonBalanceCachesTableAnnotationComposer a)
@@ -16889,6 +17727,12 @@ class $$PeopleTableTableManager extends RootTableManager<
             Value<DateTime?> deletedAt = const Value.absent(),
             Value<String?> deletedBy = const Value.absent(),
             Value<String> type = const Value.absent(),
+            Value<String?> whatsApp = const Value.absent(),
+            Value<DateTime?> dueDate = const Value.absent(),
+            Value<DateTime?> borrowDate = const Value.absent(),
+            Value<String?> upiId = const Value.absent(),
+            Value<String?> bankName = const Value.absent(),
+            Value<String?> accountHolderName = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               PeopleCompanion(
@@ -16905,6 +17749,12 @@ class $$PeopleTableTableManager extends RootTableManager<
             deletedAt: deletedAt,
             deletedBy: deletedBy,
             type: type,
+            whatsApp: whatsApp,
+            dueDate: dueDate,
+            borrowDate: borrowDate,
+            upiId: upiId,
+            bankName: bankName,
+            accountHolderName: accountHolderName,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -16921,6 +17771,12 @@ class $$PeopleTableTableManager extends RootTableManager<
             Value<DateTime?> deletedAt = const Value.absent(),
             Value<String?> deletedBy = const Value.absent(),
             Value<String> type = const Value.absent(),
+            Value<String?> whatsApp = const Value.absent(),
+            Value<DateTime?> dueDate = const Value.absent(),
+            Value<DateTime?> borrowDate = const Value.absent(),
+            Value<String?> upiId = const Value.absent(),
+            Value<String?> bankName = const Value.absent(),
+            Value<String?> accountHolderName = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               PeopleCompanion.insert(
@@ -16937,6 +17793,12 @@ class $$PeopleTableTableManager extends RootTableManager<
             deletedAt: deletedAt,
             deletedBy: deletedBy,
             type: type,
+            whatsApp: whatsApp,
+            dueDate: dueDate,
+            borrowDate: borrowDate,
+            upiId: upiId,
+            bankName: bankName,
+            accountHolderName: accountHolderName,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -25070,6 +25932,262 @@ typedef $$RecoveryDestinationsTableProcessedTableManager
         ),
         RecoveryDestination,
         PrefetchHooks Function()>;
+typedef $$ReceivableActivitiesTableCreateCompanionBuilder
+    = ReceivableActivitiesCompanion Function({
+  required String id,
+  required String personId,
+  required String activityType,
+  Value<double?> amount,
+  Value<String?> channel,
+  Value<String?> notes,
+  required DateTime createdAt,
+  Value<String> syncStatus,
+  Value<DateTime?> lastSyncedAt,
+  Value<String?> deviceId,
+  Value<int> rowid,
+});
+typedef $$ReceivableActivitiesTableUpdateCompanionBuilder
+    = ReceivableActivitiesCompanion Function({
+  Value<String> id,
+  Value<String> personId,
+  Value<String> activityType,
+  Value<double?> amount,
+  Value<String?> channel,
+  Value<String?> notes,
+  Value<DateTime> createdAt,
+  Value<String> syncStatus,
+  Value<DateTime?> lastSyncedAt,
+  Value<String?> deviceId,
+  Value<int> rowid,
+});
+
+class $$ReceivableActivitiesTableFilterComposer
+    extends Composer<_$AppDatabase, $ReceivableActivitiesTable> {
+  $$ReceivableActivitiesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get personId => $composableBuilder(
+      column: $table.personId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get activityType => $composableBuilder(
+      column: $table.activityType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get amount => $composableBuilder(
+      column: $table.amount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get channel => $composableBuilder(
+      column: $table.channel, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get notes => $composableBuilder(
+      column: $table.notes, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lastSyncedAt => $composableBuilder(
+      column: $table.lastSyncedAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get deviceId => $composableBuilder(
+      column: $table.deviceId, builder: (column) => ColumnFilters(column));
+}
+
+class $$ReceivableActivitiesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ReceivableActivitiesTable> {
+  $$ReceivableActivitiesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get personId => $composableBuilder(
+      column: $table.personId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get activityType => $composableBuilder(
+      column: $table.activityType,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get amount => $composableBuilder(
+      column: $table.amount, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get channel => $composableBuilder(
+      column: $table.channel, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+      column: $table.notes, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lastSyncedAt => $composableBuilder(
+      column: $table.lastSyncedAt,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get deviceId => $composableBuilder(
+      column: $table.deviceId, builder: (column) => ColumnOrderings(column));
+}
+
+class $$ReceivableActivitiesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ReceivableActivitiesTable> {
+  $$ReceivableActivitiesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get personId =>
+      $composableBuilder(column: $table.personId, builder: (column) => column);
+
+  GeneratedColumn<String> get activityType => $composableBuilder(
+      column: $table.activityType, builder: (column) => column);
+
+  GeneratedColumn<double> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<String> get channel =>
+      $composableBuilder(column: $table.channel, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+      column: $table.syncStatus, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastSyncedAt => $composableBuilder(
+      column: $table.lastSyncedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get deviceId =>
+      $composableBuilder(column: $table.deviceId, builder: (column) => column);
+}
+
+class $$ReceivableActivitiesTableTableManager extends RootTableManager<
+    _$AppDatabase,
+    $ReceivableActivitiesTable,
+    ReceivableActivity,
+    $$ReceivableActivitiesTableFilterComposer,
+    $$ReceivableActivitiesTableOrderingComposer,
+    $$ReceivableActivitiesTableAnnotationComposer,
+    $$ReceivableActivitiesTableCreateCompanionBuilder,
+    $$ReceivableActivitiesTableUpdateCompanionBuilder,
+    (
+      ReceivableActivity,
+      BaseReferences<_$AppDatabase, $ReceivableActivitiesTable,
+          ReceivableActivity>
+    ),
+    ReceivableActivity,
+    PrefetchHooks Function()> {
+  $$ReceivableActivitiesTableTableManager(
+      _$AppDatabase db, $ReceivableActivitiesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ReceivableActivitiesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ReceivableActivitiesTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ReceivableActivitiesTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> id = const Value.absent(),
+            Value<String> personId = const Value.absent(),
+            Value<String> activityType = const Value.absent(),
+            Value<double?> amount = const Value.absent(),
+            Value<String?> channel = const Value.absent(),
+            Value<String?> notes = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<String> syncStatus = const Value.absent(),
+            Value<DateTime?> lastSyncedAt = const Value.absent(),
+            Value<String?> deviceId = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              ReceivableActivitiesCompanion(
+            id: id,
+            personId: personId,
+            activityType: activityType,
+            amount: amount,
+            channel: channel,
+            notes: notes,
+            createdAt: createdAt,
+            syncStatus: syncStatus,
+            lastSyncedAt: lastSyncedAt,
+            deviceId: deviceId,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String id,
+            required String personId,
+            required String activityType,
+            Value<double?> amount = const Value.absent(),
+            Value<String?> channel = const Value.absent(),
+            Value<String?> notes = const Value.absent(),
+            required DateTime createdAt,
+            Value<String> syncStatus = const Value.absent(),
+            Value<DateTime?> lastSyncedAt = const Value.absent(),
+            Value<String?> deviceId = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              ReceivableActivitiesCompanion.insert(
+            id: id,
+            personId: personId,
+            activityType: activityType,
+            amount: amount,
+            channel: channel,
+            notes: notes,
+            createdAt: createdAt,
+            syncStatus: syncStatus,
+            lastSyncedAt: lastSyncedAt,
+            deviceId: deviceId,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$ReceivableActivitiesTableProcessedTableManager
+    = ProcessedTableManager<
+        _$AppDatabase,
+        $ReceivableActivitiesTable,
+        ReceivableActivity,
+        $$ReceivableActivitiesTableFilterComposer,
+        $$ReceivableActivitiesTableOrderingComposer,
+        $$ReceivableActivitiesTableAnnotationComposer,
+        $$ReceivableActivitiesTableCreateCompanionBuilder,
+        $$ReceivableActivitiesTableUpdateCompanionBuilder,
+        (
+          ReceivableActivity,
+          BaseReferences<_$AppDatabase, $ReceivableActivitiesTable,
+              ReceivableActivity>
+        ),
+        ReceivableActivity,
+        PrefetchHooks Function()>;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -25131,4 +26249,6 @@ class $AppDatabaseManager {
       $$RecoveryAllocationsTableTableManager(_db, _db.recoveryAllocations);
   $$RecoveryDestinationsTableTableManager get recoveryDestinations =>
       $$RecoveryDestinationsTableTableManager(_db, _db.recoveryDestinations);
+  $$ReceivableActivitiesTableTableManager get receivableActivities =>
+      $$ReceivableActivitiesTableTableManager(_db, _db.receivableActivities);
 }

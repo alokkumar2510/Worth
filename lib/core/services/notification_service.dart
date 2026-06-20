@@ -200,16 +200,42 @@ class NotificationService {
       if (person.isArchived == 0) {
         final double outstanding = (dbState.getPersonReceivableBalance(person.id) as num).toDouble();
         if (outstanding > 0) {
-          // Sunday at 11:00 AM
+          // Sunday at 11:00 AM (Weekly check-in)
           final nextSunday = _getNextDayOfWeek(now, DateTime.sunday);
-          final scheduledTime = DateTime(nextSunday.year, nextSunday.month, nextSunday.day, 11, 0);
+          final weeklyTime = DateTime(nextSunday.year, nextSunday.month, nextSunday.day, 11, 0);
           await scheduleNotification(
             id: 3000 + (person.id as Object).hashCode,
             title: 'Receivable Recovery Reminder',
             body: 'Friendly reminder: ${person.name} owes you $currency${outstanding.toStringAsFixed(0)}. Consider reaching out today.',
-            scheduledDateTime: scheduledTime,
+            scheduledDateTime: weeklyTime,
             type: 'receivable',
           );
+
+          // Offset-based follow-up scheduler (7, 15, 30, 60, 90 days after borrow date)
+          final borrowDate = (person.borrowDate as DateTime?) ?? (person.createdAt as DateTime);
+          final offsets = [7, 15, 30, 60, 90];
+          for (final offset in offsets) {
+            final scheduledTime = borrowDate.add(Duration(days: offset));
+            final scheduledDateTime = DateTime(scheduledTime.year, scheduledTime.month, scheduledTime.day, 10, 0); // 10:00 AM
+            
+            if (scheduledDateTime.isAfter(now)) {
+              final notifId = 31000 + (person.id as Object).hashCode + offset;
+              String stageLabel = '';
+              if (offset == 7) stageLabel = 'Gentle Reminder';
+              if (offset == 15) stageLabel = 'Follow-up Reminder';
+              if (offset == 30) stageLabel = 'Urgent Reminder';
+              if (offset == 60) stageLabel = 'High Priority';
+              if (offset == 90) stageLabel = 'Escalated';
+
+              await scheduleNotification(
+                id: notifId,
+                title: 'Receivable: $stageLabel',
+                body: '${person.name} owes you $currency${outstanding.toStringAsFixed(0)} (pending for $offset days). Send a reminder now.',
+                scheduledDateTime: scheduledDateTime,
+                type: 'receivable',
+              );
+            }
+          }
         }
       }
     }

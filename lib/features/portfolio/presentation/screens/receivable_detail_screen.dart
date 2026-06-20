@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:collection/collection.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/widgets/calculation_audit_panel.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -13,6 +15,8 @@ import '../../../../database/database.dart';
 import '../widgets/adjustment_widgets.dart';
 import '../../../../features/recovery/presentation/widgets/recovery_allocation_dialog.dart';
 import '../../../../features/recovery/presentation/widgets/recovery_flow_report_widget.dart';
+import '../../../../features/recovery/domain/utils/recovery_calculator.dart';
+import '../../../../features/recovery/presentation/widgets/payment_reminder_image_generator.dart';
 
 class ReceivableDetailScreen extends ConsumerStatefulWidget {
   final String personId;
@@ -23,13 +27,98 @@ class ReceivableDetailScreen extends ConsumerStatefulWidget {
   ConsumerState<ReceivableDetailScreen> createState() => _ReceivableDetailScreenState();
 }
 
-class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen> {
+class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen> with SingleTickerProviderStateMixin {
   final _recoverController = TextEditingController();
+  final _activityNotesController = TextEditingController();
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
 
   @override
   void dispose() {
     _recoverController.dispose();
+    _activityNotesController.dispose();
+    _tabController.dispose();
     super.dispose();
+  }
+
+  // --- Collection History log activity helper ---
+  Future<void> _logActivity(String type, {String? channel, String? notes, double? amount}) async {
+    await ref.read(mockDatabaseProvider.notifier).addReceivableActivity(
+          personId: widget.personId,
+          activityType: type,
+          amount: amount,
+          channel: channel,
+          notes: notes,
+        );
+  }
+
+  // --- Copy Reminder Action ---
+  void _copyToClipboard(String message, String stageLabel) {
+    Clipboard.setData(ClipboardData(text: message));
+    _logActivity('reminder_sent', channel: 'copy', notes: '$stageLabel copied to clipboard');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$stageLabel copied to clipboard.')),
+    );
+  }
+
+  // --- Share reminders helper ---
+  Future<void> _shareReminder(String message, String channel, String debtorName, String stageLabel) async {
+    Uri url;
+    if (channel == 'whatsapp') {
+      final phone = widget.personId; // fallback
+      final cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
+      url = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(message)}');
+    } else if (channel == 'telegram') {
+      url = Uri.parse('https://t.me/share/url?url=&text=${Uri.encodeComponent(message)}');
+    } else {
+      // SMS
+      url = Uri.parse('sms:?body=${Uri.encodeComponent(message)}');
+    }
+
+    try {
+      if (await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        await _logActivity('reminder_sent', channel: channel, notes: '$stageLabel shared');
+      } else {
+        throw 'Could not launch URL';
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to share via $channel: $e')),
+        );
+      }
+    }
+  }
+
+  // --- UPI link generator & share ---
+  Future<void> _requestUpiPayment(String debtorName, double outstanding, String upiId, String userName) async {
+    final upiLink = 'upi://pay?pa=$upiId&pn=${Uri.encodeComponent(userName)}&am=$outstanding';
+    final shareMsg = 'Hi $debtorName,\n\nOutstanding Amount:\n₹${NumberFormat.decimalPattern().format(outstanding)}\n\nPlease make payment using the link below.\n\n$upiLink\n\nGenerated using Worth.';
+    
+    final cleanPhone = widget.personId.replaceAll(RegExp(r'\D'), '');
+    final url = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(shareMsg)}');
+
+    try {
+      if (await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        await _logActivity('payment_requested', channel: 'upi', notes: 'Payment link requested and shared');
+      } else {
+        throw 'Could not launch app';
+      }
+    } catch (e) {
+      if (mounted) {
+        // Fallback: Copy to clipboard
+        Clipboard.setData(ClipboardData(text: shareMsg));
+        await _logActivity('payment_requested', channel: 'copy', notes: 'Payment requested (copied to clipboard)');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open WhatsApp. Payment message copied to clipboard instead.')),
+        );
+      }
+    }
   }
 
   void _showRecoverDialog(BuildContext context, String currency, String name, double outstanding) {
@@ -132,63 +221,168 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
   void _showEditDialog(BuildContext context, Person person) {
     final nameController = TextEditingController(text: person.name);
     final phoneController = TextEditingController(text: person.phone ?? '');
+    final whatsAppController = TextEditingController(text: person.whatsApp ?? '');
     final notesController = TextEditingController(text: person.notes ?? '');
+    final upiIdController = TextEditingController(text: person.upiId ?? '');
+    final bankNameController = TextEditingController(text: person.bankName ?? '');
+    final accountHolderNameController = TextEditingController(text: person.accountHolderName ?? '');
+    
+    DateTime? selectedBorrowDate = person.borrowDate;
+    DateTime? selectedDueDate = person.dueDate;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        
-        
-        title: const Text('Edit Receivable Person', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Name', labelStyle: TextStyle(color: AppColors.grey500)),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          title: const Text('Edit Receivable Details', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Name', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: phoneController,
+                  style: const TextStyle(color: Colors.white),
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(labelText: 'Phone', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: whatsAppController,
+                  style: const TextStyle(color: Colors.white),
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(labelText: 'WhatsApp Number', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: upiIdController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'UPI ID', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: bankNameController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Bank Name', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: accountHolderNameController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Account Holder Name', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 16),
+                
+                // Borrow Date Pick
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      selectedBorrowDate == null
+                          ? 'Set Borrow Date'
+                          : 'Borrowed: ${DateFormat('dd MMM yyyy').format(selectedBorrowDate!)}',
+                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.calendar_month, color: AppColors.darkPrimary),
+                      onPressed: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: selectedBorrowDate ?? DateTime.now(),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime.now(),
+                        );
+                        if (date != null) {
+                          setStateDialog(() {
+                            selectedBorrowDate = date;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                // Due Date Pick
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      selectedDueDate == null
+                          ? 'Set Due Date'
+                          : 'Due Date: ${DateFormat('dd MMM yyyy').format(selectedDueDate!)}',
+                      style: const TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.event_available, color: AppColors.darkPrimary),
+                      onPressed: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: selectedDueDate ?? DateTime.now().add(const Duration(days: 30)),
+                          firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                          lastDate: DateTime.now().add(const Duration(days: 3650)),
+                        );
+                        if (date != null) {
+                          setStateDialog(() {
+                            selectedDueDate = date;
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: notesController,
+                  maxLines: 2,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Notes', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: phoneController,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Phone', labelStyle: TextStyle(color: AppColors.grey500)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: notesController,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(labelText: 'Notes', labelStyle: TextStyle(color: AppColors.grey500)),
+            ElevatedButton(
+              onPressed: () {
+                final name = nameController.text.trim();
+                final phone = phoneController.text.trim();
+                final whatsApp = whatsAppController.text.trim();
+                final upi = upiIdController.text.trim();
+                final bank = bankNameController.text.trim();
+                final holder = accountHolderNameController.text.trim();
+                final notes = notesController.text.trim();
+
+                if (name.isNotEmpty) {
+                  ref.read(mockDatabaseProvider.notifier).updatePerson(
+                        person.id,
+                        name,
+                        phone.isNotEmpty ? phone : null,
+                        notes.isNotEmpty ? notes : null,
+                        whatsApp: whatsApp.isNotEmpty ? whatsApp : null,
+                        borrowDate: selectedBorrowDate,
+                        dueDate: selectedDueDate,
+                        upiId: upi.isNotEmpty ? upi : null,
+                        bankName: bank.isNotEmpty ? bank : null,
+                        accountHolderName: holder.isNotEmpty ? holder : null,
+                      );
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Receivable details updated.')),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
+              child: const Text('Save', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final name = nameController.text.trim();
-              final phone = phoneController.text.trim();
-              final notes = notesController.text.trim();
-              if (name.isNotEmpty) {
-                ref.read(mockDatabaseProvider.notifier).updatePerson(
-                      person.id,
-                      name,
-                      phone.isNotEmpty ? phone : null,
-                      notes.isNotEmpty ? notes : null,
-                    );
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Receivable details updated.')),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
-            child: const Text('Save', style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }
@@ -209,10 +403,10 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context); // close dialog
+              Navigator.pop(context);
               final notifier = ref.read(mockDatabaseProvider.notifier);
               await notifier.deletePersonSoft(person.id);
-              context.pop(); // pop details screen
+              context.pop();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Receivable "${person.name}" deleted.'),
@@ -235,6 +429,48 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
     );
   }
 
+  void _showAddNoteDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Log Interaction Note', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: _activityNotesController,
+          maxLines: 3,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            labelText: 'Interaction Details (e.g. Rahul promised to pay next week)',
+            labelStyle: TextStyle(color: AppColors.grey500),
+            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.darkPrimary)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final note = _activityNotesController.text.trim();
+              if (note.isNotEmpty) {
+                await _logActivity('notes_added', notes: note);
+                _activityNotesController.clear();
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Note added to timeline.')),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
+            child: const Text('Save Note', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dbState = ref.watch(mockDatabaseProvider);
@@ -251,10 +487,35 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
 
     final outstanding = dbState.getPersonReceivableBalance(person.id);
     final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
+
+    final txs = dbState.transactions
+        .where((t) => t.personId == person.id && t.voidedTransactionId == null && (t.type == 'lend_money' || t.type == 'recover_money'))
+        .toList();
+    final createdStr = DateFormat('dd MMM yyyy').format(person.createdAt.toLocal());
+
+    // Activities list
+    final activities = dbState.receivableActivities.where((ReceivableActivity a) => a.personId == person.id).toList();
+
+    // Smart Recovery calculations
+    final borrowDate = person.borrowDate ?? person.createdAt;
+    final daysPending = RecoveryCalculator.calculateDaysPending(borrowDate);
+    final stage = RecoveryCalculator.calculateFollowUpStage(daysPending);
+    final stageLabel = RecoveryCalculator.getStageLabel(stage);
+    final stageColor = RecoveryCalculator.getStageColor(stage);
+    final risk = RecoveryCalculator.calculateRiskLevel(daysPending);
+    final prob = RecoveryCalculator.calculateRecoveryProbability(daysPending);
+
+    // Dynamic messages
+    final gentleMsg = "Hi ${person.name}, just a friendly reminder regarding the ₹${outstanding.toStringAsFixed(0)} you borrowed. Please settle it whenever convenient.";
+    final urgentMsg = "Hi ${person.name}, the outstanding amount of ₹${outstanding.toStringAsFixed(0)} has been pending for $daysPending days. Kindly process the payment.";
+    final escalatedMsg = "Hi ${person.name}, the payment of ₹${outstanding.toStringAsFixed(0)} has been pending for $daysPending days. Please prioritize settlement.";
     
-    final txs = dbState.transactions.where((t) => t.personId == person.id && t.voidedTransactionId == null && (t.type == 'lend_money' || t.type == 'recover_money')).toList();
-    final createdStr = DateFormat('dd MMM yyyy, hh:mm a').format(person.createdAt.toLocal());
-    final updatedStr = DateFormat('dd MMM yyyy, hh:mm a').format(person.updatedAt.toLocal());
+    String currentMsg = gentleMsg;
+    if (stage == FollowUpStage.urgentReminder) {
+      currentMsg = urgentMsg;
+    } else if (stage == FollowUpStage.highPriority || stage == FollowUpStage.escalated) {
+      currentMsg = escalatedMsg;
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -270,28 +531,6 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
                 _showAdjustAmountDialog(context, ref, person, outstanding);
               } else if (value == 'view_history') {
                 showAdjustmentHistorySheet(context, person.id, 'person_receivable', person.name);
-              } else if (value == 'duplicate') {
-                await ref.read(mockDatabaseProvider.notifier).duplicatePerson(person.id);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Receivable "${person.name}" duplicated.')),
-                  );
-                }
-              } else if (value == 'archive') {
-                await ref.read(mockDatabaseProvider.notifier).archivePerson(person.id);
-                if (context.mounted) {
-                  context.pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Receivable "${person.name}" archived.')),
-                  );
-                }
-              } else if (value == 'restore') {
-                await ref.read(mockDatabaseProvider.notifier).unarchivePerson(person.id);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Receivable "${person.name}" unarchived successfully.')),
-                  );
-                }
               } else if (value == 'delete') {
                 _confirmDeleteReceivable(context, person);
               }
@@ -310,14 +549,6 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
                 child: Text('View History', style: TextStyle(color: Colors.white)),
               ),
               const PopupMenuItem(
-                value: 'duplicate',
-                child: Text('Duplicate', style: TextStyle(color: Colors.white)),
-              ),
-              PopupMenuItem(
-                value: person.isArchived == 1 ? 'restore' : 'archive',
-                child: Text(person.isArchived == 1 ? 'Restore from Archive' : 'Archive', style: const TextStyle(color: Colors.white)),
-              ),
-              const PopupMenuItem(
                 value: 'delete',
                 child: Text('Delete', style: TextStyle(color: AppColors.darkDanger)),
               ),
@@ -326,208 +557,504 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              GlassCard(
+        child: Column(
+          children: [
+            // Outstanding amount header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),
+              child: GlassCard(
                 borderColor: AppColors.darkSuccess.withOpacity(0.2),
                 child: Column(
                   children: [
                     Text(
                       'OUTSTANDING AMOUNT OWED TO YOU',
-                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 1.0),
+                      style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 1.0),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       format.format(outstanding),
                       style: GoogleFonts.inter(fontSize: 32, fontWeight: FontWeight.w800, color: AppColors.darkSuccess),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              if (outstanding > 0) ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _showRecoverDialog(context, currency, person.name, outstanding),
-                        icon: const Icon(Icons.keyboard_double_arrow_left, color: Colors.white),
-                        label: const Text('Recover Partial', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.darkPrimary,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _handleSettle(context, currency, person.name, outstanding),
-                        icon: const Icon(Icons.check, color: AppColors.darkSuccess),
-                        label: const Text('Mark Settled', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: const BorderSide(color: AppColors.glassBorder),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                        ),
-                      ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildProfileMiniCol('Risk Profile', RecoveryCalculator.getRiskLabel(risk), RecoveryCalculator.getRiskColor(risk)),
+                        _buildProfileMiniCol('Probability', RecoveryCalculator.getProbabilityLabel(prob), RecoveryCalculator.getProbabilityColor(prob)),
+                        _buildProfileMiniCol('Collection Stage', stageLabel, stageColor),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
-              ],
-
-              Builder(
-                builder: (context) {
-                  final double lent = txs
-                      .where((t) => t.personId == person.id && t.voidedTransactionId == null && t.type == 'lend_money')
-                      .fold(0.0, (sum, t) => sum + t.amount);
-                  final double recoveries = txs
-                      .where((t) => t.personId == person.id && t.voidedTransactionId == null && t.type == 'recover_money')
-                      .fold(0.0, (sum, t) => sum + t.amount);
-                  final double adjs = dbState.adjustments
-                      .where((a) => a.entityId == person.id && a.entityType == 'person_receivable')
-                      .fold(0.0, (sum, a) => sum + a.adjustedAmount);
-
-                  return CalculationAuditPanel(
-                    title: 'Verify Receivable Calculation',
-                    formula: 'Outstanding Balance = Lent - Recoveries + Adjustments',
-                    inputs: {
-                      'Total Lent': format.format(lent),
-                      'Total Recovered': format.format(recoveries),
-                      'Adjustments': format.format(adjs),
-                    },
-                    output: format.format(outstanding),
-                    steps: [
-                      'Sum all funds lent to this individual: ${format.format(lent)}.',
-                      'Sum all recoveries received from this individual: ${format.format(recoveries)}.',
-                      'Sum all adjustments applied to this receivable: ${format.format(adjs)}.',
-                      'Calculate outstanding balance: Lent (${format.format(lent)}) - Recoveries (${format.format(recoveries)}) + Adjustments (${format.format(adjs)}) = ${format.format(outstanding)}.',
-                    ],
-                  );
-                },
               ),
-              const SizedBox(height: 24),
+            ),
 
-              if (person.notes != null) ...[
-                Text(
-                  'Notes',
-                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.grey500),
-                ),
-                const SizedBox(height: 8),
-                GlassCard(
-                  child: Text(
-                    person.notes!,
-                    style: const TextStyle(color: Colors.white, height: 1.4),
-                  ),
-                ),
-                const SizedBox(height: 24),
+            // Tab bar switcher
+            TabBar(
+              controller: _tabController,
+              indicatorColor: AppColors.darkPrimary,
+              labelColor: Colors.white,
+              unselectedLabelColor: AppColors.grey500,
+              tabs: const [
+                Tab(text: 'Collect'),
+                Tab(text: 'Timeline'),
+                Tab(text: 'Ledger'),
               ],
+            ),
 
-              Text(
-                'Recovery Log',
-                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              const SizedBox(height: 12),
-
-              if (txs.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 32.0),
-                  child: Center(child: Text('No recovery history found.', style: TextStyle(color: AppColors.grey500))),
-                )
-              else
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: txs.length,
-                  itemBuilder: (context, index) {
-                    final tx = txs[index];
-                    final isVoided = tx.voidedTransactionId != null || tx.type == 'void';
-
-                    final isRecovery = tx.type == 'recover_money';
-                    final color = isRecovery ? AppColors.darkSuccess : AppColors.darkDanger;
-                    final prefix = isRecovery ? '-' : '+';
-
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: GlassCard(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    tx.notes ?? tx.type.replaceAll('_', ' ').toUpperCase(),
-                                    style: TextStyle(
-                                      color: isVoided ? AppColors.grey500 : Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  // --- COLLECT TAB ---
+                  SingleChildScrollView(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Quick settlements buttons
+                        if (outstanding > 0) ...[
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () => _showRecoverDialog(context, currency, person.name, outstanding),
+                                  icon: const Icon(Icons.keyboard_double_arrow_left, color: Colors.white),
+                                  label: const Text('Recover Partial', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.darkPrimary,
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(DateFormat('dd MMM yyyy').format(tx.transactionDate), style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _handleSettle(context, currency, person.name, outstanding),
+                                  icon: const Icon(Icons.check, color: AppColors.darkSuccess),
+                                  label: const Text('Mark Settled', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    side: const BorderSide(color: AppColors.glassBorder),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+
+                        // Request Payment link section
+                        if (person.upiId != null && person.upiId!.isNotEmpty) ...[
+                          Text(
+                            'UPI PAYMENT COLLECTION',
+                            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+                          ),
+                          const SizedBox(height: 12),
+                          GlassCard(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.account_balance_wallet_outlined, color: AppColors.darkPrimary),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(person.accountHolderName ?? person.name, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                                          Text('UPI: ${person.upiId} (${person.bankName ?? 'No Bank Specified'})', style: const TextStyle(color: AppColors.grey500, fontSize: 11)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton.icon(
+                                  onPressed: () => _requestUpiPayment(
+                                    person.name,
+                                    outstanding,
+                                    person.upiId!,
+                                    person.accountHolderName ?? dbState.userUpiName,
+                                  ),
+                                  icon: const Icon(Icons.share, color: Colors.white),
+                                  label: const Text('Request UPI Payment (WhatsApp)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF25D366)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+
+                        // Reminder messages templates
+                        Text(
+                          'AUTO GENERATED REMINDERS',
+                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+                        ),
+                        const SizedBox(height: 12),
+                        GlassCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                '$stageLabel Message template',
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.darkPrimary),
+                              ),
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.glassSurface,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  currentMsg,
+                                  style: const TextStyle(color: Colors.white, height: 1.4, fontSize: 13),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.copy, color: Colors.white70),
+                                    tooltip: 'Copy text',
+                                    onPressed: () => _copyToClipboard(currentMsg, stageLabel),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.message_outlined, color: Colors.white70),
+                                    tooltip: 'Send SMS',
+                                    onPressed: () => _shareReminder(currentMsg, 'sms', person.name, stageLabel),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.send_rounded, color: Colors.white70),
+                                    tooltip: 'Send Telegram',
+                                    onPressed: () => _shareReminder(currentMsg, 'telegram', person.name, stageLabel),
+                                  ),
+                                  ElevatedButton.icon(
+                                    onPressed: () => _shareReminder(currentMsg, 'whatsapp', person.name, stageLabel),
+                                    icon: const Icon(Icons.share, color: Colors.white, size: 16),
+                                    label: const Text('WhatsApp', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF25D366)),
+                                  ),
                                 ],
                               ),
-                            ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Image Card generator section
+                        if (person.upiId != null && person.upiId!.isNotEmpty) ...[
+                          Text(
+                            'PAYMENT REMINDER CARD GENERATOR',
+                            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+                          ),
+                          const SizedBox(height: 12),
+                          PaymentReminderImageGenerator(
+                            debtorName: person.name,
+                            amount: outstanding,
+                            borrowDate: borrowDate,
+                            daysPending: daysPending,
+                            userName: dbState.userUpiName.isNotEmpty ? dbState.userUpiName : 'Worth User',
+                            upiId: person.upiId!,
+                            currency: currency,
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  // --- TIMELINE TAB ---
+                  SingleChildScrollView(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
                             Text(
-                              '$prefix$currency${NumberFormat.decimalPattern().format(tx.amount)}',
-                              style: TextStyle(
-                                color: isVoided ? AppColors.grey500 : color,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
+                              'COLLECTION ACTIONS LOG',
+                              style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: _showAddNoteDialog,
+                              icon: const Icon(Icons.add_comment, size: 14, color: Colors.white),
+                              label: const Text('Add Note', style: TextStyle(fontSize: 11, color: Colors.white)),
+                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.layer2, padding: const EdgeInsets.symmetric(horizontal: 12)),
                             ),
                           ],
                         ),
-                      ),
-                    );
-                  },
-                ),
-              const SizedBox(height: 24),
-              GlassCard(
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'AUDIT LOG INFORMATION',
-                      style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Created At', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
-                        Text(createdStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 16),
+                        
+                        if (activities.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 40.0),
+                            child: Center(
+                              child: Text(
+                                'No timeline interactions logged yet.',
+                                style: TextStyle(color: AppColors.grey500, fontSize: 13),
+                              ),
+                            ),
+                          )
+                        else
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: activities.length,
+                            itemBuilder: (context, index) {
+                              final activity = activities[index];
+                              return _buildTimelineCard(activity, currency);
+                            },
+                          ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Last Edited', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
-                        Text(updatedStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+                  ),
 
-              // ─── Recovery Flow Report ────────────────────────────────────
-              RecoveryFlowReportWidget(
-                personId: widget.personId,
-                dbState: dbState,
+                  // --- LEDGER TAB ---
+                  SingleChildScrollView(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Builder(
+                          builder: (context) {
+                            final double lent = txs
+                                .where((t) => t.personId == person.id && t.voidedTransactionId == null && t.type == 'lend_money')
+                                .fold(0.0, (sum, t) => sum + t.amount);
+                            final double recoveries = txs
+                                .where((t) => t.personId == person.id && t.voidedTransactionId == null && t.type == 'recover_money')
+                                .fold(0.0, (sum, t) => sum + t.amount);
+                            final double adjs = dbState.adjustments
+                                .where((a) => a.entityId == person.id && a.entityType == 'person_receivable')
+                                .fold(0.0, (sum, a) => sum + a.adjustedAmount);
+
+                            return CalculationAuditPanel(
+                              title: 'Verify Receivable Calculation',
+                              formula: 'Outstanding Balance = Lent - Recoveries + Adjustments',
+                              inputs: {
+                                'Total Lent': format.format(lent),
+                                'Total Recovered': format.format(recoveries),
+                                'Adjustments': format.format(adjs),
+                              },
+                              output: format.format(outstanding),
+                              steps: [
+                                'Sum all funds lent to this individual: ${format.format(lent)}.',
+                                'Sum all recoveries received from this individual: ${format.format(recoveries)}.',
+                                'Sum all adjustments applied to this receivable: ${format.format(adjs)}.',
+                                'Calculate outstanding balance: Lent (${format.format(lent)}) - Recoveries (${format.format(recoveries)}) + Adjustments (${format.format(adjs)}) = ${format.format(outstanding)}.',
+                              ],
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        
+                        if (person.notes != null) ...[
+                          Text(
+                            'General Notes',
+                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.grey500),
+                          ),
+                          const SizedBox(height: 8),
+                          GlassCard(
+                            child: Text(
+                              person.notes!,
+                              style: const TextStyle(color: Colors.white, height: 1.4),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+
+                        Text(
+                          'Ledger Transactions',
+                          style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                        const SizedBox(height: 12),
+
+                        if (txs.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 32.0),
+                            child: Center(child: Text('No ledger history found.', style: TextStyle(color: AppColors.grey500))),
+                          )
+                        else
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: txs.length,
+                            itemBuilder: (context, index) {
+                              final tx = txs[index];
+                              final isVoided = tx.voidedTransactionId != null || tx.type == 'void';
+
+                              final isRecovery = tx.type == 'recover_money';
+                              final color = isRecovery ? AppColors.darkSuccess : AppColors.darkDanger;
+                              final prefix = isRecovery ? '-' : '+';
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                child: GlassCard(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              tx.notes ?? tx.type.replaceAll('_', ' ').toUpperCase(),
+                                              style: TextStyle(
+                                                color: isVoided ? AppColors.grey500 : Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(DateFormat('dd MMM yyyy').format(tx.transactionDate), style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
+                                          ],
+                                        ),
+                                      ),
+                                      Text(
+                                        '$prefix$currency${NumberFormat.decimalPattern().format(tx.amount)}',
+                                        style: TextStyle(
+                                          color: isVoided ? AppColors.grey500 : color,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        const SizedBox(height: 24),
+                        
+                        RecoveryFlowReportWidget(
+                          personId: widget.personId,
+                          dbState: dbState,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 24),
-            ],
-          ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileMiniCol(String label, String val, Color valColor) {
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(color: AppColors.grey500, fontSize: 9, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        Text(val, style: TextStyle(color: valColor, fontSize: 12, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _buildTimelineCard(ReceivableActivity activity, String currency) {
+    String title = '';
+    IconData icon = Icons.info_outline;
+    Color iconColor = Colors.white70;
+    
+    switch (activity.activityType) {
+      case 'created':
+        title = 'Receivable created';
+        icon = Icons.add_circle_outline;
+        iconColor = AppColors.darkPrimary;
+        break;
+      case 'reminder_sent':
+        title = 'Reminder Shared';
+        icon = Icons.notification_important_outlined;
+        iconColor = Colors.amber;
+        break;
+      case 'payment_requested':
+        title = 'Payment request sent';
+        icon = Icons.link_rounded;
+        iconColor = Colors.cyan;
+        break;
+      case 'payment_received':
+        title = 'Payment Received';
+        icon = Icons.call_received;
+        iconColor = AppColors.darkSuccess;
+        break;
+      case 'settled':
+        title = 'Fully Settled';
+        icon = Icons.check_circle_outline;
+        iconColor = AppColors.darkSuccess;
+        break;
+      case 'notes_added':
+        title = 'Interaction note logged';
+        icon = Icons.comment_outlined;
+        iconColor = Colors.white;
+        break;
+    }
+
+    final dateStr = DateFormat('dd MMM yyyy, hh:mm a').format(activity.createdAt.toLocal());
+    final isCashFlow = activity.amount != null && activity.amount! > 0;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: GlassCard(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 16),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.white)),
+                      if (isCashFlow)
+                        Text(
+                          '+$currency${NumberFormat.decimalPattern().format(activity.amount)}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.darkSuccess),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  if (activity.notes != null && activity.notes!.isNotEmpty) ...[
+                    Text(
+                      activity.notes!,
+                      style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
+                    ),
+                    const SizedBox(height: 6),
+                  ],
+                  Row(
+                    children: [
+                      Text(dateStr, style: const TextStyle(color: AppColors.grey500, fontSize: 10)),
+                      if (activity.channel != null) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          'via ${activity.channel!.toUpperCase()}',
+                          style: TextStyle(color: AppColors.darkPrimary.withOpacity(0.8), fontSize: 9, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -557,25 +1084,24 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
             onPressed: () async {
               final newAmt = double.tryParse(controller.text.trim());
               if (newAmt == null) return;
-              
-              Navigator.pop(context); // close input dialog
 
-              // 1. Show Warning
+              Navigator.pop(context);
+
               final continueAdj = await showAdjustmentWarningDialog(context);
               if (!continueAdj) return;
 
-              // 2. Ask Reason
               final reason = await showAdjustmentReasonSheet(context);
               if (reason == null) return;
 
-              // 3. Save
               await ref.read(mockDatabaseProvider.notifier).addAdjustment(
-                entityType: 'person_receivable',
-                entityId: person.id,
-                oldAmount: currentOutstanding,
-                newAmount: newAmt,
-                reason: reason,
-              );
+                    entityType: 'person_receivable',
+                    entityId: person.id,
+                    oldAmount: currentOutstanding,
+                    newAmount: newAmt,
+                    reason: reason,
+                  );
+
+              await _logActivity('notes_added', notes: 'Manually adjusted outstanding balance from $currentOutstanding to $newAmt. Reason: $reason');
 
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Outstanding amount adjusted successfully.')),

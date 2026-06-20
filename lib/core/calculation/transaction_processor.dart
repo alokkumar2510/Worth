@@ -42,6 +42,9 @@ class TransactionProcessor {
             purchaseDate: companion.transactionDate,
             createdAt: Value(DateTime.now().toUtc()),
             updatedAt: Value(DateTime.now().toUtc()),
+            fundingSource: companion.fundingSource,
+            fundingLiabilityId: companion.fundingLiabilityId,
+            fundingDetails: companion.fundingDetails,
           ));
     } else if (type == 'investment_sell') {
       final double unitsSold = companion.units.value ?? 0.0;

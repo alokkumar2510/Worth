@@ -23,6 +23,13 @@ mixin _$Receivable {
   String get id => throw _privateConstructorUsedError;
   String get personName => throw _privateConstructorUsedError;
   double get amount => throw _privateConstructorUsedError;
+  String? get phone => throw _privateConstructorUsedError;
+  String? get whatsApp => throw _privateConstructorUsedError;
+  DateTime? get borrowDate => throw _privateConstructorUsedError;
+  DateTime? get dueDate => throw _privateConstructorUsedError;
+  String? get upiId => throw _privateConstructorUsedError;
+  String? get bankName => throw _privateConstructorUsedError;
+  String? get accountHolderName => throw _privateConstructorUsedError;
   String? get notes => throw _privateConstructorUsedError;
   int get isArchived => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
@@ -45,6 +52,13 @@ abstract class $ReceivableCopyWith<$Res> {
       {String id,
       String personName,
       double amount,
+      String? phone,
+      String? whatsApp,
+      DateTime? borrowDate,
+      DateTime? dueDate,
+      String? upiId,
+      String? bankName,
+      String? accountHolderName,
       String? notes,
       int isArchived,
       DateTime createdAt,
@@ -68,6 +82,13 @@ class _$ReceivableCopyWithImpl<$Res, $Val extends Receivable>
     Object? id = null,
     Object? personName = null,
     Object? amount = null,
+    Object? phone = freezed,
+    Object? whatsApp = freezed,
+    Object? borrowDate = freezed,
+    Object? dueDate = freezed,
+    Object? upiId = freezed,
+    Object? bankName = freezed,
+    Object? accountHolderName = freezed,
     Object? notes = freezed,
     Object? isArchived = null,
     Object? createdAt = null,
@@ -87,6 +108,34 @@ class _$ReceivableCopyWithImpl<$Res, $Val extends Receivable>
           ? _value.amount
           : amount // ignore: cast_nullable_to_non_nullable
               as double,
+      phone: freezed == phone
+          ? _value.phone
+          : phone // ignore: cast_nullable_to_non_nullable
+              as String?,
+      whatsApp: freezed == whatsApp
+          ? _value.whatsApp
+          : whatsApp // ignore: cast_nullable_to_non_nullable
+              as String?,
+      borrowDate: freezed == borrowDate
+          ? _value.borrowDate
+          : borrowDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      dueDate: freezed == dueDate
+          ? _value.dueDate
+          : dueDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      upiId: freezed == upiId
+          ? _value.upiId
+          : upiId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      bankName: freezed == bankName
+          ? _value.bankName
+          : bankName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      accountHolderName: freezed == accountHolderName
+          ? _value.accountHolderName
+          : accountHolderName // ignore: cast_nullable_to_non_nullable
+              as String?,
       notes: freezed == notes
           ? _value.notes
           : notes // ignore: cast_nullable_to_non_nullable
@@ -123,6 +172,13 @@ abstract class _$$ReceivableImplCopyWith<$Res>
       {String id,
       String personName,
       double amount,
+      String? phone,
+      String? whatsApp,
+      DateTime? borrowDate,
+      DateTime? dueDate,
+      String? upiId,
+      String? bankName,
+      String? accountHolderName,
       String? notes,
       int isArchived,
       DateTime createdAt,
@@ -144,6 +200,13 @@ class __$$ReceivableImplCopyWithImpl<$Res>
     Object? id = null,
     Object? personName = null,
     Object? amount = null,
+    Object? phone = freezed,
+    Object? whatsApp = freezed,
+    Object? borrowDate = freezed,
+    Object? dueDate = freezed,
+    Object? upiId = freezed,
+    Object? bankName = freezed,
+    Object? accountHolderName = freezed,
     Object? notes = freezed,
     Object? isArchived = null,
     Object? createdAt = null,
@@ -163,6 +226,34 @@ class __$$ReceivableImplCopyWithImpl<$Res>
           ? _value.amount
           : amount // ignore: cast_nullable_to_non_nullable
               as double,
+      phone: freezed == phone
+          ? _value.phone
+          : phone // ignore: cast_nullable_to_non_nullable
+              as String?,
+      whatsApp: freezed == whatsApp
+          ? _value.whatsApp
+          : whatsApp // ignore: cast_nullable_to_non_nullable
+              as String?,
+      borrowDate: freezed == borrowDate
+          ? _value.borrowDate
+          : borrowDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      dueDate: freezed == dueDate
+          ? _value.dueDate
+          : dueDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      upiId: freezed == upiId
+          ? _value.upiId
+          : upiId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      bankName: freezed == bankName
+          ? _value.bankName
+          : bankName // ignore: cast_nullable_to_non_nullable
+              as String?,
+      accountHolderName: freezed == accountHolderName
+          ? _value.accountHolderName
+          : accountHolderName // ignore: cast_nullable_to_non_nullable
+              as String?,
       notes: freezed == notes
           ? _value.notes
           : notes // ignore: cast_nullable_to_non_nullable
@@ -194,6 +285,13 @@ class _$ReceivableImpl implements _Receivable {
       {required this.id,
       required this.personName,
       required this.amount,
+      this.phone,
+      this.whatsApp,
+      this.borrowDate,
+      this.dueDate,
+      this.upiId,
+      this.bankName,
+      this.accountHolderName,
       this.notes,
       required this.isArchived,
       required this.createdAt,
@@ -210,6 +308,20 @@ class _$ReceivableImpl implements _Receivable {
   @override
   final double amount;
   @override
+  final String? phone;
+  @override
+  final String? whatsApp;
+  @override
+  final DateTime? borrowDate;
+  @override
+  final DateTime? dueDate;
+  @override
+  final String? upiId;
+  @override
+  final String? bankName;
+  @override
+  final String? accountHolderName;
+  @override
   final String? notes;
   @override
   final int isArchived;
@@ -223,7 +335,7 @@ class _$ReceivableImpl implements _Receivable {
 
   @override
   String toString() {
-    return 'Receivable(id: $id, personName: $personName, amount: $amount, notes: $notes, isArchived: $isArchived, createdAt: $createdAt, updatedAt: $updatedAt, syncStatus: $syncStatus)';
+    return 'Receivable(id: $id, personName: $personName, amount: $amount, phone: $phone, whatsApp: $whatsApp, borrowDate: $borrowDate, dueDate: $dueDate, upiId: $upiId, bankName: $bankName, accountHolderName: $accountHolderName, notes: $notes, isArchived: $isArchived, createdAt: $createdAt, updatedAt: $updatedAt, syncStatus: $syncStatus)';
   }
 
   @override
@@ -235,6 +347,17 @@ class _$ReceivableImpl implements _Receivable {
             (identical(other.personName, personName) ||
                 other.personName == personName) &&
             (identical(other.amount, amount) || other.amount == amount) &&
+            (identical(other.phone, phone) || other.phone == phone) &&
+            (identical(other.whatsApp, whatsApp) ||
+                other.whatsApp == whatsApp) &&
+            (identical(other.borrowDate, borrowDate) ||
+                other.borrowDate == borrowDate) &&
+            (identical(other.dueDate, dueDate) || other.dueDate == dueDate) &&
+            (identical(other.upiId, upiId) || other.upiId == upiId) &&
+            (identical(other.bankName, bankName) ||
+                other.bankName == bankName) &&
+            (identical(other.accountHolderName, accountHolderName) ||
+                other.accountHolderName == accountHolderName) &&
             (identical(other.notes, notes) || other.notes == notes) &&
             (identical(other.isArchived, isArchived) ||
                 other.isArchived == isArchived) &&
@@ -248,8 +371,23 @@ class _$ReceivableImpl implements _Receivable {
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hash(runtimeType, id, personName, amount, notes,
-      isArchived, createdAt, updatedAt, syncStatus);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      personName,
+      amount,
+      phone,
+      whatsApp,
+      borrowDate,
+      dueDate,
+      upiId,
+      bankName,
+      accountHolderName,
+      notes,
+      isArchived,
+      createdAt,
+      updatedAt,
+      syncStatus);
 
   @JsonKey(ignore: true)
   @override
@@ -270,6 +408,13 @@ abstract class _Receivable implements Receivable {
       {required final String id,
       required final String personName,
       required final double amount,
+      final String? phone,
+      final String? whatsApp,
+      final DateTime? borrowDate,
+      final DateTime? dueDate,
+      final String? upiId,
+      final String? bankName,
+      final String? accountHolderName,
       final String? notes,
       required final int isArchived,
       required final DateTime createdAt,
@@ -285,6 +430,20 @@ abstract class _Receivable implements Receivable {
   String get personName;
   @override
   double get amount;
+  @override
+  String? get phone;
+  @override
+  String? get whatsApp;
+  @override
+  DateTime? get borrowDate;
+  @override
+  DateTime? get dueDate;
+  @override
+  String? get upiId;
+  @override
+  String? get bankName;
+  @override
+  String? get accountHolderName;
   @override
   String? get notes;
   @override

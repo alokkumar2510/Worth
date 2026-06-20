@@ -14,6 +14,12 @@ class People extends Table {
   DateTimeColumn get deletedAt => dateTime().nullable()();
   TextColumn get deletedBy => text().nullable()();
   TextColumn get type => text().withDefault(const Constant('personal_loan'))();
+  TextColumn get whatsApp => text().nullable()();
+  DateTimeColumn get dueDate => dateTime().nullable()();
+  DateTimeColumn get borrowDate => dateTime().nullable()();
+  TextColumn get upiId => text().nullable()();
+  TextColumn get bankName => text().nullable()();
+  TextColumn get accountHolderName => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

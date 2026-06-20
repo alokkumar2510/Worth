@@ -1025,11 +1025,13 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
     // Find linked liability name if applicable
     String? linkedLiabilityName;
     if (inv.fundingLiabilityId != null) {
-      final account = dbState.accounts.firstWhereOrNull((a) => a.id == inv.fundingLiabilityId);
+      final rawId = inv.fundingLiabilityId!;
+      final cleanId = rawId.contains('_') ? rawId.substring(rawId.indexOf('_') + 1) : rawId;
+      final account = dbState.accounts.firstWhereOrNull((a) => a.id == cleanId || a.id == rawId);
       if (account != null) {
         linkedLiabilityName = '${account.name} (Credit Account)';
       } else {
-        final person = dbState.people.firstWhereOrNull((p) => p.id == inv.fundingLiabilityId);
+        final person = dbState.people.firstWhereOrNull((p) => p.id == cleanId || p.id == rawId);
         if (person != null) {
           linkedLiabilityName = '${person.name} (Person Creditor)';
         }

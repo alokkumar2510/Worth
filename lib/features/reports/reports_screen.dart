@@ -211,6 +211,134 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     );
   }
 
+  Widget _buildRecoveryCenterCard(BuildContext context) {
+    final goldAccent = const Color(0xFFD4AF37);
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFF0F112A),
+            Color(0xFF1B1D38),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: goldAccent.withOpacity(0.2),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 10,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => context.push('/recovery/dashboard'),
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: goldAccent.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: goldAccent.withOpacity(0.15),
+                          width: 1,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.shield_outlined,
+                        color: goldAccent,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Smart Debt Recovery Center',
+                            style: GoogleFonts.outfit(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'RECOVERY INTELLIGENCE CENTER',
+                            style: GoogleFonts.inter(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: goldAccent,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Manage outstanding receivables, configure UPI payment collections, track interaction timelines, and view dynamic aging bucket analytics.',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: AppColors.grey400,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: goldAccent.withOpacity(0.4), width: 1.5),
+                  ),
+                  child: Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.speed_rounded,
+                          color: goldAccent,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Open Recovery Center',
+                          style: GoogleFonts.outfit(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -280,6 +408,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   delegate: SliverChildListDelegate([
                     // SECTION 0: PREMIUM PDF DOSSIER EXPORT CARD
                     _buildPdfExportCard(context, dbState),
+                    const SizedBox(height: 16),
+                    _buildRecoveryCenterCard(context),
                     const SizedBox(height: 24),
 
                     // SECTION 1: NET WORTH PERFORMANCE CARD

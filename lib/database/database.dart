@@ -30,6 +30,7 @@ import 'tables/portfolio_histories.dart';
 import 'tables/portfolio_snapshots.dart';
 import 'tables/recovery_allocations.dart';
 import 'tables/recovery_destinations.dart';
+import 'tables/receivable_activities.dart';
 
 part 'database.g.dart';
 
@@ -62,12 +63,13 @@ part 'database.g.dart';
   PortfolioSnapshots,
   RecoveryAllocations,
   RecoveryDestinations,
+  ReceivableActivities,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 17; // Bumped for People type column
+  int get schemaVersion => 18; // Bumped for Receivable activities and additional People columns
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -225,6 +227,16 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 17) {
             await m.addColumn(people, people.type);
+          }
+          if (from < 18) {
+            await m.addColumn(people, people.whatsApp);
+            await m.addColumn(people, people.dueDate);
+            await m.addColumn(people, people.borrowDate);
+            await m.addColumn(people, people.upiId);
+            await m.addColumn(people, people.bankName);
+            await m.addColumn(people, people.accountHolderName);
+
+            await m.createTable(receivableActivities);
           }
         },
       );

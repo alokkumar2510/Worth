@@ -43,54 +43,36 @@ class TransactionValidator {
         break;
 
       case 'borrow_money':
-        if (!companion.toAccountId.present || companion.toAccountId.value == null) {
-          throw const FormatException('Borrow money transaction requires a destination account (toAccountId).');
-        }
         if (!companion.personId.present || companion.personId.value == null) {
           throw const FormatException('Borrow money transaction requires a lender (personId).');
         }
         break;
 
       case 'repay_money':
-        if (!companion.fromAccountId.present || companion.fromAccountId.value == null) {
-          throw const FormatException('Repay money transaction requires a source account (fromAccountId).');
-        }
         if (!companion.personId.present || companion.personId.value == null) {
           throw const FormatException('Repay money transaction requires a recipient (personId).');
         }
         break;
 
       case 'lend_money':
-        if (!companion.fromAccountId.present || companion.fromAccountId.value == null) {
-          throw const FormatException('Lend money transaction requires a source account (fromAccountId).');
-        }
         if (!companion.personId.present || companion.personId.value == null) {
           throw const FormatException('Lend money transaction requires a borrower (personId).');
         }
         break;
 
       case 'recover_money':
-        if (!companion.toAccountId.present || companion.toAccountId.value == null) {
-          throw const FormatException('Recover money transaction requires a destination account (toAccountId).');
-        }
         if (!companion.personId.present || companion.personId.value == null) {
           throw const FormatException('Recover money transaction requires a payer (personId).');
         }
         break;
 
       case 'investment_buy':
-        if (!companion.fromAccountId.present || companion.fromAccountId.value == null) {
-          throw const FormatException('Investment buy transaction requires a source account (fromAccountId).');
-        }
         if (!companion.investmentId.present || companion.investmentId.value == null) {
           throw const FormatException('Investment buy transaction requires an investment instrument (investmentId).');
         }
         break;
 
       case 'investment_sell':
-        if (!companion.toAccountId.present || companion.toAccountId.value == null) {
-          throw const FormatException('Investment sell transaction requires a destination account (toAccountId).');
-        }
         if (!companion.investmentId.present || companion.investmentId.value == null) {
           throw const FormatException('Investment sell transaction requires an investment instrument (investmentId).');
         }

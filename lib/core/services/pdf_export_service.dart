@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -13,61 +12,59 @@ import '../../database/database.dart';
 import '../calculation/liability_calculation_service.dart';
 
 // ──────────────────────────────────────────────────────────────────────────────
-// WORTH WEALTH INTELLIGENCE REPORT — Premium Dark-Mode PDF Dossier
+// WORTH — PRIVATE WEALTH STATEMENT
 // ──────────────────────────────────────────────────────────────────────────────
 //
 // Design Direction:
-//   Morgan Stanley Private Wealth · Goldman Sachs Client Reports
-//   BlackRock Investor Reports · Apple Design · Linear
+//   Light editorial aesthetic. Morgan Stanley · Apple · Notion.
+//   Off-white pages, charcoal typography, single gold accent.
+//   Generous white space. Strong typographic hierarchy.
+//   No gradients. No glassmorphism. No dark backgrounds.
 //
-// Zero white pages. Zero placeholder text. Zero generic tables.
-// Every insight is computed from actual data.
+// Font Strategy:
+//   Embedded Noto Sans TTF for guaranteed ₹ symbol rendering.
+//   Loaded via rootBundle — zero runtime downloads.
+//
 // ──────────────────────────────────────────────────────────────────────────────
 
-extension PdfColorExtension on PdfColor {
-  PdfColor withOpacity(double opacity) {
-    return PdfColor(red, green, blue, opacity);
-  }
-}
-
 class PdfExportService {
-  // ── Brand Palette ─────────────────────────────────────────────────────────
-  static final PdfColor gold = PdfColor.fromHex('#D4AF37');
-  static final PdfColor goldDark = PdfColor.fromHex('#B8860B');
-  static final PdfColor deepNavy = PdfColor.fromHex('#0A0D1F');
-  static final PdfColor cardSurface = PdfColor.fromHex('#111428');
-  static final PdfColor cardBorder = PdfColor.fromHex('#1E2140');
-  static final PdfColor pageBg = PdfColor.fromHex('#0D1024');
-  static final PdfColor textWhite = PdfColor.fromHex('#F0F0F5');
-  static final PdfColor textMuted = PdfColor.fromHex('#6B7094');
-  static final PdfColor textDim = PdfColor.fromHex('#4A4F6E');
-  static final PdfColor greenGrowth = PdfColor.fromHex('#34D399');
-  static final PdfColor redDebt = PdfColor.fromHex('#EF4444');
-  static final PdfColor blueInfo = PdfColor.fromHex('#38BDF8');
-  static final PdfColor purple = PdfColor.fromHex('#A78BFA');
-  static final PdfColor amber = PdfColor.fromHex('#FBBF24');
+  // ── Editorial Palette ────────────────────────────────────────────────────
+  static final PdfColor pageBg       = PdfColor.fromHex('#FAFAFA');
+  static final PdfColor white        = PdfColor.fromHex('#FFFFFF');
+  static final PdfColor charcoal     = PdfColor.fromHex('#0A0A0A');
+  static final PdfColor slate800     = PdfColor.fromHex('#1E293B');
+  static final PdfColor slate600     = PdfColor.fromHex('#475569');
+  static final PdfColor slate400     = PdfColor.fromHex('#94A3B8');
+  static final PdfColor slate200     = PdfColor.fromHex('#E2E8F0');
+  static final PdfColor slate100     = PdfColor.fromHex('#F1F5F9');
+  static final PdfColor gold         = PdfColor.fromHex('#D4AF37');
+  static final PdfColor goldDark     = PdfColor.fromHex('#B8860B');
+  static final PdfColor positive     = PdfColor.fromHex('#16A34A');
+  static final PdfColor negative     = PdfColor.fromHex('#DC2626');
+  static final PdfColor info         = PdfColor.fromHex('#2563EB');
 
   // ── Main Entry Point ─────────────────────────────────────────────────────
   Future<List<int>> generateReportBytes(MockDatabaseState dbState) async {
     final pdf = pw.Document(
-      title: 'Worth Wealth Intelligence Report',
+      title: 'Worth — Private Wealth Statement',
       author: 'Worth Wealth Management',
     );
 
-    // Load premium Google Fonts with fallbacks
-    pw.Font fontTitle;
-    pw.Font fontBody;
+    // Load embedded Noto Sans font — guaranteed ₹ support
+    pw.Font fontRegular;
     pw.Font fontBold;
 
     try {
-      fontTitle = await PdfGoogleFonts.outfitMedium();
-      fontBody = await PdfGoogleFonts.interRegular();
-      fontBold = await PdfGoogleFonts.interBold();
+      final regularData = await rootBundle.load('assets/fonts/NotoSans-Regular.ttf');
+      fontRegular = pw.Font.ttf(regularData);
+      fontBold = pw.Font.ttf(regularData); // Variable font — same file, bold simulated via TextStyle
     } catch (_) {
-      fontTitle = pw.Font.helvetica();
-      fontBody = pw.Font.helvetica();
+      // Absolute last resort fallback — should never happen with bundled assets
+      fontRegular = pw.Font.helvetica();
       fontBold = pw.Font.helveticaBold();
     }
+
+    final fonts = _Fonts(title: fontBold, body: fontRegular, bold: fontBold);
 
     // Load logo
     pw.MemoryImage? logoImage;
@@ -77,48 +74,31 @@ class PdfExportService {
     } catch (_) {}
 
     final currency = dbState.currency;
-    final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
+    final formatCompact = NumberFormat.currency(locale: 'en_IN', symbol: currency, decimalDigits: 0);
     final now = DateTime.now();
+    final formattedDate = DateFormat('dd MMMM yyyy').format(now);
     final formattedDateTime = DateFormat('dd MMM yyyy, hh:mm a').format(now);
 
-    final fonts = _Fonts(title: fontTitle, body: fontBody, bold: fontBold);
-
-    // Pre-compute all data needed across pages
+    // Pre-compute all data
     final reportData = _computeReportData(dbState, now);
 
-    // ── PAGE 1: COVER ───────────────────────────────────────────────────────
-    pdf.addPage(_buildCoverPage(fonts, logoImage, format, formattedDateTime, reportData));
+    // ── BUILD PAGES ──────────────────────────────────────────────────────
+    pdf.addPage(_buildCoverPage(fonts, logoImage, formatCompact, formattedDate, reportData));
+    pdf.addPage(_buildExecutiveSummary(fonts, formatCompact, formattedDateTime, reportData, 2));
+    pdf.addPage(_buildAssetAllocation(fonts, formatCompact, formattedDateTime, reportData, dbState, 3));
+    pdf.addPage(_buildLiabilities(fonts, formatCompact, formattedDateTime, reportData, dbState, 4));
+    pdf.addPage(_buildWealthEvolution(fonts, formatCompact, formattedDateTime, reportData, dbState, 5));
+    pdf.addPage(_buildCashFlow(fonts, formatCompact, formattedDateTime, reportData, dbState, now, 6));
+    pdf.addPage(_buildSipPerformance(fonts, formatCompact, formattedDateTime, reportData, dbState, now, 7));
+    pdf.addPage(_buildInvestmentHoldings(fonts, formatCompact, formattedDateTime, reportData, dbState, now, 8));
 
-    // ── PAGE 2: EXECUTIVE SUMMARY ───────────────────────────────────────────
-    pdf.addPage(_buildExecutiveSummary(fonts, format, formattedDateTime, reportData, 2));
-
-    // ── PAGE 3: ASSET ALLOCATION ────────────────────────────────────────────
-    pdf.addPage(_buildAssetAllocation(fonts, format, formattedDateTime, reportData, dbState, 3));
-
-    // ── PAGE 4: LIABILITIES ─────────────────────────────────────────────────
-    pdf.addPage(_buildLiabilities(fonts, format, formattedDateTime, reportData, dbState, 4));
-
-    // ── PAGE 5: WEALTH EVOLUTION ────────────────────────────────────────────
-    pdf.addPage(_buildWealthEvolution(fonts, format, formattedDateTime, reportData, dbState, 5));
-
-    // ── PAGE 6: CASH FLOW & TRANSACTIONS ────────────────────────────────────
-    pdf.addPage(_buildCashFlow(fonts, format, formattedDateTime, reportData, dbState, now, 6));
-
-    // ── PAGE 7: SIP PERFORMANCE ─────────────────────────────────────────────
-    pdf.addPage(_buildSipPerformance(fonts, format, formattedDateTime, reportData, dbState, now, 7));
-
-    // ── PAGE 8: INVESTMENT HOLDINGS ─────────────────────────────────────────
-    pdf.addPage(_buildInvestmentHoldings(fonts, format, formattedDateTime, reportData, dbState, now, 8));
-
-    // ── PAGE 9: IPO POOL (CONDITIONAL) ──────────────────────────────────────
     int nextPage = 9;
     if (dbState.ipoPools.isNotEmpty) {
-      pdf.addPage(_buildIpoPool(fonts, format, formattedDateTime, dbState, nextPage));
+      pdf.addPage(_buildIpoPool(fonts, formatCompact, formattedDateTime, dbState, nextPage));
       nextPage++;
     }
 
-    // ── PAGE 10: INTELLIGENCE OBSERVATIONS ──────────────────────────────────
-    pdf.addPage(_buildIntelligenceObservations(fonts, format, formattedDateTime, reportData, dbState, nextPage));
+    pdf.addPage(_buildObservations(fonts, formatCompact, formattedDateTime, reportData, dbState, nextPage));
 
     return pdf.save();
   }
@@ -282,138 +262,119 @@ class PdfExportService {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  // PAGE 1: COVER PAGE
+  // PAGE 1: COVER
   // ════════════════════════════════════════════════════════════════════════════
 
-  pw.Page _buildCoverPage(_Fonts fonts, pw.MemoryImage? logoImage, NumberFormat format, String dateTime, _ReportData data) {
+  pw.Page _buildCoverPage(_Fonts fonts, pw.MemoryImage? logoImage, NumberFormat format, String date, _ReportData data) {
+    final netWorth = data.totalAssetsComputed - data.totalLiabilitiesComputed;
+
     return pw.Page(
       pageFormat: PdfPageFormat.a4,
       margin: pw.EdgeInsets.zero,
       build: (context) {
         return pw.Container(
-          color: deepNavy,
-          child: pw.Stack(
+          width: double.infinity,
+          height: double.infinity,
+          color: white,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 56, vertical: 48),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              // Decorative gold glow circle (top-right)
-              pw.Positioned(
-                top: -80,
-                right: -80,
-                child: pw.Container(
-                  width: 280,
-                  height: 280,
-                  decoration: pw.BoxDecoration(
-                    color: gold.withOpacity(0.03),
-                    shape: pw.BoxShape.circle,
-                  ),
-                ),
+              // Top bar: Logo + WORTH wordmark
+              pw.Row(
+                children: [
+                  if (logoImage != null)
+                    pw.Image(logoImage, width: 28, height: 28)
+                  else
+                    pw.Container(
+                      width: 28,
+                      height: 28,
+                      decoration: pw.BoxDecoration(
+                        color: charcoal,
+                        shape: pw.BoxShape.circle,
+                      ),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text('W', style: pw.TextStyle(font: fonts.bold, color: white, fontSize: 13)),
+                    ),
+                  pw.SizedBox(width: 10),
+                  pw.Text('WORTH', style: pw.TextStyle(font: fonts.bold, fontSize: 16, color: charcoal, letterSpacing: 4.0)),
+                ],
               ),
-              // Secondary glow (bottom-left)
-              pw.Positioned(
-                bottom: -120,
-                left: -120,
-                child: pw.Container(
-                  width: 320,
-                  height: 320,
-                  decoration: pw.BoxDecoration(
-                    color: gold.withOpacity(0.02),
-                    shape: pw.BoxShape.circle,
-                  ),
-                ),
+
+              pw.Spacer(flex: 4),
+
+              // Main title block
+              pw.Text(
+                'Private',
+                style: pw.TextStyle(font: fonts.body, fontSize: 44, color: slate400),
               ),
-              pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 44, vertical: 50),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+              pw.Text(
+                'Wealth Statement',
+                style: pw.TextStyle(font: fonts.bold, fontSize: 44, color: charcoal),
+              ),
+
+              pw.SizedBox(height: 20),
+
+              // Gold rule
+              pw.Container(width: 64, height: 3, color: gold),
+
+              pw.SizedBox(height: 24),
+
+              // Tagline
+              pw.Text(
+                'Your Complete Financial Reality',
+                style: pw.TextStyle(font: fonts.body, fontSize: 12, color: slate400, letterSpacing: 0.5),
+              ),
+
+              pw.Spacer(flex: 2),
+
+              // Net Worth — hero number
+              pw.Text(
+                'NET WORTH',
+                style: pw.TextStyle(font: fonts.bold, fontSize: 10, color: slate400, letterSpacing: 2.0),
+              ),
+              pw.SizedBox(height: 8),
+              pw.Text(
+                format.format(netWorth),
+                style: pw.TextStyle(font: fonts.bold, fontSize: 52, color: charcoal),
+              ),
+              pw.SizedBox(height: 4),
+              pw.Container(width: 200, height: 1.5, color: gold),
+
+              pw.Spacer(flex: 3),
+
+              // Footer metadata
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.only(top: 16),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border(top: pw.BorderSide(color: slate200, width: 0.8)),
+                ),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    // Header: Logo + Branding
-                    pw.Row(
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        if (logoImage != null)
-                          pw.Image(logoImage, width: 30, height: 30)
-                        else
-                          pw.Container(
-                            width: 30,
-                            height: 30,
-                            decoration: pw.BoxDecoration(
-                              color: gold,
-                              shape: pw.BoxShape.circle,
-                            ),
-                            alignment: pw.Alignment.center,
-                            child: pw.Text('W', style: pw.TextStyle(font: fonts.bold, color: deepNavy, fontSize: 15, fontWeight: pw.FontWeight.bold)),
-                          ),
-                        pw.SizedBox(width: 12),
-                        pw.Text('WORTH', style: pw.TextStyle(font: fonts.title, fontSize: 18, color: textWhite, letterSpacing: 3.0)),
+                        pw.Text('PREPARED FOR', style: pw.TextStyle(font: fonts.body, fontSize: 7, color: slate400, letterSpacing: 1.5)),
+                        pw.SizedBox(height: 3),
+                        pw.Text('Account Holder', style: pw.TextStyle(font: fonts.bold, fontSize: 11, color: charcoal)),
                       ],
                     ),
-
-                    pw.Spacer(flex: 3),
-
-                    // Document Title
-                    pw.Text(
-                      'WEALTH',
-                      style: pw.TextStyle(font: fonts.title, fontSize: 52, fontWeight: pw.FontWeight.bold, color: textWhite, letterSpacing: 2.0),
-                    ),
-                    pw.Text(
-                      'INTELLIGENCE',
-                      style: pw.TextStyle(font: fonts.title, fontSize: 52, fontWeight: pw.FontWeight.bold, color: gold, letterSpacing: 2.0),
-                    ),
-                    pw.Text(
-                      'REPORT',
-                      style: pw.TextStyle(font: fonts.title, fontSize: 52, fontWeight: pw.FontWeight.bold, color: textWhite, letterSpacing: 2.0),
-                    ),
-                    pw.SizedBox(height: 16),
-                    pw.Container(width: 80, height: 4, color: gold),
-                    pw.SizedBox(height: 20),
-                    pw.Text(
-                      'A comprehensive audit of net worth, asset allocation,\ndebt status, and systematic wealth-building plans.',
-                      style: pw.TextStyle(font: fonts.body, fontSize: 13, color: textMuted, lineSpacing: 1.4),
-                    ),
-
-                    pw.Spacer(flex: 2),
-
-                    // Wealth Summary Card
-                    pw.Container(
-                      width: double.infinity,
-                      padding: const pw.EdgeInsets.all(28),
-                      decoration: pw.BoxDecoration(
-                        color: cardSurface,
-                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(20)),
-                        border: pw.Border.all(color: gold.withOpacity(0.2), width: 1),
-                      ),
-                      child: pw.Row(
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                        children: [
-                          _buildCoverKPI(fonts, 'NET WORTH', format.format(data.totalAssetsComputed - data.totalLiabilitiesComputed), textWhite),
-                          pw.Container(width: 1, height: 50, color: textDim.withOpacity(0.3)),
-                          _buildCoverKPI(fonts, 'TOTAL ASSETS', format.format(data.totalAssetsComputed), greenGrowth),
-                          pw.Container(width: 1, height: 50, color: textDim.withOpacity(0.3)),
-                          _buildCoverKPI(fonts, 'TOTAL LIABILITIES', format.format(data.totalLiabilitiesComputed), redDebt),
-                        ],
-                      ),
-                    ),
-
-                    pw.Spacer(flex: 3),
-
-                    // Footer metadata
-                    pw.Row(
-                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
                       children: [
-                        pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
-                          children: [
-                            pw.Text('PREPARED FOR', style: pw.TextStyle(font: fonts.body, fontSize: 8, color: textDim, letterSpacing: 1.5)),
-                            pw.SizedBox(height: 4),
-                            pw.Text('Worth Account Holder', style: pw.TextStyle(font: fonts.bold, fontSize: 12, color: textWhite)),
-                          ],
-                        ),
-                        pw.Column(
-                          crossAxisAlignment: pw.CrossAxisAlignment.end,
-                          children: [
-                            pw.Text('DATE GENERATED', style: pw.TextStyle(font: fonts.body, fontSize: 8, color: textDim, letterSpacing: 1.5)),
-                            pw.SizedBox(height: 4),
-                            pw.Text(dateTime, style: pw.TextStyle(font: fonts.bold, fontSize: 11, color: textWhite)),
-                          ],
-                        ),
+                        pw.Text('DATE', style: pw.TextStyle(font: fonts.body, fontSize: 7, color: slate400, letterSpacing: 1.5)),
+                        pw.SizedBox(height: 3),
+                        pw.Text(date, style: pw.TextStyle(font: fonts.bold, fontSize: 11, color: charcoal)),
+                      ],
+                    ),
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                      children: [
+                        pw.Text('CLASSIFICATION', style: pw.TextStyle(font: fonts.body, fontSize: 7, color: slate400, letterSpacing: 1.5)),
+                        pw.SizedBox(height: 3),
+                        pw.Text('CONFIDENTIAL', style: pw.TextStyle(font: fonts.bold, fontSize: 11, color: gold)),
                       ],
                     ),
                   ],
@@ -426,34 +387,27 @@ class PdfExportService {
     );
   }
 
-  pw.Widget _buildCoverKPI(_Fonts fonts, String label, String value, PdfColor valueColor) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Text(label, style: pw.TextStyle(font: fonts.body, fontSize: 9, color: textMuted, letterSpacing: 1.0)),
-        pw.SizedBox(height: 8),
-        pw.Text(value, style: pw.TextStyle(font: fonts.title, fontSize: 22, fontWeight: pw.FontWeight.bold, color: valueColor)),
-      ],
-    );
-  }
-
   // ════════════════════════════════════════════════════════════════════════════
-  // PAGE 2: EXECUTIVE WEALTH SUMMARY
+  // PAGE 2: EXECUTIVE SUMMARY
   // ════════════════════════════════════════════════════════════════════════════
 
   pw.Page _buildExecutiveSummary(_Fonts fonts, NumberFormat format, String dateTime, _ReportData data, int pageNum) {
+    final netWorth = data.totalAssetsComputed - data.totalLiabilitiesComputed;
     String healthStatus = 'STABLE';
     PdfColor healthColor = gold;
     if (data.wealthScore >= 80) {
       healthStatus = 'OUTSTANDING';
-      healthColor = greenGrowth;
+      healthColor = positive;
     } else if (data.wealthScore >= 50) {
       healthStatus = 'HEALTHY';
-      healthColor = greenGrowth;
+      healthColor = positive;
     } else if (data.wealthScore < 30) {
       healthStatus = 'VULNERABLE';
-      healthColor = redDebt;
+      healthColor = negative;
     }
+
+    final surplus = data.totalIncomeThisMonth - data.totalExpenseThisMonth;
+    final savingsRate = data.totalIncomeThisMonth > 0 ? (surplus / data.totalIncomeThisMonth * 100) : 0.0;
 
     return pw.Page(
       pageFormat: PdfPageFormat.a4,
@@ -461,153 +415,117 @@ class PdfExportService {
       build: (context) {
         return pw.Container(
           color: pageBg,
-          padding: const pw.EdgeInsets.all(40),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 48, vertical: 40),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              _buildPageHeader(fonts, 'EXECUTIVE WEALTH SUMMARY', 'High-level snapshot of current financial positions, leverage ratio, and liquidity indexes.'),
-              pw.SizedBox(height: 24),
+              _buildPageHeader(fonts, 'Executive Summary'),
 
-              // KPI Row
+              pw.SizedBox(height: 32),
+
+              // Three primary metrics
               pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  _buildKpiCard(fonts, 'NET WORTH', format.format(data.totalAssetsComputed - data.totalLiabilitiesComputed), gold),
-                  pw.SizedBox(width: 12),
-                  _buildKpiCard(fonts, 'TOTAL ASSETS', format.format(data.totalAssetsComputed), greenGrowth),
-                  pw.SizedBox(width: 12),
-                  _buildKpiCard(fonts, 'TOTAL LIABILITIES', format.format(data.totalLiabilitiesComputed), redDebt),
+                  _buildLargeMetric(fonts, 'Net Worth', format.format(netWorth), charcoal),
+                  pw.SizedBox(width: 32),
+                  _buildLargeMetric(fonts, 'Total Assets', format.format(data.totalAssetsComputed), positive),
+                  pw.SizedBox(width: 32),
+                  _buildLargeMetric(fonts, 'Total Liabilities', format.format(data.totalLiabilitiesComputed), negative),
                 ],
               ),
-              pw.SizedBox(height: 20),
 
-              // Leverage Index + Wealth Score side-by-side
+              pw.SizedBox(height: 28),
+              pw.Container(height: 0.5, color: slate200),
+              pw.SizedBox(height: 28),
+
+              // Wealth Score + Leverage Index row
               pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
                   pw.Expanded(
-                    child: _buildDarkCard(
-                      height: 190,
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                        children: [
-                          pw.Text('LEVERAGE INDEX', style: pw.TextStyle(font: fonts.bold, fontSize: 10, color: textMuted, letterSpacing: 0.5)),
-                          pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              pw.Text('${data.assetLiabilityRatio.toStringAsFixed(2)}x', style: pw.TextStyle(font: fonts.title, fontSize: 34, fontWeight: pw.FontWeight.bold, color: textWhite)),
-                              pw.SizedBox(height: 2),
-                              pw.Text('Asset-to-Liability Ratio', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: textMuted)),
-                            ],
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('WEALTH SCORE', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate400, letterSpacing: 1.5)),
+                        pw.SizedBox(height: 10),
+                        pw.Row(
+                          crossAxisAlignment: pw.CrossAxisAlignment.end,
+                          children: [
+                            pw.Text('${data.wealthScore}', style: pw.TextStyle(font: fonts.bold, fontSize: 42, color: healthColor)),
+                            pw.Padding(
+                              padding: const pw.EdgeInsets.only(bottom: 6),
+                              child: pw.Text(' / 100', style: pw.TextStyle(font: fonts.body, fontSize: 14, color: slate400)),
+                            ),
+                          ],
+                        ),
+                        pw.SizedBox(height: 8),
+                        pw.Container(
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: pw.BoxDecoration(
+                            border: pw.Border.all(color: healthColor, width: 0.8),
+                            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
                           ),
-                          // Progress bar
-                          pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              pw.Row(
-                                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                                children: [
-                                  pw.Text(
-                                    'Assets (${data.totalAssetsComputed > 0 ? ((data.totalAssetsComputed / (data.totalAssetsComputed + data.totalLiabilitiesComputed)) * 100).toStringAsFixed(0) : '100'}%)',
-                                    style: pw.TextStyle(font: fonts.body, fontSize: 8, color: greenGrowth),
-                                  ),
-                                  pw.Text(
-                                    'Debt (${data.totalLiabilitiesComputed > 0 ? ((data.totalLiabilitiesComputed / (data.totalAssetsComputed + data.totalLiabilitiesComputed)) * 100).toStringAsFixed(0) : '0'}%)',
-                                    style: pw.TextStyle(font: fonts.body, fontSize: 8, color: redDebt),
-                                  ),
-                                ],
-                              ),
-                              pw.SizedBox(height: 6),
-                              pw.Container(
-                                height: 6,
-                                width: double.infinity,
-                                decoration: pw.BoxDecoration(
-                                  color: cardBorder,
-                                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
-                                ),
-                                child: pw.Row(
-                                  children: [
-                                    pw.Expanded(
-                                      flex: (data.totalAssetsComputed > 0 ? data.totalAssetsComputed : 1).toInt(),
-                                      child: pw.Container(
-                                        decoration: pw.BoxDecoration(
-                                          color: greenGrowth,
-                                          borderRadius: const pw.BorderRadius.horizontal(left: pw.Radius.circular(3)),
-                                        ),
-                                      ),
-                                    ),
-                                    if (data.totalLiabilitiesComputed > 0)
-                                      pw.Expanded(
-                                        flex: data.totalLiabilitiesComputed.toInt(),
-                                        child: pw.Container(
-                                          decoration: pw.BoxDecoration(
-                                            color: redDebt,
-                                            borderRadius: const pw.BorderRadius.horizontal(right: pw.Radius.circular(3)),
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                          child: pw.Text(healthStatus, style: pw.TextStyle(font: fonts.bold, fontSize: 8, color: healthColor, letterSpacing: 1.0)),
+                        ),
+                        pw.SizedBox(height: 12),
+                        pw.Text(
+                          'Composite score measuring financial security based on\nasset strength relative to outstanding obligations.',
+                          style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate600, lineSpacing: 1.4),
+                        ),
+                      ],
                     ),
                   ),
-                  pw.SizedBox(width: 14),
+                  pw.SizedBox(width: 32),
                   pw.Expanded(
-                    child: _buildDarkCard(
-                      height: 190,
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                        children: [
-                          pw.Text('WORTH WEALTH SCORE', style: pw.TextStyle(font: fonts.bold, fontSize: 10, color: textMuted, letterSpacing: 0.5)),
-                          pw.Row(
-                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: pw.CrossAxisAlignment.end,
-                            children: [
-                              pw.Text('${data.wealthScore}', style: pw.TextStyle(font: fonts.title, fontSize: 48, fontWeight: pw.FontWeight.bold, color: healthColor)),
-                              pw.Column(
-                                crossAxisAlignment: pw.CrossAxisAlignment.end,
-                                children: [
-                                  pw.Text('/ 100', style: pw.TextStyle(font: fonts.body, fontSize: 14, color: textMuted)),
-                                  pw.SizedBox(height: 4),
-                                  pw.Container(
-                                    padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    decoration: pw.BoxDecoration(
-                                      color: healthColor.withOpacity(0.12),
-                                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
-                                      border: pw.Border.all(color: healthColor.withOpacity(0.3), width: 0.8),
-                                    ),
-                                    child: pw.Text(healthStatus, style: pw.TextStyle(font: fonts.bold, fontSize: 8, color: healthColor, letterSpacing: 0.5)),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          pw.Text(
-                            'Measures financial security by evaluating asset holdings against outstanding leverage debt liabilities.',
-                            style: pw.TextStyle(font: fonts.body, fontSize: 9, color: textMuted, lineSpacing: 1.3),
-                          ),
-                        ],
-                      ),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('LEVERAGE INDEX', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate400, letterSpacing: 1.5)),
+                        pw.SizedBox(height: 10),
+                        pw.Text('${data.assetLiabilityRatio.toStringAsFixed(2)}x', style: pw.TextStyle(font: fonts.bold, fontSize: 42, color: charcoal)),
+                        pw.SizedBox(height: 8),
+                        pw.Text('Asset-to-Liability Ratio', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate600)),
+                        pw.SizedBox(height: 16),
+
+                        // Minimal progress bar
+                        _buildMinimalProgressBar(data.totalAssetsComputed, data.totalLiabilitiesComputed),
+                        pw.SizedBox(height: 6),
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text(
+                              'Assets ${data.totalAssetsComputed > 0 ? ((data.totalAssetsComputed / (data.totalAssetsComputed + data.totalLiabilitiesComputed)) * 100).toStringAsFixed(0) : '100'}%',
+                              style: pw.TextStyle(font: fonts.body, fontSize: 7, color: slate400),
+                            ),
+                            pw.Text(
+                              'Liabilities ${data.totalLiabilitiesComputed > 0 ? ((data.totalLiabilitiesComputed / (data.totalAssetsComputed + data.totalLiabilitiesComputed)) * 100).toStringAsFixed(0) : '0'}%',
+                              style: pw.TextStyle(font: fonts.body, fontSize: 7, color: slate400),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-              pw.SizedBox(height: 24),
 
-              // Liquidity & Forecasts
-              pw.Text('LIQUIDITY & FORECASTS', style: pw.TextStyle(font: fonts.bold, fontSize: 10, color: textMuted, letterSpacing: 1.0)),
-              pw.SizedBox(height: 12),
+              pw.SizedBox(height: 28),
+              pw.Container(height: 0.5, color: slate200),
+              pw.SizedBox(height: 28),
+
+              // Secondary metrics row
+              pw.Text('ADDITIONAL POSITIONS', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate400, letterSpacing: 1.5)),
+              pw.SizedBox(height: 16),
               pw.Row(
                 children: [
-                  _buildKpiCard(fonts, 'RECEIVABLES', format.format(data.totalReceivables), blueInfo),
-                  pw.SizedBox(width: 12),
-                  _buildKpiCard(fonts, 'EXPECTED INCOME', format.format(data.totalIncomeThisMonth), amber),
-                  pw.SizedBox(width: 12),
-                  _buildKpiCard(fonts, 'INVESTED CAPITAL', format.format(data.invAssets), gold),
+                  _buildCompactMetric(fonts, 'Receivables', format.format(data.totalReceivables)),
+                  pw.SizedBox(width: 24),
+                  _buildCompactMetric(fonts, 'Invested Capital', format.format(data.invAssets)),
+                  pw.SizedBox(width: 24),
+                  _buildCompactMetric(fonts, 'Cash Holdings', format.format(data.cashAssets)),
+                  pw.SizedBox(width: 24),
+                  _buildCompactMetric(fonts, 'Savings Rate', '${savingsRate.toStringAsFixed(1)}%'),
                 ],
               ),
 
@@ -621,7 +539,7 @@ class PdfExportService {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  // PAGE 3: PORTFOLIO ASSET ALLOCATION
+  // PAGE 3: ASSET ALLOCATION
   // ════════════════════════════════════════════════════════════════════════════
 
   pw.Page _buildAssetAllocation(_Fonts fonts, NumberFormat format, String dateTime, _ReportData data, MockDatabaseState dbState, int pageNum) {
@@ -631,46 +549,44 @@ class PdfExportService {
       build: (context) {
         return pw.Container(
           color: pageBg,
-          padding: const pw.EdgeInsets.all(40),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 48, vertical: 40),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              _buildPageHeader(fonts, 'PORTFOLIO ASSET ALLOCATION', 'Detailed breakdown of holding classes, capitalization value, and share percentages.'),
+              _buildPageHeader(fonts, 'Asset Allocation'),
+
+              pw.SizedBox(height: 28),
+
+              // Allocation breakdown
+              pw.Text('PORTFOLIO COMPOSITION', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate400, letterSpacing: 1.5)),
+              pw.SizedBox(height: 16),
+
+              _buildEditorialBar(fonts, 'Investments', data.invAssets, data.totalAssetsComputed, charcoal, format),
+              pw.SizedBox(height: 14),
+              _buildEditorialBar(fonts, 'Cash & Cash Equivalents', data.cashAssets, data.totalAssetsComputed, slate600, format),
+              pw.SizedBox(height: 14),
+              _buildEditorialBar(fonts, 'Receivables & Lends', data.totalReceivables, data.totalAssetsComputed, gold, format),
+
+              pw.SizedBox(height: 28),
+              pw.Container(height: 0.5, color: slate200),
               pw.SizedBox(height: 24),
 
-              // Allocation Bars
-              _buildDarkCard(
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text('ALLOCATION BREAKDOWN', style: pw.TextStyle(font: fonts.bold, fontSize: 10, color: textWhite, letterSpacing: 0.5)),
-                    pw.SizedBox(height: 18),
-                    _buildAllocationBar(fonts, 'Investments', data.invAssets, data.totalAssetsComputed, gold, format),
-                    pw.SizedBox(height: 14),
-                    _buildAllocationBar(fonts, 'Cash & Cash Equivalents', data.cashAssets, data.totalAssetsComputed, greenGrowth, format),
-                    pw.SizedBox(height: 14),
-                    _buildAllocationBar(fonts, 'Receivables & Lends', data.totalReceivables, data.totalAssetsComputed, blueInfo, format),
-                  ],
-                ),
-              ),
-              pw.SizedBox(height: 20),
-
-              // Assets Table
-              pw.Text('ASSETS REGISTER', style: pw.TextStyle(font: fonts.bold, fontSize: 10, color: textMuted, letterSpacing: 1.0)),
-              pw.SizedBox(height: 12),
-              _buildDarkTable(
+              // Asset Register Table
+              pw.Text('ASSET REGISTER', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate400, letterSpacing: 1.5)),
+              pw.SizedBox(height: 14),
+              _buildEditorialTable(
                 fonts: fonts,
-                headers: ['ASSET NAME', 'CLASS / TYPE', 'CAPITAL VALUE', 'SHARE %'],
+                headers: ['Asset Name', 'Classification', 'Capital Value', 'Share'],
                 rows: [
                   ...dbState.investments.where((i) => i.isArchived == 0).map((i) {
                     final val = dbState.getInvestmentInvestedCapital(i.id);
                     final pct = data.totalAssetsComputed > 0 ? (val / data.totalAssetsComputed) * 100 : 0.0;
-                    return [i.name, i.type.replaceAll('_', ' ').toUpperCase(), format.format(val), '${pct.toStringAsFixed(1)}%'];
+                    return [i.name, i.type.replaceAll('_', ' '), format.format(val), '${pct.toStringAsFixed(1)}%'];
                   }),
                   ...dbState.accounts.where((a) => a.isArchived == 0 && a.type != 'credit').map((a) {
                     final val = dbState.getAccountCashBalance(a.id);
                     final pct = data.totalAssetsComputed > 0 ? (val / data.totalAssetsComputed) * 100 : 0.0;
-                    return [a.name, '${a.type.toUpperCase()} ACCOUNT', format.format(val), '${pct.toStringAsFixed(1)}%'];
+                    return [a.name, '${a.type} account', format.format(val), '${pct.toStringAsFixed(1)}%'];
                   }),
                 ],
               ),
@@ -685,7 +601,7 @@ class PdfExportService {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  // PAGE 4: DEBT OBLIGATIONS & LIABILITIES
+  // PAGE 4: LIABILITIES
   // ════════════════════════════════════════════════════════════════════════════
 
   pw.Page _buildLiabilities(_Fonts fonts, NumberFormat format, String dateTime, _ReportData data, MockDatabaseState dbState, int pageNum) {
@@ -695,41 +611,39 @@ class PdfExportService {
       build: (context) {
         return pw.Container(
           color: pageBg,
-          padding: const pw.EdgeInsets.all(40),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 48, vertical: 40),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              _buildPageHeader(fonts, 'DEBT OBLIGATIONS & LIABILITIES', 'Outstanding leverage, credit cards, personal loans, and debt-funded asset exposure.'),
+              _buildPageHeader(fonts, 'Debt & Liabilities'),
+
+              pw.SizedBox(height: 28),
+
+              // Debt composition
+              pw.Text('DEBT COMPOSITION', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate400, letterSpacing: 1.5)),
+              pw.SizedBox(height: 16),
+
+              _buildEditorialBar(fonts, 'Credit Cards', data.creditDues, data.totalLiabilitiesComputed, negative, format),
+              pw.SizedBox(height: 14),
+              _buildEditorialBar(fonts, 'Personal & Peer Loans', data.personDues, data.totalLiabilitiesComputed, charcoal, format),
+              pw.SizedBox(height: 14),
+              _buildEditorialBar(fonts, 'Margin Trading (MTF)', data.mtfBorrowed, data.totalLiabilitiesComputed, slate600, format),
+
+              pw.SizedBox(height: 28),
+              pw.Container(height: 0.5, color: slate200),
               pw.SizedBox(height: 24),
 
-              // Debt Composition
-              _buildDarkCard(
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text('DEBT COMPOSITION', style: pw.TextStyle(font: fonts.bold, fontSize: 10, color: textWhite, letterSpacing: 0.5)),
-                    pw.SizedBox(height: 18),
-                    _buildAllocationBar(fonts, 'Credit Cards', data.creditDues, data.totalLiabilitiesComputed, redDebt, format),
-                    pw.SizedBox(height: 14),
-                    _buildAllocationBar(fonts, 'Personal & Peer Loans', data.personDues, data.totalLiabilitiesComputed, amber, format),
-                    pw.SizedBox(height: 14),
-                    _buildAllocationBar(fonts, 'Margin Trading Facility (MTF)', data.mtfBorrowed, data.totalLiabilitiesComputed, purple, format),
-                  ],
-                ),
-              ),
-              pw.SizedBox(height: 20),
-
               // Liabilities Table
-              pw.Text('LIABILITIES REGISTER', style: pw.TextStyle(font: fonts.bold, fontSize: 10, color: textMuted, letterSpacing: 1.0)),
-              pw.SizedBox(height: 12),
-              _buildDarkTable(
+              pw.Text('LIABILITIES REGISTER', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate400, letterSpacing: 1.5)),
+              pw.SizedBox(height: 14),
+              _buildEditorialTable(
                 fonts: fonts,
-                headers: ['LENDER / CARD', 'LEVERAGE TYPE', 'BALANCE OWED', 'DEBT SHARE %'],
+                headers: ['Lender / Card', 'Type', 'Balance Owed', 'Share'],
                 rows: [
                   ...dbState.accounts.where((a) => a.isArchived == 0 && a.type == 'credit').map((a) {
                     final val = LiabilityCalculationService.calculateCreditCard(a, dbState.transactions, dbState.adjustments).finalBalance;
                     final pct = data.totalLiabilitiesComputed > 0 ? (val / data.totalLiabilitiesComputed) * 100 : 0.0;
-                    return [a.name, 'CREDIT CARD', format.format(val), '${pct.toStringAsFixed(1)}%'];
+                    return [a.name, 'Credit Card', format.format(val), '${pct.toStringAsFixed(1)}%'];
                   }),
                   ...dbState.people.where((p) {
                     if (p.isArchived != 0) return false;
@@ -738,20 +652,20 @@ class PdfExportService {
                   }).map((p) {
                     final val = LiabilityCalculationService.calculatePeerLiability(p, dbState.transactions, dbState.adjustments).finalBalance;
                     final pct = data.totalLiabilitiesComputed > 0 ? (val / data.totalLiabilitiesComputed) * 100 : 0.0;
-                    String label = 'PERSONAL LOAN';
+                    String label = 'Personal Loan';
                     if (p.type == 'borrowing') {
-                      label = 'BORROWING';
+                      label = 'Borrowing';
                     } else if (p.type == 'education_loan') {
-                      label = 'EDUCATION LOAN';
+                      label = 'Education Loan';
                     } else if (p.type == 'manual_liability') {
-                      label = 'MANUAL LIABILITY';
+                      label = 'Manual Liability';
                     }
                     return [p.name, label, format.format(val), '${pct.toStringAsFixed(1)}%'];
                   }),
                   ...dbState.mtfPositions.where((m) => m.isClosed == 0 && m.deletedAt == null).map((m) {
                     final val = LiabilityCalculationService.calculateMtfPosition(m, dbState.transactions, DateTime.now()).finalBalance;
                     final pct = data.totalLiabilitiesComputed > 0 ? (val / data.totalLiabilitiesComputed) * 100 : 0.0;
-                    return [m.instrument, 'MTF POSITION', format.format(val), '${pct.toStringAsFixed(1)}%'];
+                    return [m.instrument, 'MTF Position', format.format(val), '${pct.toStringAsFixed(1)}%'];
                   }),
                 ],
               ),
@@ -766,7 +680,7 @@ class PdfExportService {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  // PAGE 5: WEALTH EVOLUTION & SNAPSHOTS
+  // PAGE 5: WEALTH EVOLUTION
   // ════════════════════════════════════════════════════════════════════════════
 
   pw.Page _buildWealthEvolution(_Fonts fonts, NumberFormat format, String dateTime, _ReportData data, MockDatabaseState dbState, int pageNum) {
@@ -780,30 +694,37 @@ class PdfExportService {
       build: (context) {
         return pw.Container(
           color: pageBg,
-          padding: const pw.EdgeInsets.all(40),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 48, vertical: 40),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              _buildPageHeader(fonts, 'WEALTH EVOLUTION & SNAPSHOTS', 'Historical trend timeline showing progressive net worth accumulation.'),
-              pw.SizedBox(height: 24),
+              _buildPageHeader(fonts, 'Wealth Evolution'),
+
+              pw.SizedBox(height: 28),
 
               // Line Chart
               if (values.isNotEmpty) ...[
-                _buildDarkCard(
+                pw.Text('NET WORTH TREND', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate400, letterSpacing: 1.5)),
+                pw.SizedBox(height: 16),
+                pw.Container(
+                  width: double.infinity,
+                  padding: const pw.EdgeInsets.all(20),
+                  decoration: pw.BoxDecoration(
+                    color: white,
+                    border: pw.Border.all(color: slate200, width: 0.5),
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                  ),
                   child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('NET WORTH GROWTH CURVE', style: pw.TextStyle(font: fonts.bold, fontSize: 10, color: textWhite, letterSpacing: 0.5)),
-                      pw.SizedBox(height: 14),
                       pw.SizedBox(
                         height: 160,
                         child: pw.CustomPaint(
-                          painter: LineChartPainter(
+                          painter: _LightLineChartPainter(
                             values: values,
                             labels: labels,
                             lineColor: gold,
-                            areaColor: gold.withOpacity(0.06),
-                            gridColor: cardBorder,
+                            areaColor: PdfColor(gold.red, gold.green, gold.blue, 0.08),
+                            gridColor: slate200,
                             dotColor: gold,
                           ).paint,
                         ),
@@ -811,20 +732,20 @@ class PdfExportService {
                       pw.SizedBox(height: 10),
                       pw.Row(
                         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                        children: labels.map((l) => pw.Text(l, style: pw.TextStyle(font: fonts.body, fontSize: 7, color: textDim))).toList(),
+                        children: labels.map((l) => pw.Text(l, style: pw.TextStyle(font: fonts.body, fontSize: 7, color: slate400))).toList(),
                       ),
                     ],
                   ),
                 ),
-                pw.SizedBox(height: 20),
+                pw.SizedBox(height: 24),
               ],
 
               // Snapshots Table
-              pw.Text('HISTORICAL WEALTH SNAPSHOTS', style: pw.TextStyle(font: fonts.bold, fontSize: 10, color: textMuted, letterSpacing: 1.0)),
-              pw.SizedBox(height: 12),
-              _buildDarkTable(
+              pw.Text('HISTORICAL SNAPSHOTS', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate400, letterSpacing: 1.5)),
+              pw.SizedBox(height: 14),
+              _buildEditorialTable(
                 fonts: fonts,
-                headers: ['SNAPSHOT DATE', 'ASSETS TOTAL', 'LIABILITIES', 'NET WORTH'],
+                headers: ['Date', 'Total Assets', 'Liabilities', 'Net Worth'],
                 rows: data.historicalSnaps.reversed.take(10).map((s) {
                   return [
                     DateFormat('dd MMM yyyy').format(s.snapshotDate),
@@ -845,13 +766,12 @@ class PdfExportService {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  // PAGE 6: CASH FLOW & TRANSACTION ANALYTICS
+  // PAGE 6: CASH FLOW
   // ════════════════════════════════════════════════════════════════════════════
 
   pw.Page _buildCashFlow(_Fonts fonts, NumberFormat format, String dateTime, _ReportData data, MockDatabaseState dbState, DateTime now, int pageNum) {
     final surplus = data.totalIncomeThisMonth - data.totalExpenseThisMonth;
 
-    // Recent transactions
     final recentTxs = dbState.transactions.where((t) => t.voidedTransactionId == null).toList()
       ..sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
     final displayTxs = recentTxs.take(12).toList();
@@ -862,54 +782,54 @@ class PdfExportService {
       build: (context) {
         return pw.Container(
           color: pageBg,
-          padding: const pw.EdgeInsets.all(40),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 48, vertical: 40),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              _buildPageHeader(fonts, 'CASH FLOW & TRANSACTION ANALYTICS', 'Monthly income vs expenditure, category metrics, and recent activity logs.'),
-              pw.SizedBox(height: 24),
+              _buildPageHeader(fonts, 'Cash Flow & Transactions'),
 
-              // Monthly Cash Flow KPIs
+              pw.SizedBox(height: 28),
+
+              // Cash flow metrics
               pw.Row(
                 children: [
-                  _buildKpiCard(fonts, 'MONTHLY INCOME', format.format(data.totalIncomeThisMonth), greenGrowth),
-                  pw.SizedBox(width: 12),
-                  _buildKpiCard(fonts, 'MONTHLY EXPENSES', format.format(data.totalExpenseThisMonth), redDebt),
-                  pw.SizedBox(width: 12),
-                  _buildKpiCard(fonts, 'NET SURPLUS', format.format(surplus), surplus >= 0 ? greenGrowth : redDebt),
+                  _buildLargeMetric(fonts, 'Income', format.format(data.totalIncomeThisMonth), positive),
+                  pw.SizedBox(width: 32),
+                  _buildLargeMetric(fonts, 'Expenses', format.format(data.totalExpenseThisMonth), negative),
+                  pw.SizedBox(width: 32),
+                  _buildLargeMetric(fonts, 'Net Surplus', format.format(surplus), surplus >= 0 ? positive : negative),
                 ],
               ),
-              pw.SizedBox(height: 20),
 
-              // Expense Category Breakdown
+              pw.SizedBox(height: 24),
+
+              // Expense category breakdown
               if (data.expensesByCategory.isNotEmpty) ...[
-                _buildDarkCard(
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text('EXPENSE CATEGORY BREAKDOWN', style: pw.TextStyle(font: fonts.bold, fontSize: 10, color: textWhite, letterSpacing: 0.5)),
-                      pw.SizedBox(height: 14),
-                      ..._buildExpenseCategoryBars(fonts, data, format),
-                    ],
-                  ),
-                ),
+                pw.Container(height: 0.5, color: slate200),
+                pw.SizedBox(height: 20),
+                pw.Text('EXPENSE CATEGORIES', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate400, letterSpacing: 1.5)),
+                pw.SizedBox(height: 14),
+                ..._buildExpenseCategoryBars(fonts, data, format),
                 pw.SizedBox(height: 20),
               ],
 
-              // Transaction Log
-              pw.Text('RECENT TRANSACTION ACTIVITY', style: pw.TextStyle(font: fonts.bold, fontSize: 10, color: textMuted, letterSpacing: 1.0)),
-              pw.SizedBox(height: 12),
-              _buildDarkTable(
+              pw.Container(height: 0.5, color: slate200),
+              pw.SizedBox(height: 20),
+
+              // Transaction log
+              pw.Text('RECENT ACTIVITY', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate400, letterSpacing: 1.5)),
+              pw.SizedBox(height: 14),
+              _buildEditorialTable(
                 fonts: fonts,
-                headers: ['DATE', 'DESCRIPTION', 'TYPE', 'AMOUNT'],
+                headers: ['Date', 'Description', 'Type', 'Amount'],
                 rows: displayTxs.map((t) {
                   final dateStr = DateFormat('dd MMM').format(t.transactionDate);
                   final isNegative = ['expense', 'lend_money', 'repay_money', 'investment_buy'].contains(t.type);
                   final prefix = isNegative ? '-' : '+';
                   return [
                     dateStr,
-                    t.notes ?? t.type.replaceAll('_', ' ').toUpperCase(),
-                    t.type.replaceAll('_', ' ').toUpperCase(),
+                    t.notes ?? t.type.replaceAll('_', ' '),
+                    t.type.replaceAll('_', ' '),
                     '$prefix${format.format(t.amount)}',
                   ];
                 }).toList(),
@@ -925,18 +845,18 @@ class PdfExportService {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  // PAGE 7: SIP PERFORMANCE TRACKER
+  // PAGE 7: SIP PERFORMANCE
   // ════════════════════════════════════════════════════════════════════════════
 
   pw.Page _buildSipPerformance(_Fonts fonts, NumberFormat format, String dateTime, _ReportData data, MockDatabaseState dbState, DateTime now, int pageNum) {
     String consistencyLabel = 'CONSISTENT';
-    PdfColor consistencyColor = greenGrowth;
+    PdfColor consistencyColor = positive;
     if (data.sipConsistencyRate < 50) {
       consistencyLabel = 'IRREGULAR';
-      consistencyColor = redDebt;
+      consistencyColor = negative;
     } else if (data.sipConsistencyRate < 80) {
       consistencyLabel = 'MODERATE';
-      consistencyColor = amber;
+      consistencyColor = gold;
     }
 
     return pw.Page(
@@ -945,59 +865,63 @@ class PdfExportService {
       build: (context) {
         return pw.Container(
           color: pageBg,
-          padding: const pw.EdgeInsets.all(40),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 48, vertical: 40),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              _buildPageHeader(fonts, 'SIP PERFORMANCE TRACKER', 'Systematic Investment Plan execution, consistency, and performance analysis.'),
-              pw.SizedBox(height: 24),
+              _buildPageHeader(fonts, 'SIP Performance'),
 
-              // SIP KPIs
+              pw.SizedBox(height: 28),
+
+              // SIP metrics
               pw.Row(
                 children: [
-                  _buildKpiCard(fonts, 'SIP INVESTED', format.format(data.sipInvestedCapital), gold),
-                  pw.SizedBox(width: 12),
-                  _buildKpiCard(fonts, 'CURRENT VALUE', format.format(data.sipCurrentValuation), greenGrowth),
-                  pw.SizedBox(width: 12),
-                  _buildKpiCard(fonts, 'GROWTH (P&L)', '${data.sipGrowth >= 0 ? '+' : ''}${format.format(data.sipGrowth)}', data.sipGrowth >= 0 ? greenGrowth : redDebt),
+                  _buildLargeMetric(fonts, 'SIP Invested', format.format(data.sipInvestedCapital), charcoal),
+                  pw.SizedBox(width: 32),
+                  _buildLargeMetric(fonts, 'Current Value', format.format(data.sipCurrentValuation), positive),
+                  pw.SizedBox(width: 32),
+                  _buildLargeMetric(fonts, 'Growth', '${data.sipGrowth >= 0 ? '+' : ''}${format.format(data.sipGrowth)}', data.sipGrowth >= 0 ? positive : negative),
                 ],
               ),
-              pw.SizedBox(height: 16),
 
-              // Consistency Badge
-              _buildDarkCard(
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text('SIP CONSISTENCY RATE', style: pw.TextStyle(font: fonts.bold, fontSize: 10, color: textMuted, letterSpacing: 0.5)),
-                        pw.SizedBox(height: 8),
-                        pw.Text('${data.sipConsistencyRate.toStringAsFixed(0)}%', style: pw.TextStyle(font: fonts.title, fontSize: 28, fontWeight: pw.FontWeight.bold, color: consistencyColor)),
-                      ],
+              pw.SizedBox(height: 24),
+              pw.Container(height: 0.5, color: slate200),
+              pw.SizedBox(height: 24),
+
+              // Consistency
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('CONSISTENCY RATE', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate400, letterSpacing: 1.5)),
+                      pw.SizedBox(height: 8),
+                      pw.Text('${data.sipConsistencyRate.toStringAsFixed(0)}%', style: pw.TextStyle(font: fonts.bold, fontSize: 28, color: consistencyColor)),
+                    ],
+                  ),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: consistencyColor, width: 0.8),
+                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
                     ),
-                    pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: pw.BoxDecoration(
-                        color: consistencyColor.withOpacity(0.12),
-                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
-                        border: pw.Border.all(color: consistencyColor.withOpacity(0.3)),
-                      ),
-                      child: pw.Text(consistencyLabel, style: pw.TextStyle(font: fonts.bold, fontSize: 9, color: consistencyColor, letterSpacing: 0.5)),
-                    ),
-                  ],
-                ),
+                    child: pw.Text(consistencyLabel, style: pw.TextStyle(font: fonts.bold, fontSize: 8, color: consistencyColor, letterSpacing: 1.0)),
+                  ),
+                ],
               ),
-              pw.SizedBox(height: 20),
 
-              // SIP Details Table
+              pw.SizedBox(height: 24),
+              pw.Container(height: 0.5, color: slate200),
+              pw.SizedBox(height: 24),
+
+              // SIP details table
               if (data.sipDetails.isNotEmpty) ...[
-                pw.Text('INDIVIDUAL SIP BREAKDOWN', style: pw.TextStyle(font: fonts.bold, fontSize: 10, color: textMuted, letterSpacing: 1.0)),
-                pw.SizedBox(height: 12),
-                _buildDarkTable(
+                pw.Text('INDIVIDUAL SIP BREAKDOWN', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate400, letterSpacing: 1.5)),
+                pw.SizedBox(height: 14),
+                _buildEditorialTable(
                   fonts: fonts,
-                  headers: ['SIP NAME', 'INVESTED', 'CURRENT VALUE', 'RETURN'],
+                  headers: ['SIP Name', 'Invested', 'Current Value', 'Return'],
                   rows: data.sipDetails.map((sip) {
                     final growth = (sip['growth'] as double?) ?? 0.0;
                     final invested = (sip['invested'] as double?) ?? 0.0;
@@ -1011,9 +935,16 @@ class PdfExportService {
                   }).toList(),
                 ),
               ] else
-                _buildDarkCard(
-                  child: pw.Center(
-                    child: pw.Text('No active SIP plans found. Set up SIPs to track systematic wealth building.', style: pw.TextStyle(font: fonts.body, fontSize: 11, color: textMuted)),
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(24),
+                  decoration: pw.BoxDecoration(
+                    color: white,
+                    border: pw.Border.all(color: slate200, width: 0.5),
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                  ),
+                  child: pw.Text(
+                    'No active SIP plans. Systematic investment plans are the backbone of disciplined wealth creation.',
+                    style: pw.TextStyle(font: fonts.body, fontSize: 10, color: slate400),
                   ),
                 ),
 
@@ -1027,7 +958,7 @@ class PdfExportService {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  // PAGE 8: INVESTMENT HOLDING ANALYSIS
+  // PAGE 8: INVESTMENT HOLDINGS
   // ════════════════════════════════════════════════════════════════════════════
 
   pw.Page _buildInvestmentHoldings(_Fonts fonts, NumberFormat format, String dateTime, _ReportData data, MockDatabaseState dbState, DateTime now, int pageNum) {
@@ -1049,8 +980,6 @@ class PdfExportService {
     }
 
     final double avgHolding = activeInvestments.isNotEmpty ? totalHoldingDays / activeInvestments.length : 0.0;
-
-    // Sort by holding days descending
     holdingData.sort((a, b) => (b['days'] as int).compareTo(a['days'] as int));
 
     return pw.Page(
@@ -1059,46 +988,51 @@ class PdfExportService {
       build: (context) {
         return pw.Container(
           color: pageBg,
-          padding: const pw.EdgeInsets.all(40),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 48, vertical: 40),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              _buildPageHeader(fonts, 'INVESTMENT HOLDING ANALYSIS', 'Portfolio age distribution, holding periods, and capital aging metrics.'),
-              pw.SizedBox(height: 24),
+              _buildPageHeader(fonts, 'Investment Holdings'),
 
-              // Average Holding Period
-              _buildDarkCard(
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Column(
+              pw.SizedBox(height: 28),
+
+              // Holding period metrics
+              pw.Row(
+                children: [
+                  pw.Expanded(
+                    child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('AVERAGE HOLDING PERIOD', style: pw.TextStyle(font: fonts.bold, fontSize: 10, color: textMuted, letterSpacing: 0.5)),
+                        pw.Text('AVERAGE HOLDING PERIOD', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate400, letterSpacing: 1.5)),
                         pw.SizedBox(height: 8),
-                        pw.Text('${avgHolding.toStringAsFixed(0)} Days', style: pw.TextStyle(font: fonts.title, fontSize: 28, fontWeight: pw.FontWeight.bold, color: gold)),
+                        pw.Text('${avgHolding.toStringAsFixed(0)} Days', style: pw.TextStyle(font: fonts.bold, fontSize: 28, color: charcoal)),
                       ],
                     ),
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  ),
+                  pw.Expanded(
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('ACTIVE POSITIONS', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: textMuted, letterSpacing: 0.5)),
-                        pw.SizedBox(height: 6),
-                        pw.Text('${activeInvestments.length}', style: pw.TextStyle(font: fonts.title, fontSize: 24, fontWeight: pw.FontWeight.bold, color: textWhite)),
+                        pw.Text('ACTIVE POSITIONS', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate400, letterSpacing: 1.5)),
+                        pw.SizedBox(height: 8),
+                        pw.Text('${activeInvestments.length}', style: pw.TextStyle(font: fonts.bold, fontSize: 28, color: charcoal)),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              pw.SizedBox(height: 20),
 
-              // Holding Table
+              pw.SizedBox(height: 24),
+              pw.Container(height: 0.5, color: slate200),
+              pw.SizedBox(height: 24),
+
+              // Holdings table
               if (holdingData.isNotEmpty) ...[
-                pw.Text('POSITION-WISE HOLDING PERIODS', style: pw.TextStyle(font: fonts.bold, fontSize: 10, color: textMuted, letterSpacing: 1.0)),
-                pw.SizedBox(height: 12),
-                _buildDarkTable(
+                pw.Text('POSITION-WISE ANALYSIS', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate400, letterSpacing: 1.5)),
+                pw.SizedBox(height: 14),
+                _buildEditorialTable(
                   fonts: fonts,
-                  headers: ['INVESTMENT', 'PURCHASE DATE', 'CAPITAL VALUE', 'HOLDING PERIOD'],
+                  headers: ['Investment', 'Purchase Date', 'Capital Value', 'Holding'],
                   rows: holdingData.take(15).map((hd) {
                     final purchaseDate = hd['purchaseDate'] as DateTime;
                     return [
@@ -1110,10 +1044,14 @@ class PdfExportService {
                   }).toList(),
                 ),
               ] else
-                _buildDarkCard(
-                  child: pw.Center(
-                    child: pw.Text('No active investments found.', style: pw.TextStyle(font: fonts.body, fontSize: 11, color: textMuted)),
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(24),
+                  decoration: pw.BoxDecoration(
+                    color: white,
+                    border: pw.Border.all(color: slate200, width: 0.5),
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
                   ),
+                  child: pw.Text('No active investments found.', style: pw.TextStyle(font: fonts.body, fontSize: 10, color: slate400)),
                 ),
 
               pw.Spacer(),
@@ -1126,7 +1064,7 @@ class PdfExportService {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  // PAGE 9: IPO POOL REPORT (CONDITIONAL)
+  // PAGE 9: IPO POOL (CONDITIONAL)
   // ════════════════════════════════════════════════════════════════════════════
 
   pw.Page _buildIpoPool(_Fonts fonts, NumberFormat format, String dateTime, MockDatabaseState dbState, int pageNum) {
@@ -1138,36 +1076,34 @@ class PdfExportService {
       build: (context) {
         return pw.Container(
           color: pageBg,
-          padding: const pw.EdgeInsets.all(40),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 48, vertical: 40),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              _buildPageHeader(fonts, 'IPO POOL ALLOCATION REPORT', 'Application settlement status, contributor allocation, and capital ownership.'),
+              _buildPageHeader(fonts, 'IPO Pool Report'),
+
+              pw.SizedBox(height: 28),
+
+              // Pool details
+              pw.Text(pool.name, style: pw.TextStyle(font: fonts.bold, fontSize: 18, color: charcoal)),
+              pw.SizedBox(height: 16),
+
+              _buildKeyValueRow(fonts, 'Listing Date', DateFormat('dd MMM yyyy').format(pool.createdAt)),
+              pw.SizedBox(height: 8),
+              _buildKeyValueRow(fonts, 'Total Applied Capital', format.format(pool.totalPoolAmount)),
+              pw.SizedBox(height: 8),
+              _buildKeyValueRow(fonts, 'Settlement Status', pool.status.toUpperCase(), valueColor: pool.status == 'allotted' ? positive : gold),
+
+              pw.SizedBox(height: 28),
+              pw.Container(height: 0.5, color: slate200),
               pw.SizedBox(height: 24),
 
-              // Pool Summary
-              _buildDarkCard(
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(pool.name.toUpperCase(), style: pw.TextStyle(font: fonts.bold, fontSize: 14, color: gold, letterSpacing: 0.5)),
-                    pw.SizedBox(height: 16),
-                    _buildKeyValueRow(fonts, 'Estimated Listing Date', DateFormat('dd MMM yyyy').format(pool.createdAt)),
-                    pw.SizedBox(height: 8),
-                    _buildKeyValueRow(fonts, 'Total Applied Capital', format.format(pool.totalPoolAmount)),
-                    pw.SizedBox(height: 8),
-                    _buildKeyValueRow(fonts, 'Settlement Status', pool.status.toUpperCase(), valueColor: pool.status == 'allotted' ? greenGrowth : amber),
-                  ],
-                ),
-              ),
-              pw.SizedBox(height: 20),
-
-              // Contributors Table
-              pw.Text('CONTRIBUTOR CAPITAL & OWNERSHIP', style: pw.TextStyle(font: fonts.bold, fontSize: 10, color: textMuted, letterSpacing: 1.0)),
-              pw.SizedBox(height: 12),
-              _buildDarkTable(
+              // Contributors table
+              pw.Text('CONTRIBUTOR ALLOCATION', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate400, letterSpacing: 1.5)),
+              pw.SizedBox(height: 14),
+              _buildEditorialTable(
                 fonts: fonts,
-                headers: ['CONTRIBUTOR', 'CAPITAL INJECTED', 'REFUNDED', 'OWNERSHIP %'],
+                headers: ['Contributor', 'Capital Injected', 'Refunded', 'Ownership'],
                 rows: pool.contributors.map((c) {
                   final ownership = (pool.totalGroupContribution > 0 ? (c.contribution / pool.totalGroupContribution) : 0.0) * 100;
                   return [c.name, format.format(c.contribution), format.format(c.amountReceived), '${ownership.toStringAsFixed(1)}%'];
@@ -1184,11 +1120,10 @@ class PdfExportService {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  // PAGE 10: FINANCIAL INTELLIGENCE OBSERVATIONS
+  // PAGE 10: OBSERVATIONS & CLOSING
   // ════════════════════════════════════════════════════════════════════════════
 
-  pw.Page _buildIntelligenceObservations(_Fonts fonts, NumberFormat format, String dateTime, _ReportData data, MockDatabaseState dbState, int pageNum) {
-    // Compute data-driven insights
+  pw.Page _buildObservations(_Fonts fonts, NumberFormat format, String dateTime, _ReportData data, MockDatabaseState dbState, int pageNum) {
     final netWorth = data.totalAssetsComputed - data.totalLiabilitiesComputed;
     final surplus = data.totalIncomeThisMonth - data.totalExpenseThisMonth;
     final savingsRate = data.totalIncomeThisMonth > 0 ? (surplus / data.totalIncomeThisMonth * 100) : 0.0;
@@ -1199,77 +1134,80 @@ class PdfExportService {
       build: (context) {
         return pw.Container(
           color: pageBg,
-          padding: const pw.EdgeInsets.all(40),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 48, vertical: 40),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              _buildPageHeader(fonts, 'FINANCIAL INTELLIGENCE', 'Data-driven portfolio observations, risk indicators, and strategic highlights.'),
-              pw.SizedBox(height: 24),
+              _buildPageHeader(fonts, 'Observations'),
 
-              // Insight 1: Portfolio Growth Summary
-              _buildInsightCard(
+              pw.SizedBox(height: 28),
+
+              // Insight 1
+              _buildInsightBlock(
                 fonts: fonts,
-                title: 'PORTFOLIO GROWTH SUMMARY',
+                title: 'Portfolio Position',
                 content: 'Net worth stands at ${format.format(netWorth)}. Capital assets total ${format.format(data.totalAssetsComputed)} against outstanding liabilities of ${format.format(data.totalLiabilitiesComputed)}. Your Wealth Score of ${data.wealthScore}/100 places your financial position in the ${data.wealthScore >= 80 ? 'outstanding' : data.wealthScore >= 50 ? 'healthy' : data.wealthScore >= 30 ? 'stable' : 'vulnerable'} zone.',
-                color: gold,
               ),
-              pw.SizedBox(height: 14),
+              pw.SizedBox(height: 20),
 
-              // Insight 2: Leverage Exposure
+              // Insight 2
               if (dbState.debtFundedAssets > 0)
-                _buildInsightCard(
+                _buildInsightBlock(
                   fonts: fonts,
-                  title: 'LEVERAGE & DEBT FUNDING EXPOSURE',
-                  content: 'Portfolio contains ${format.format(dbState.debtFundedAssets)} of debt-funded assets, representing ${((dbState.debtFundedAssets / (data.totalAssetsComputed > 0 ? data.totalAssetsComputed : 1)) * 100).toStringAsFixed(1)}% of total assets. Maintain a high asset-to-liability ratio (currently ${data.assetLiabilityRatio.toStringAsFixed(2)}x) to safeguard against market volatility.',
-                  color: redDebt,
+                  title: 'Leverage Exposure',
+                  content: 'Portfolio contains ${format.format(dbState.debtFundedAssets)} of debt-funded assets, representing ${((dbState.debtFundedAssets / (data.totalAssetsComputed > 0 ? data.totalAssetsComputed : 1)) * 100).toStringAsFixed(1)}% of total assets. Current asset-to-liability ratio stands at ${data.assetLiabilityRatio.toStringAsFixed(2)}x.',
                 )
               else
-                _buildInsightCard(
+                _buildInsightBlock(
                   fonts: fonts,
-                  title: 'LEVERAGE & DEBT FUNDING EXPOSURE',
-                  content: 'Asset portfolio is 100% self-funded with zero debt-funded positions. Exceptional liquidity and financial stability with an asset-to-liability ratio of ${data.assetLiabilityRatio.toStringAsFixed(2)}x.',
-                  color: greenGrowth,
+                  title: 'Leverage Exposure',
+                  content: 'Asset portfolio is entirely self-funded with zero debt-funded positions. Exceptional financial stability with an asset-to-liability ratio of ${data.assetLiabilityRatio.toStringAsFixed(2)}x.',
                 ),
-              pw.SizedBox(height: 14),
+              pw.SizedBox(height: 20),
 
-              // Insight 3: SIP Consistency
-              _buildInsightCard(
+              // Insight 3
+              _buildInsightBlock(
                 fonts: fonts,
-                title: 'SYSTEMATIC WEALTH CREATION',
+                title: 'Systematic Wealth Creation',
                 content: data.sipDetails.isNotEmpty
-                    ? 'SIP portfolio has ${data.sipDetails.length} active plans with a consistency rate of ${data.sipConsistencyRate.toStringAsFixed(0)}%. Total SIP invested capital: ${format.format(data.sipInvestedCapital)}, current valuation: ${format.format(data.sipCurrentValuation)} (${data.sipGrowth >= 0 ? '+' : ''}${format.format(data.sipGrowth)} growth).'
-                    : 'No active SIP plans detected. Systematic investment plans are the backbone of disciplined wealth creation. Consider initiating monthly SIPs to compound returns over time.',
-                color: blueInfo,
+                    ? '${data.sipDetails.length} active SIP plan${data.sipDetails.length > 1 ? 's' : ''} with a consistency rate of ${data.sipConsistencyRate.toStringAsFixed(0)}%. Total SIP invested capital: ${format.format(data.sipInvestedCapital)}, current valuation: ${format.format(data.sipCurrentValuation)} (${data.sipGrowth >= 0 ? '+' : ''}${format.format(data.sipGrowth)}).'
+                    : 'No active SIP plans detected. Systematic investment plans compound returns over time and are recommended for disciplined wealth creation.',
               ),
-              pw.SizedBox(height: 14),
+              pw.SizedBox(height: 20),
 
-              // Insight 4: Cash Flow Health
-              _buildInsightCard(
+              // Insight 4
+              _buildInsightBlock(
                 fonts: fonts,
-                title: 'CASH FLOW HEALTH',
+                title: 'Cash Flow Health',
                 content: data.totalIncomeThisMonth > 0
-                    ? 'Monthly income of ${format.format(data.totalIncomeThisMonth)} against expenses of ${format.format(data.totalExpenseThisMonth)} yields a ${surplus >= 0 ? 'surplus' : 'deficit'} of ${format.format(surplus.abs())} (savings rate: ${savingsRate.toStringAsFixed(1)}%). ${savingsRate >= 30 ? 'Excellent savings discipline.' : savingsRate >= 10 ? 'Moderate savings — consider optimizing discretionary spending.' : 'Low savings rate — review expense categories for optimization opportunities.'}'
-                    : 'No income recorded this month. Track all income sources to generate comprehensive cash flow intelligence.',
-                color: surplus >= 0 ? greenGrowth : amber,
+                    ? 'Monthly income of ${format.format(data.totalIncomeThisMonth)} against expenses of ${format.format(data.totalExpenseThisMonth)} yields a ${surplus >= 0 ? 'surplus' : 'deficit'} of ${format.format(surplus.abs())} (savings rate: ${savingsRate.toStringAsFixed(1)}%). ${savingsRate >= 30 ? 'Excellent savings discipline.' : savingsRate >= 10 ? 'Moderate savings — consider optimizing discretionary spending.' : 'Low savings rate — review expense categories for optimization.'}'
+                    : 'No income recorded this month. Track all income sources for comprehensive cash flow intelligence.',
               ),
 
               pw.Spacer(),
 
-              // End-of-report branding
+              // End of report
               pw.Container(
                 width: double.infinity,
-                padding: const pw.EdgeInsets.symmetric(vertical: 16),
+                padding: const pw.EdgeInsets.only(top: 20),
                 decoration: pw.BoxDecoration(
-                  border: pw.Border(top: pw.BorderSide(color: cardBorder, width: 1)),
+                  border: pw.Border(top: pw.BorderSide(color: slate200, width: 0.8)),
                 ),
                 child: pw.Column(
                   children: [
-                    pw.Text('END OF REPORT', style: pw.TextStyle(font: fonts.bold, fontSize: 8, color: textDim, letterSpacing: 2.0)),
+                    pw.Container(width: 40, height: 2, color: gold),
+                    pw.SizedBox(height: 12),
+                    pw.Text('END OF REPORT', style: pw.TextStyle(font: fonts.bold, fontSize: 8, color: slate400, letterSpacing: 2.5)),
                     pw.SizedBox(height: 4),
-                    pw.Text('Generated by Worth — Personal Wealth Intelligence', style: pw.TextStyle(font: fonts.body, fontSize: 8, color: textDim)),
+                    pw.Text(
+                      'Generated by Worth — Your Complete Financial Reality',
+                      style: pw.TextStyle(font: fonts.body, fontSize: 8, color: slate400),
+                    ),
                   ],
                 ),
               ),
+
+              pw.SizedBox(height: 12),
               _buildPageFooter(fonts, dateTime, pageNum),
             ],
           ),
@@ -1279,90 +1217,104 @@ class PdfExportService {
   }
 
   // ════════════════════════════════════════════════════════════════════════════
-  // SHARED UI COMPONENTS
+  // SHARED EDITORIAL COMPONENTS
   // ════════════════════════════════════════════════════════════════════════════
 
-  pw.Widget _buildPageHeader(_Fonts fonts, String title, String subtitle) {
+  pw.Widget _buildPageHeader(_Fonts fonts, String title) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Text(title, style: pw.TextStyle(font: fonts.title, fontSize: 20, fontWeight: pw.FontWeight.bold, color: textWhite, letterSpacing: 0.5)),
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text('WORTH', style: pw.TextStyle(font: fonts.bold, fontSize: 8, color: slate400, letterSpacing: 3.0)),
+            pw.Container(width: 24, height: 1.5, color: gold),
+          ],
+        ),
+        pw.SizedBox(height: 16),
+        pw.Text(title, style: pw.TextStyle(font: fonts.bold, fontSize: 24, color: charcoal)),
         pw.SizedBox(height: 6),
-        pw.Text(subtitle, style: pw.TextStyle(font: fonts.body, fontSize: 10, color: textMuted)),
-        pw.SizedBox(height: 4),
-        pw.Container(width: 60, height: 3, color: gold),
+        pw.Container(width: 48, height: 2, color: gold),
       ],
     );
   }
 
   pw.Widget _buildPageFooter(_Fonts fonts, String dateTime, int pageNum) {
     return pw.Container(
-      margin: const pw.EdgeInsets.only(top: 12),
       padding: const pw.EdgeInsets.only(top: 10),
       decoration: pw.BoxDecoration(
-        border: pw.Border(top: pw.BorderSide(color: cardBorder, width: 0.8)),
+        border: pw.Border(top: pw.BorderSide(color: slate200, width: 0.5)),
       ),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
-          pw.Text('Worth Wealth Intelligence', style: pw.TextStyle(font: fonts.body, fontSize: 7, color: textDim)),
-          pw.Text('CONFIDENTIAL  |  $dateTime', style: pw.TextStyle(font: fonts.body, fontSize: 7, color: textDim)),
-          pw.Text('Page $pageNum', style: pw.TextStyle(font: fonts.bold, fontSize: 7, color: textDim)),
+          pw.Text('Worth — Private Wealth Statement', style: pw.TextStyle(font: fonts.body, fontSize: 7, color: slate400)),
+          pw.Text('Confidential  ·  $dateTime', style: pw.TextStyle(font: fonts.body, fontSize: 7, color: slate400)),
+          pw.Text('$pageNum', style: pw.TextStyle(font: fonts.bold, fontSize: 7, color: slate400)),
         ],
       ),
     );
   }
 
-  pw.Widget _buildDarkCard({required pw.Widget child, double? height}) {
-    return pw.Container(
-      height: height,
-      width: double.infinity,
-      padding: const pw.EdgeInsets.all(20),
-      decoration: pw.BoxDecoration(
-        color: cardSurface,
-        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(16)),
-        border: pw.Border.all(color: cardBorder, width: 0.8),
-      ),
-      child: child,
-    );
-  }
-
-  pw.Widget _buildKpiCard(_Fonts fonts, String label, String value, PdfColor valueColor) {
+  pw.Widget _buildLargeMetric(_Fonts fonts, String label, String value, PdfColor valueColor) {
     return pw.Expanded(
-      child: pw.Container(
-        padding: const pw.EdgeInsets.all(16),
-        decoration: pw.BoxDecoration(
-          color: cardSurface,
-          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(14)),
-          border: pw.Border.all(color: cardBorder, width: 0.8),
-        ),
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text(label, style: pw.TextStyle(font: fonts.body, fontSize: 8, color: textMuted, letterSpacing: 0.5)),
-            pw.SizedBox(height: 8),
-            pw.Text(value, style: pw.TextStyle(font: fonts.title, fontSize: 17, fontWeight: pw.FontWeight.bold, color: valueColor)),
-          ],
-        ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(label.toUpperCase(), style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate400, letterSpacing: 1.0)),
+          pw.SizedBox(height: 8),
+          pw.Text(value, style: pw.TextStyle(font: fonts.bold, fontSize: 18, color: valueColor)),
+        ],
       ),
     );
   }
 
-  List<pw.Widget> _buildExpenseCategoryBars(_Fonts fonts, _ReportData data, NumberFormat format) {
-    final sortedEntries = data.expensesByCategory.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final colors = [redDebt, amber, purple, blueInfo, gold, greenGrowth];
-    return sortedEntries.take(6).toList().asMap().entries.map((indexed) {
-      final e = indexed.value;
-      final color = colors[indexed.key % colors.length];
-      return pw.Padding(
-        padding: const pw.EdgeInsets.only(bottom: 10),
-        child: _buildAllocationBar(fonts, e.key, e.value, data.totalExpenseThisMonth, color, format),
-      );
-    }).toList();
+  pw.Widget _buildCompactMetric(_Fonts fonts, String label, String value) {
+    return pw.Expanded(
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(label, style: pw.TextStyle(font: fonts.body, fontSize: 8, color: slate400)),
+          pw.SizedBox(height: 4),
+          pw.Text(value, style: pw.TextStyle(font: fonts.bold, fontSize: 13, color: charcoal)),
+        ],
+      ),
+    );
   }
 
-  pw.Widget _buildAllocationBar(_Fonts fonts, String label, double amount, double total, PdfColor color, NumberFormat format) {
+  pw.Widget _buildMinimalProgressBar(double assets, double liabilities) {
+    final total = assets + liabilities;
+    final assetPct = total > 0 ? assets / total : 1.0;
+
+    return pw.Container(
+      height: 4,
+      width: double.infinity,
+      decoration: pw.BoxDecoration(
+        color: slate200,
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
+      ),
+      child: pw.Row(
+        children: [
+          pw.Expanded(
+            flex: (assetPct * 100).toInt().clamp(1, 100),
+            child: pw.Container(
+              decoration: pw.BoxDecoration(
+                color: charcoal,
+                borderRadius: const pw.BorderRadius.horizontal(left: pw.Radius.circular(2)),
+              ),
+            ),
+          ),
+          if (liabilities > 0)
+            pw.Expanded(
+              flex: ((1.0 - assetPct) * 100).toInt().clamp(1, 100),
+              child: pw.Container(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _buildEditorialBar(_Fonts fonts, String label, double amount, double total, PdfColor color, NumberFormat format) {
     final pct = total > 0 ? (amount / total) : 0.0;
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1370,25 +1322,25 @@ class PdfExportService {
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
-            pw.Text(label, style: pw.TextStyle(font: fonts.bold, fontSize: 9, color: textWhite)),
-            pw.Text('${format.format(amount)} (${(pct * 100).toStringAsFixed(1)}%)', style: pw.TextStyle(font: fonts.bold, fontSize: 9, color: textWhite)),
+            pw.Text(label, style: pw.TextStyle(font: fonts.bold, fontSize: 10, color: slate800)),
+            pw.Text('${format.format(amount)}  (${(pct * 100).toStringAsFixed(1)}%)', style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate600)),
           ],
         ),
         pw.SizedBox(height: 6),
         pw.Container(
-          height: 5,
+          height: 4,
           width: double.infinity,
           decoration: pw.BoxDecoration(
-            color: cardBorder,
-            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2.5)),
+            color: slate100,
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
           ),
           child: pw.Row(
             children: [
               pw.Container(
-                width: pct * 470,
+                width: (pct * 460).clamp(0, 460),
                 decoration: pw.BoxDecoration(
                   color: color,
-                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2.5)),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
                 ),
               ),
             ],
@@ -1398,38 +1350,74 @@ class PdfExportService {
     );
   }
 
-  pw.Widget _buildInsightCard({required _Fonts fonts, required String title, required String content, required PdfColor color}) {
-    return pw.Container(
-      padding: const pw.EdgeInsets.all(16),
-      decoration: pw.BoxDecoration(
-        color: cardSurface,
-        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(14)),
-        border: pw.Border.all(color: cardBorder, width: 0.8),
+  List<pw.Widget> _buildExpenseCategoryBars(_Fonts fonts, _ReportData data, NumberFormat format) {
+    final sortedEntries = data.expensesByCategory.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return sortedEntries.take(6).map((e) {
+      return pw.Padding(
+        padding: const pw.EdgeInsets.only(bottom: 10),
+        child: _buildEditorialBar(fonts, e.key, e.value, data.totalExpenseThisMonth, slate600, format),
+      );
+    }).toList();
+  }
+
+  pw.Widget _buildEditorialTable({required _Fonts fonts, required List<String> headers, required List<List<String>> rows}) {
+    return pw.Table(
+      border: pw.TableBorder(
+        horizontalInside: pw.BorderSide(color: slate200, width: 0.4),
+        bottom: pw.BorderSide(color: slate200, width: 0.4),
       ),
-      child: pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Container(
-            width: 4,
-            height: 52,
-            decoration: pw.BoxDecoration(
-              color: color,
-              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
-            ),
+      columnWidths: {
+        for (int i = 0; i < headers.length; i++)
+          i: i == 0 ? const pw.FlexColumnWidth(3) : const pw.FlexColumnWidth(2),
+      },
+      children: [
+        // Header row
+        pw.TableRow(
+          decoration: pw.BoxDecoration(
+            border: pw.Border(bottom: pw.BorderSide(color: charcoal, width: 1.0)),
           ),
-          pw.SizedBox(width: 14),
-          pw.Expanded(
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text(title, style: pw.TextStyle(font: fonts.bold, fontSize: 8, color: color, letterSpacing: 0.8)),
-                pw.SizedBox(height: 6),
-                pw.Text(content, style: pw.TextStyle(font: fonts.body, fontSize: 9, color: textWhite, lineSpacing: 1.4)),
-              ],
+          children: headers.map((h) => pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            child: pw.Text(h.toUpperCase(), style: pw.TextStyle(font: fonts.bold, fontSize: 7, color: slate400, letterSpacing: 0.5)),
+          )).toList(),
+        ),
+        // Data rows
+        ...rows.map((row) => pw.TableRow(
+          children: row.asMap().entries.map((e) => pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 7, horizontal: 4),
+            child: pw.Text(
+              e.value,
+              style: pw.TextStyle(
+                font: e.key == 0 ? fonts.bold : fonts.body,
+                fontSize: 9,
+                color: e.key == 0 ? slate800 : slate600,
+              ),
+              maxLines: 1,
             ),
-          ),
-        ],
-      ),
+          )).toList(),
+        )),
+      ],
+    );
+  }
+
+  pw.Widget _buildInsightBlock({required _Fonts fonts, required String title, required String content}) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Row(
+          children: [
+            pw.Container(width: 3, height: 14, color: gold),
+            pw.SizedBox(width: 10),
+            pw.Text(title.toUpperCase(), style: pw.TextStyle(font: fonts.bold, fontSize: 9, color: charcoal, letterSpacing: 1.0)),
+          ],
+        ),
+        pw.SizedBox(height: 8),
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(left: 13),
+          child: pw.Text(content, style: pw.TextStyle(font: fonts.body, fontSize: 9, color: slate600, lineSpacing: 1.5)),
+        ),
+      ],
     );
   }
 
@@ -1437,44 +1425,8 @@ class PdfExportService {
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
-        pw.Text(key, style: pw.TextStyle(font: fonts.body, fontSize: 10, color: textMuted)),
-        pw.Text(value, style: pw.TextStyle(font: fonts.bold, fontSize: 11, color: valueColor ?? textWhite)),
-      ],
-    );
-  }
-
-  pw.Widget _buildDarkTable({required _Fonts fonts, required List<String> headers, required List<List<String>> rows}) {
-    return pw.Table(
-      border: pw.TableBorder(
-        horizontalInside: pw.BorderSide(color: cardBorder, width: 0.5),
-        bottom: pw.BorderSide(color: cardBorder, width: 0.8),
-      ),
-      columnWidths: {
-        for (int i = 0; i < headers.length; i++)
-          i: i == 0 ? const pw.FlexColumnWidth(3) : const pw.FlexColumnWidth(2),
-      },
-      children: [
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: cardSurface),
-          children: headers.map((h) => pw.Padding(
-            padding: const pw.EdgeInsets.all(9),
-            child: pw.Text(h, style: pw.TextStyle(font: fonts.bold, fontSize: 8, color: textMuted, letterSpacing: 0.3)),
-          )).toList(),
-        ),
-        ...rows.map((row) => pw.TableRow(
-          children: row.asMap().entries.map((e) => pw.Padding(
-            padding: const pw.EdgeInsets.all(9),
-            child: pw.Text(
-              e.value,
-              style: pw.TextStyle(
-                font: e.key == 0 ? fonts.bold : fonts.body,
-                fontSize: 9,
-                color: textWhite,
-              ),
-              maxLines: 1,
-            ),
-          )).toList(),
-        )),
+        pw.Text(key, style: pw.TextStyle(font: fonts.body, fontSize: 10, color: slate400)),
+        pw.Text(value, style: pw.TextStyle(font: fonts.bold, fontSize: 11, color: valueColor ?? charcoal)),
       ],
     );
   }
@@ -1541,7 +1493,7 @@ class PdfExportService {
 
   Future<String> savePdfToDownloads(List<int> pdfBytes, {bool forcePrivateDirectory = false}) async {
     final timestamp = DateFormat('yyyy_MM_dd_HH_mm_ss').format(DateTime.now());
-    final fileName = 'Worth_Report_$timestamp.pdf';
+    final fileName = 'Worth_Statement_$timestamp.pdf';
 
     if (Platform.isAndroid && !forcePrivateDirectory) {
       final downloadsDir = Directory('/storage/emulated/0/Download/Worth');
@@ -1565,7 +1517,7 @@ class PdfExportService {
 
         int counter = 1;
         while (await file.exists()) {
-          filePath = '${downloadsDir.path}/Worth_Report_${timestamp}_$counter.pdf';
+          filePath = '${downloadsDir.path}/Worth_Statement_${timestamp}_$counter.pdf';
           file = File(filePath);
           counter++;
         }
@@ -1598,7 +1550,7 @@ class PdfExportService {
 
       int counter = 1;
       while (await file.exists()) {
-        filePath = '${backupWorthDir.path}/Worth_Report_${timestamp}_$counter.pdf';
+        filePath = '${backupWorthDir.path}/Worth_Statement_${timestamp}_$counter.pdf';
         file = File(filePath);
         counter++;
       }
@@ -1671,10 +1623,10 @@ class _SipOccurrence {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// CUSTOM PAINTER: LINE CHART
+// LIGHT THEME LINE CHART PAINTER
 // ══════════════════════════════════════════════════════════════════════════════
 
-class LineChartPainter {
+class _LightLineChartPainter {
   final List<double> values;
   final List<String> labels;
   final PdfColor lineColor;
@@ -1682,7 +1634,7 @@ class LineChartPainter {
   final PdfColor gridColor;
   final PdfColor dotColor;
 
-  LineChartPainter({
+  _LightLineChartPainter({
     required this.values,
     required this.labels,
     required this.lineColor,

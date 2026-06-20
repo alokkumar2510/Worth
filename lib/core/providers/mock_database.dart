@@ -44,6 +44,10 @@ class MockDatabaseState {
   final List<PortfolioSnapshot> portfolioSnapshots;
   final List<RecoveryAllocation> recoveryAllocations;
   final List<RecoveryDestination> recoveryDestinations;
+  final List<ReceivableActivity> receivableActivities;
+  final String userUpiId;
+  final String userUpiName;
+  final String userUpiBank;
   
   // Settings & Auth State
   final String currency;
@@ -88,6 +92,10 @@ class MockDatabaseState {
     this.portfolioSnapshots = const [],
     this.recoveryAllocations = const [],
     this.recoveryDestinations = const [],
+    this.receivableActivities = const [],
+    this.userUpiId = '',
+    this.userUpiName = '',
+    this.userUpiBank = '',
     this.currency = '₹',
     this.themeMode = 'dark',
     this.appLockEnabled = false,
@@ -131,6 +139,10 @@ class MockDatabaseState {
     List<PortfolioSnapshot>? portfolioSnapshots,
     List<RecoveryAllocation>? recoveryAllocations,
     List<RecoveryDestination>? recoveryDestinations,
+    List<ReceivableActivity>? receivableActivities,
+    String? userUpiId,
+    String? userUpiName,
+    String? userUpiBank,
     String? currency,
     String? themeMode,
     bool? appLockEnabled,
@@ -173,6 +185,10 @@ class MockDatabaseState {
       portfolioSnapshots: portfolioSnapshots ?? this.portfolioSnapshots,
       recoveryAllocations: recoveryAllocations ?? this.recoveryAllocations,
       recoveryDestinations: recoveryDestinations ?? this.recoveryDestinations,
+      receivableActivities: receivableActivities ?? this.receivableActivities,
+      userUpiId: userUpiId ?? this.userUpiId,
+      userUpiName: userUpiName ?? this.userUpiName,
+      userUpiBank: userUpiBank ?? this.userUpiBank,
       currency: currency ?? this.currency,
       themeMode: themeMode ?? this.themeMode,
       appLockEnabled: appLockEnabled ?? this.appLockEnabled,
@@ -608,6 +624,10 @@ class MockDatabaseState {
       portfolioSnapshots: portfolioSnapshots.where((s) => !s.snapshotDate.isAfter(targetDate)).toList(),
       recoveryAllocations: recoveryAllocations.where((a) => !a.createdAt.isAfter(targetDate)).toList(),
       recoveryDestinations: recoveryDestinations.where((d) => !d.createdAt.isAfter(targetDate)).toList(),
+      receivableActivities: receivableActivities.where((a) => !a.createdAt.isAfter(targetDate)).toList(),
+      userUpiId: userUpiId,
+      userUpiName: userUpiName,
+      userUpiBank: userUpiBank,
       currency: currency,
       themeMode: themeMode,
       appLockEnabled: appLockEnabled,
@@ -883,6 +903,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final rawPortfolioSnapshots = await db.select(db.portfolioSnapshots).get();
       final rawRecoveryAllocations = await db.select(db.recoveryAllocations).get();
       final rawRecoveryDestinations = await db.select(db.recoveryDestinations).get();
+      final rawReceivableActivities = await db.select(db.receivableActivities).get();
 
       final accounts = rawAccounts.where((x) => x.deletedAt == null).toList();
       final people = rawPeople.where((x) => x.deletedAt == null).toList();
@@ -894,8 +915,13 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final sips = rawSips.where((x) => x.deletedAt == null).toList();
       final portfolioHistory = rawPortfolioHistory.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       final portfolioSnapshots = rawPortfolioSnapshots.toList()..sort((a, b) => b.snapshotDate.compareTo(a.snapshotDate));
+      final receivableActivities = rawReceivableActivities.toList()..sort((ReceivableActivity a, ReceivableActivity b) => b.createdAt.compareTo(a.createdAt));
 
       final settingsMap = {for (var s in settingsList) s.key: s.value};
+
+      final userUpiId = settingsMap['user_upi_id'] ?? '';
+      final userUpiName = settingsMap['user_upi_name'] ?? '';
+      final userUpiBank = settingsMap['user_upi_bank'] ?? '';
 
       final currency = settingsMap['currency'] ?? '₹';
       final themeMode = settingsMap['themeMode'] ?? 'dark';
@@ -1017,6 +1043,10 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         portfolioSnapshots: portfolioSnapshots,
         recoveryAllocations: rawRecoveryAllocations.toList(),
         recoveryDestinations: rawRecoveryDestinations.toList(),
+        receivableActivities: receivableActivities,
+        userUpiId: userUpiId,
+        userUpiName: userUpiName,
+        userUpiBank: userUpiBank,
         currency: currency,
         themeMode: themeMode,
         appLockEnabled: appLockEnabled,
@@ -1491,7 +1521,18 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     }
   }
 
-  Future<Person> addPerson(String name, String? phone, String? notes, [String type = 'personal_loan']) async {
+  Future<Person> addPerson(
+    String name,
+    String? phone,
+    String? notes, [
+    String type = 'personal_loan',
+    String? whatsApp,
+    DateTime? borrowDate,
+    DateTime? dueDate,
+    String? upiId,
+    String? bankName,
+    String? accountHolderName,
+  ]) async {
     final id = _uuid.v4();
     final now = DateTime.now().toUtc();
     final newPerson = Person(
@@ -1504,6 +1545,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       updatedAt: now,
       syncStatus: 'pending',
       type: type,
+      whatsApp: whatsApp,
+      borrowDate: borrowDate,
+      dueDate: dueDate,
+      upiId: upiId,
+      bankName: bankName,
+      accountHolderName: accountHolderName,
     );
 
     final isMock = _ref.read(mockModeProvider);
@@ -1517,8 +1564,20 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     return newPerson;
   }
 
-  Future<void> updatePerson(String id, String name, String? phone, String? notes) async {
+  Future<void> updatePerson(
+    String id,
+    String name,
+    String? phone,
+    String? notes, {
+    String? whatsApp,
+    DateTime? borrowDate,
+    DateTime? dueDate,
+    String? upiId,
+    String? bankName,
+    String? accountHolderName,
+  }) async {
     final isMock = _ref.read(mockModeProvider);
+    final now = DateTime.now().toUtc();
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
       await (db.update(db.people)..where((tbl) => tbl.id.equals(id)))
@@ -1526,7 +1585,13 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
           name: Value(name),
           phone: Value(phone),
           notes: Value(notes),
-          updatedAt: Value(DateTime.now().toUtc()),
+          whatsApp: Value(whatsApp),
+          borrowDate: Value(borrowDate),
+          dueDate: Value(dueDate),
+          upiId: Value(upiId),
+          bankName: Value(bankName),
+          accountHolderName: Value(accountHolderName),
+          updatedAt: Value(now),
         ));
       _queueSync('person', id, 'upsert');
     } else {
@@ -1540,15 +1605,71 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
               notes: notes,
               isArchived: p.isArchived,
               createdAt: p.createdAt,
-              updatedAt: DateTime.now().toUtc(),
+              updatedAt: now,
               syncStatus: p.syncStatus,
               type: p.type,
+              whatsApp: whatsApp ?? p.whatsApp,
+              borrowDate: borrowDate ?? p.borrowDate,
+              dueDate: dueDate ?? p.dueDate,
+              upiId: upiId ?? p.upiId,
+              bankName: bankName ?? p.bankName,
+              accountHolderName: accountHolderName ?? p.accountHolderName,
             );
           }
           return p;
         }).toList(),
       );
     }
+  }
+
+  Future<void> addReceivableActivity({
+    required String personId,
+    required String activityType,
+    double? amount,
+    String? channel,
+    String? notes,
+  }) async {
+    final id = _uuid.v4();
+    final now = DateTime.now().toUtc();
+    final activity = ReceivableActivity(
+      id: id,
+      personId: personId,
+      activityType: activityType,
+      amount: amount,
+      channel: channel,
+      notes: notes,
+      createdAt: now,
+      syncStatus: 'pending',
+    );
+
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await db.into(db.receivableActivities).insert(activity);
+      _queueSync('receivable_activity', id, 'upsert');
+    } else {
+      state = state.copyWith(
+        receivableActivities: [activity, ...state.receivableActivities],
+      );
+    }
+  }
+
+  Future<void> updateUpiDetails(String upiId, String name, String bankName) async {
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      await db.into(db.settings).insertOnConflictUpdate(Setting(key: 'user_upi_id', value: upiId));
+      await db.into(db.settings).insertOnConflictUpdate(Setting(key: 'user_upi_name', value: name));
+      await db.into(db.settings).insertOnConflictUpdate(Setting(key: 'user_upi_bank', value: bankName));
+      _syncSetting('user_upi_id');
+      _syncSetting('user_upi_name');
+      _syncSetting('user_upi_bank');
+    }
+    state = state.copyWith(
+      userUpiId: upiId,
+      userUpiName: name,
+      userUpiBank: bankName,
+    );
   }
 
   Future<bool> deletePerson(String id) async {
@@ -1645,6 +1766,18 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       notes: notes,
       date: date,
     );
+
+    // Fetch outstanding balance to check if it's fully settled
+    final outstanding = state.getPersonReceivableBalance(personId);
+    final isSettle = (outstanding - amount).abs() < 0.01 || (outstanding - amount) <= 0;
+
+    await addReceivableActivity(
+      personId: personId,
+      activityType: isSettle ? 'settled' : 'payment_received',
+      amount: amount,
+      notes: notes ?? (isSettle ? 'Full settlement completed' : 'Payment recovered'),
+    );
+
     return tx.id;
   }
 
@@ -1822,6 +1955,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final db = _ref.read(realDatabaseProvider);
       await db.into(db.investments).insert(newInvestment);
       _queueSync('investment', id, 'upsert');
+      await loadStateFromDatabase();
     } else {
       state = state.copyWith(investments: [...state.investments, newInvestment]);
     }
@@ -2074,6 +2208,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         fundingLiabilityId: fundingLiabilityId,
         fundingDetails: fundingDetails,
       );
+      await loadStateFromDatabase();
     } else {
       final amount = units * pricePerUnit;
       final tx = _createTransactionInternal(
@@ -2128,6 +2263,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         notes: notes,
         date: date,
       );
+      await loadStateFromDatabase();
     } else {
       final totalProceeds = unitsToSell * salePricePerUnit;
       final sellTx = _createTransactionInternal(
@@ -2740,6 +2876,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       );
       await _ref.read(realTransactionServiceProvider).createTransaction(companion);
       _queueSync('transaction', tx.id, 'upsert');
+      await loadStateFromDatabase();
     } else {
       tx = _createTransactionInternal(
         type: type,
@@ -4407,6 +4544,10 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       portfolioSnapshots: const [],
       recoveryAllocations: const [],
       recoveryDestinations: const [],
+      receivableActivities: const [],
+      userUpiId: '',
+      userUpiName: '',
+      userUpiBank: '',
       currency: mockCurrency,
       themeMode: 'dark', // Premium Dark Theme by default
       appLockEnabled: false,

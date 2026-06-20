@@ -500,11 +500,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                    child: _buildInfoRow('Version', '1.8.0 (Build 9)'),
+                    child: _buildInfoRow('Version', '1.9.0 (Build 10)'),
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                     child: _buildInfoRow('Database Model', 'FIFO Lot Ledger (Drift/Encrypted)'),
+                  ),
+                  const Divider(color: AppColors.glassBorder, height: 1),
+                  _buildSettingsTile(
+                    icon: Icons.new_releases_outlined,
+                    title: 'What\'s New in v1.9.0',
+                    value: 'Smart Debt Recovery',
+                    onTap: () => context.push('/settings/whats_new'),
                   ),
                   const Divider(color: AppColors.glassBorder, height: 1),
                   _buildSettingsTile(
