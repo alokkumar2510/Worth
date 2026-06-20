@@ -1056,23 +1056,61 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
                         const SizedBox(height: 24),
 
                         // Image Card generator section
-                        if (person.upiId != null && person.upiId!.isNotEmpty) ...[
-                          Text(
-                            'PAYMENT REMINDER CARD GENERATOR',
-                            style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+                        Text(
+                          'PAYMENT REMINDER CARD GENERATOR',
+                          style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5),
+                        ),
+                        const SizedBox(height: 12),
+                        if (dbState.userUpiId.isEmpty) ...[
+                          GestureDetector(
+                            onTap: () => context.push('/recovery/upi_settings'),
+                            child: GlassCard(
+                              borderColor: Colors.amber.withOpacity(0.3),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.warning_amber_rounded, color: Colors.amber, size: 24),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'UPI Collection ID Not Set',
+                                          style: GoogleFonts.inter(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Tap here to set up your UPI ID so debtors can scan the QR code to pay you directly.',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11,
+                                            color: AppColors.grey400,
+                                            height: 1.3,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(Icons.chevron_right_rounded, color: AppColors.grey500),
+                                ],
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 12),
-                          PaymentReminderImageGenerator(
-                            debtorName: person.name,
-                            amount: outstanding,
-                            borrowDate: borrowDate,
-                            daysPending: daysPending,
-                            userName: dbState.userUpiName.isNotEmpty ? dbState.userUpiName : 'Worth User',
-                            upiId: person.upiId!,
-                            currency: currency,
-                          ),
-                          const SizedBox(height: 24),
                         ],
+                        PaymentReminderImageGenerator(
+                          debtorName: person.name,
+                          amount: outstanding,
+                          borrowDate: borrowDate,
+                          daysPending: daysPending,
+                          userName: dbState.userUpiName.isNotEmpty ? dbState.userUpiName : 'Worth User',
+                          upiId: dbState.userUpiId.isNotEmpty ? dbState.userUpiId : 'payment@worth',
+                          currency: currency,
+                        ),
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
