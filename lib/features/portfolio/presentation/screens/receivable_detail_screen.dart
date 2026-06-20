@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,6 +7,9 @@ import 'package:go_router/go_router.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../../core/widgets/calculation_audit_panel.dart';
 import '../../../../core/constants/app_colors.dart';
@@ -67,11 +71,28 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
   }
 
   // --- Share reminders helper ---
-  Future<void> _shareReminder(String message, String channel, String debtorName, String stageLabel) async {
+  Future<void> _shareReminder(String message, String channel, Person person, String stageLabel) async {
     Uri url;
     if (channel == 'whatsapp') {
-      final phone = widget.personId; // fallback
-      final cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
+      final rawPhone = person.whatsApp ?? person.phone ?? '';
+      final cleanPhone = _cleanPhoneNumber(rawPhone);
+
+      // Print debug log
+      print('Selected Contact:');
+      print(person.name);
+      print('');
+      print('WhatsApp Number:');
+      print(cleanPhone);
+
+      if (cleanPhone.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No phone number or WhatsApp number found for this contact.')),
+          );
+        }
+        return;
+      }
+
       url = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(message)}');
     } else if (channel == 'telegram') {
       url = Uri.parse('https://t.me/share/url?url=&text=${Uri.encodeComponent(message)}');
@@ -96,11 +117,29 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
   }
 
   // --- UPI link generator & share ---
-  Future<void> _requestUpiPayment(String debtorName, double outstanding, String upiId, String userName) async {
+  Future<void> _requestUpiPayment(Person person, double outstanding, String upiId, String userName) async {
     final upiLink = 'upi://pay?pa=$upiId&pn=${Uri.encodeComponent(userName)}&am=$outstanding';
-    final shareMsg = 'Hi $debtorName,\n\nOutstanding Amount:\n₹${NumberFormat.decimalPattern().format(outstanding)}\n\nPlease make payment using the link below.\n\n$upiLink\n\nGenerated using Worth.';
+    final shareMsg = 'Hi ${person.name},\n\nOutstanding Amount:\n₹${NumberFormat.decimalPattern().format(outstanding)}\n\nPlease make payment using the link below.\n\n$upiLink\n\nGenerated using Worth.';
     
-    final cleanPhone = widget.personId.replaceAll(RegExp(r'\D'), '');
+    final rawPhone = person.whatsApp ?? person.phone ?? '';
+    final cleanPhone = _cleanPhoneNumber(rawPhone);
+
+    // Print debug log
+    print('Selected Contact:');
+    print(person.name);
+    print('');
+    print('WhatsApp Number:');
+    print(cleanPhone);
+
+    if (cleanPhone.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No phone number or WhatsApp number found for this contact.')),
+        );
+      }
+      return;
+    }
+
     final url = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(shareMsg)}');
 
     try {
@@ -119,6 +158,203 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
         );
       }
     }
+  }
+
+  String _cleanPhoneNumber(String phone) {
+    // 1. Remove spaces and special characters
+    String digits = phone.replaceAll(RegExp(r'\D'), '');
+    
+    // 2. Remove duplicate country code (starts with 9191 and length is 14)
+    if (digits.startsWith('9191') && digits.length == 14) {
+      digits = digits.substring(2);
+    }
+    
+    // 3. Prepend 91 if it's exactly 10 digits
+    if (digits.length == 10) {
+      digits = '91$digits';
+    }
+    
+    return digits;
+  }
+
+  Future<void> _shareQrCode(String upiLink) async {
+    try {
+      final qrValidationResult = QrValidator.validate(
+        data: upiLink,
+        version: QrVersions.auto,
+        errorCorrectionLevel: QrErrorCorrectLevel.L,
+      );
+      if (qrValidationResult.status == QrValidationStatus.valid) {
+        final qrCode = qrValidationResult.qrCode!;
+        final painter = QrPainter.withQr(
+          qr: qrCode,
+          color: const Color(0xFF000000),
+          emptyColor: const Color(0xFFFFFFFF),
+          gapless: true,
+        );
+        
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/worth_payment_qr.png');
+        
+        final picData = await painter.toImageData(300);
+        if (picData != null) {
+          await file.writeAsBytes(picData.buffer.asUint8List());
+          await Share.shareXFiles([XFile(file.path)], text: 'Scan this QR code to pay.');
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to share QR: $e')));
+      }
+    }
+  }
+
+  Future<void> _launchUpiApp(String appName, String upiId, String userName, double amount) async {
+    final encodedName = Uri.encodeComponent(userName);
+    String scheme;
+    switch (appName.toLowerCase()) {
+      case 'google pay':
+        scheme = 'tez://pay?pa=$upiId&pn=$encodedName&am=$amount';
+        break;
+      case 'phonepe':
+        scheme = 'phonepe://pay?pa=$upiId&pn=$encodedName&am=$amount';
+        break;
+      case 'paytm':
+        scheme = 'paytmmp://pay?pa=$upiId&pn=$encodedName&am=$amount';
+        break;
+      case 'bhim':
+      default:
+        scheme = 'upi://pay?pa=$upiId&pn=$encodedName&am=$amount';
+        break;
+    }
+    
+    final uri = Uri.parse(scheme);
+    try {
+      final success = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (success) {
+        await _logActivity('payment_requested', channel: appName.toLowerCase(), notes: 'Opened UPI app: $appName');
+      } else {
+        if (appName.toLowerCase() != 'bhim' && appName.toLowerCase() != 'upi') {
+          final fallbackUri = Uri.parse('upi://pay?pa=$upiId&pn=$encodedName&am=$amount');
+          final fallbackSuccess = await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
+          if (fallbackSuccess) {
+            await _logActivity('payment_requested', channel: 'upi_fallback', notes: 'Opened generic UPI chooser as fallback for $appName');
+            return;
+          }
+        }
+        throw 'Could not launch UPI app';
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open $appName: $e. Try copying the UPI ID instead.')),
+        );
+      }
+    }
+  }
+
+  void _showUpiAppChooser(BuildContext context, Person person, double outstanding, String userUpiName) {
+    final upiId = person.upiId!;
+    final accountName = person.accountHolderName ?? userUpiName;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.layer1,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Select UPI App to Pay',
+              style: GoogleFonts.outfit(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const Icon(Icons.apps_rounded, color: AppColors.darkPrimary),
+              title: const Text('Any UPI App (System Chooser)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _launchUpiApp('bhim', upiId, accountName, outstanding);
+              },
+            ),
+            const Divider(color: AppColors.glassBorder),
+            ListTile(
+              leading: const Icon(Icons.payment, color: Colors.blue),
+              title: const Text('Google Pay', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _launchUpiApp('google pay', upiId, accountName, outstanding);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.payment, color: Colors.purple),
+              title: const Text('PhonePe', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _launchUpiApp('phonepe', upiId, accountName, outstanding);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.payment, color: Colors.lightBlue),
+              title: const Text('Paytm', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _launchUpiApp('paytm', upiId, accountName, outstanding);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.payment, color: Colors.orange),
+              title: const Text('BHIM', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _launchUpiApp('bhim', upiId, accountName, outstanding);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUpiActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 90,
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+        decoration: BoxDecoration(
+          color: AppColors.glassSurface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.glassBorder),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: AppColors.darkPrimary, size: 20),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showRecoverDialog(BuildContext context, String currency, String name, double outstanding) {
@@ -519,7 +755,28 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(person.name, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: AppColors.darkSuccess.withOpacity(0.12),
+              backgroundImage: person.photoPath != null && File(person.photoPath!).existsSync()
+                  ? FileImage(File(person.photoPath!))
+                  : null,
+              child: person.photoPath == null || !File(person.photoPath!).existsSync()
+                  ? const Icon(Icons.person, color: AppColors.darkSuccess, size: 18)
+                  : null,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                person.name,
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
@@ -675,7 +932,7 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
                                 const SizedBox(height: 16),
                                 ElevatedButton.icon(
                                   onPressed: () => _requestUpiPayment(
-                                    person.name,
+                                    person,
                                     outstanding,
                                     person.upiId!,
                                     person.accountHolderName ?? dbState.userUpiName,
@@ -683,6 +940,56 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
                                   icon: const Icon(Icons.share, color: Colors.white),
                                   label: const Text('Request UPI Payment (WhatsApp)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                                   style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF25D366)),
+                                ),
+                                const SizedBox(height: 16),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  alignment: WrapAlignment.spaceEvenly,
+                                  children: [
+                                    _buildUpiActionButton(
+                                      icon: Icons.copy_rounded,
+                                      label: 'Copy UPI',
+                                      onTap: () {
+                                        Clipboard.setData(ClipboardData(text: person.upiId!));
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('UPI ID copied to clipboard.')),
+                                        );
+                                      },
+                                    ),
+                                    _buildUpiActionButton(
+                                      icon: Icons.link_rounded,
+                                      label: 'Copy Link',
+                                      onTap: () {
+                                        final upiLink = 'upi://pay?pa=${person.upiId}&pn=${Uri.encodeComponent(person.accountHolderName ?? person.name)}&am=$outstanding';
+                                        Clipboard.setData(ClipboardData(text: upiLink));
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Payment link copied to clipboard.')),
+                                        );
+                                      },
+                                    ),
+                                    _buildUpiActionButton(
+                                      icon: Icons.share_rounded,
+                                      label: 'Share Link',
+                                      onTap: () {
+                                        final upiLink = 'upi://pay?pa=${person.upiId}&pn=${Uri.encodeComponent(person.accountHolderName ?? person.name)}&am=$outstanding';
+                                        Share.share(upiLink, subject: 'Payment Link');
+                                      },
+                                    ),
+                                    _buildUpiActionButton(
+                                      icon: Icons.qr_code_2_rounded,
+                                      label: 'Share QR',
+                                      onTap: () {
+                                        final upiLink = 'upi://pay?pa=${person.upiId}&pn=${Uri.encodeComponent(person.accountHolderName ?? person.name)}&am=$outstanding';
+                                        _shareQrCode(upiLink);
+                                      },
+                                    ),
+                                    _buildUpiActionButton(
+                                      icon: Icons.open_in_new_rounded,
+                                      label: 'Open UPI',
+                                      onTap: () => _showUpiAppChooser(context, person, outstanding, dbState.userUpiName),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -728,15 +1035,15 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
                                   IconButton(
                                     icon: const Icon(Icons.message_outlined, color: Colors.white70),
                                     tooltip: 'Send SMS',
-                                    onPressed: () => _shareReminder(currentMsg, 'sms', person.name, stageLabel),
+                                    onPressed: () => _shareReminder(currentMsg, 'sms', person, stageLabel),
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.send_rounded, color: Colors.white70),
                                     tooltip: 'Send Telegram',
-                                    onPressed: () => _shareReminder(currentMsg, 'telegram', person.name, stageLabel),
+                                    onPressed: () => _shareReminder(currentMsg, 'telegram', person, stageLabel),
                                   ),
                                   ElevatedButton.icon(
-                                    onPressed: () => _shareReminder(currentMsg, 'whatsapp', person.name, stageLabel),
+                                    onPressed: () => _shareReminder(currentMsg, 'whatsapp', person, stageLabel),
                                     icon: const Icon(Icons.share, color: Colors.white, size: 16),
                                     label: const Text('WhatsApp', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF25D366)),

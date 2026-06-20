@@ -20,6 +20,7 @@ class People extends Table {
   TextColumn get upiId => text().nullable()();
   TextColumn get bankName => text().nullable()();
   TextColumn get accountHolderName => text().nullable()();
+  TextColumn get photoPath => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

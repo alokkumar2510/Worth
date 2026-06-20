@@ -1,6 +1,6 @@
 name: worth
 description: A personal wealth operating system.
-version: 1.9.0+10
+version: 1.10.0+11
 
 publish_to: 'none'
 
@@ -55,7 +55,9 @@ dependencies:
   flutter_local_notifications: ^17.2.1
   timezone: ^0.9.2
   qr_flutter: ^4.1.0
-  share_plus: ^13.1.0
+  share_plus: ^12.0.2
+  flutter_contacts: ^1.1.9
+  image: ^4.3.0
 
   # JSON Serialization & Freezed
   freezed_annotation: ^2.4.4

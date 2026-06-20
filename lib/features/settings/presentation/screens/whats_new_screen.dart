@@ -14,44 +14,24 @@ class WhatsNewScreen extends StatelessWidget {
 
     final List<Map<String, String>> features = [
       {
-        'title': 'Interactive Debt Aging Chart',
-        'desc': 'Beautiful, dynamic bar charts visualizing outstanding receivables across aging buckets (0-30, 31-60, 61-90, 90+ days).'
+        'title': 'Production Image Rendering Engine',
+        'desc': 'Generates and saves professional payment reminders in high-resolution aspect ratios (1080x1350, 1080x1920, 1200x628) using on-device RepaintBoundary rendering.'
       },
       {
-        'title': 'Automated Recovery Calculator',
-        'desc': 'Computes borrower-specific risk levels (Low to Critical), recovery probabilities, and days pending in real-time.'
+        'title': 'Embedded Scan-to-Pay QR Codes',
+        'desc': 'Dynamically generates and embeds UPI scan-to-pay QR codes directly in your generated reminder image with "Scan & Pay" details.'
       },
       {
-        'title': 'Smart Follow-Up Engine',
-        'desc': 'Categorizes collection status into 5 progressive stages—from Gentle Reminder to Legal Escalation.'
+        'title': 'UPI Options & App Chooser Panel',
+        'desc': 'Quick options to copy UPI ID/payment links, share QR codes, or instantly launch Google Pay, PhonePe, Paytm, or BHIM directly from the receivable screen.'
       },
       {
-        'title': 'Custom Reminder Card Generator',
-        'desc': 'Generates and exports premium, customizable payment cards with themes like Luxury Gold, Corporate Blue, and Minimalist.'
+        'title': 'Smart Contact Picker Import',
+        'desc': 'Search and select contacts using a search sheet to automatically pre-fill names, phone numbers, and WhatsApp IDs for new receivables.'
       },
       {
-        'title': 'Dynamic UPI QR Generation',
-        'desc': 'Creates scan-to-pay QR codes instantly on-device using the debtor’s name and outstanding balance.'
-      },
-      {
-        'title': 'Smart Share Integrations',
-        'desc': 'Formats and launches personalized reminder copy directly into WhatsApp, Telegram, SMS, or system clipboard.'
-      },
-      {
-        'title': 'Comprehensive Collection Timeline',
-        'desc': 'Keeps a visual log of all collection activities, including reminders sent, custom manual notes, and partial payments.'
-      },
-      {
-        'title': 'Offline-First Architecture',
-        'desc': 'Manage configurations, track debtors, and log updates offline with robust local SQLite/Drift caching.'
-      },
-      {
-        'title': 'Seamless Firebase Cloud Sync',
-        'desc': 'Automatically pushes and pulls offline updates, backup points, and collection logs to Firestore when back online.'
-      },
-      {
-        'title': 'Local Notifications Scheduler',
-        'desc': 'Schedules precise device reminders for critical aging thresholds to ensure you never forget to follow up.'
+        'title': 'Debtor Profile Avatars',
+        'desc': 'Synchronize contact photos to local storage and display debtor avatars on dashboard cards, ledgers, and transaction timeline sheets.'
       },
     ];
 
@@ -59,7 +39,7 @@ class WhatsNewScreen extends StatelessWidget {
       backgroundColor: AppColors.darkBackground,
       appBar: AppBar(
         title: Text(
-          "What's New in v1.9.0",
+          "What's New in v1.10.0",
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -96,7 +76,7 @@ class WhatsNewScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'Worth v1.9.0',
+                            'Worth v1.10.0',
                             style: GoogleFonts.outfit(
                               fontSize: 26,
                               fontWeight: FontWeight.bold,
@@ -106,7 +86,7 @@ class WhatsNewScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Smart Debt Recovery & UPI Collection',
+                            'Smart UPI QR & Premium Image Recovery',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.inter(
                               fontSize: 14,
@@ -117,7 +97,7 @@ class WhatsNewScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'A major core upgrade introduces full-cycle receivables tracking, professional reminders sharing, and UPI payment integration.',
+                            'A major update introducing premium reminders image generation, embedded payment QR codes, contact picker integration, and a comprehensive UPI payment panel.',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.inter(
                               fontSize: 13,

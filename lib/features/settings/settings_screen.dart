@@ -500,7 +500,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                    child: _buildInfoRow('Version', '1.9.0 (Build 10)'),
+                    child: _buildInfoRow('Version', '1.10.0 (Build 11)'),
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -509,8 +509,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const Divider(color: AppColors.glassBorder, height: 1),
                   _buildSettingsTile(
                     icon: Icons.new_releases_outlined,
-                    title: 'What\'s New in v1.9.0',
-                    value: 'Smart Debt Recovery',
+                    title: 'What\'s New in v1.10.0',
+                    value: 'Smart UPI QR Recovery',
                     onTap: () => context.push('/settings/whats_new'),
                   ),
                   const Divider(color: AppColors.glassBorder, height: 1),

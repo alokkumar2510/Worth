@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -300,7 +301,12 @@ class DebtRecoveryDashboardScreen extends ConsumerWidget {
                               children: [
                                 CircleAvatar(
                                   backgroundColor: stageColor.withOpacity(0.12),
-                                  child: Icon(Icons.person_rounded, color: stageColor),
+                                  backgroundImage: debtor.photoPath != null && File(debtor.photoPath!).existsSync()
+                                      ? FileImage(File(debtor.photoPath!))
+                                      : null,
+                                  child: debtor.photoPath == null || !File(debtor.photoPath!).existsSync()
+                                      ? Icon(Icons.person_rounded, color: stageColor)
+                                      : null,
                                 ),
                                 const SizedBox(width: 16),
                                 Expanded(

@@ -69,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 18; // Bumped for Receivable activities and additional People columns
+  int get schemaVersion => 19; // Bumped for photoPath column in People
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -237,6 +237,9 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(people, people.accountHolderName);
 
             await m.createTable(receivableActivities);
+          }
+          if (from < 19) {
+            await m.addColumn(people, people.photoPath);
           }
         },
       );

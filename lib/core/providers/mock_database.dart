@@ -1532,6 +1532,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     String? upiId,
     String? bankName,
     String? accountHolderName,
+    String? photoPath,
   ]) async {
     final id = _uuid.v4();
     final now = DateTime.now().toUtc();
@@ -1551,6 +1552,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       upiId: upiId,
       bankName: bankName,
       accountHolderName: accountHolderName,
+      photoPath: photoPath,
     );
 
     final isMock = _ref.read(mockModeProvider);
@@ -1575,6 +1577,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     String? upiId,
     String? bankName,
     String? accountHolderName,
+    String? photoPath,
   }) async {
     final isMock = _ref.read(mockModeProvider);
     final now = DateTime.now().toUtc();
@@ -1591,6 +1594,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
           upiId: Value(upiId),
           bankName: Value(bankName),
           accountHolderName: Value(accountHolderName),
+          photoPath: Value(photoPath),
           updatedAt: Value(now),
         ));
       _queueSync('person', id, 'upsert');
@@ -1614,6 +1618,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
               upiId: upiId ?? p.upiId,
               bankName: bankName ?? p.bankName,
               accountHolderName: accountHolderName ?? p.accountHolderName,
+              photoPath: photoPath ?? p.photoPath,
             );
           }
           return p;

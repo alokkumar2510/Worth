@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -5,6 +6,8 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:collection/collection.dart';
 import 'package:drift/drift.dart' show Value;
+import 'package:flutter_contacts/flutter_contacts.dart' hide Account;
+import 'package:path_provider/path_provider.dart';
 
 import '../../core/widgets/calculation_audit_panel.dart';
 import '../../core/constants/app_colors.dart';
@@ -296,13 +299,34 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     );
   }
 
+  void _showContactPickerSheet(BuildContext context, Function(String name, String phone, String? photoPath) onSelected) async {
+    if (!await FlutterContacts.requestPermission()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Contacts permission denied. Please allow contact access to import.')),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.layer1,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => _ContactPickerModal(onSelected: onSelected),
+    );
+  }
+
   void _showAddPersonDialog(bool isLending) {
     final nameController = TextEditingController();
+    final phoneController = TextEditingController();
+    final whatsAppController = TextEditingController();
+    final upiIdController = TextEditingController();
     final amountController = TextEditingController();
     final notesController = TextEditingController();
     DateTime selectedDate = DateTime.now();
     TimeOfDay selectedTime = TimeOfDay.now();
     String selectedType = 'personal_loan';
+    String? selectedPhotoPath;
 
     final dbState = ref.read(mockDatabaseProvider);
     final activeAccounts = dbState.accounts.where((a) => a.isArchived == 0).toList();
@@ -322,10 +346,64 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Choose Contact Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          _showContactPickerSheet(context, (name, phone, photoPath) {
+                            setState(() {
+                              nameController.text = name;
+                              phoneController.text = phone;
+                              whatsAppController.text = phone;
+                              selectedPhotoPath = photoPath;
+                            });
+                          });
+                        },
+                        icon: const Icon(Icons.import_contacts_rounded, color: Colors.white, size: 18),
+                        label: const Text('Import From Contacts', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.darkPrimary,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (selectedPhotoPath != null) ...[
+                  CircleAvatar(
+                    radius: 36,
+                    backgroundImage: FileImage(File(selectedPhotoPath!)),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 TextField(
                   controller: nameController,
                   style: const TextStyle(color: Colors.white),
                   decoration: const InputDecoration(labelText: 'Name', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: phoneController,
+                  keyboardType: TextInputType.phone,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'Phone', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: whatsAppController,
+                  keyboardType: TextInputType.phone,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'WhatsApp Number', labelStyle: TextStyle(color: AppColors.grey500)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: upiIdController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: const InputDecoration(labelText: 'UPI ID (Optional)', labelStyle: TextStyle(color: AppColors.grey500)),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -430,6 +508,9 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
             ElevatedButton(
               onPressed: () async {
                 final name = nameController.text.trim();
+                final phone = phoneController.text.trim();
+                final whatsApp = whatsAppController.text.trim();
+                final upiId = upiIdController.text.trim();
                 final amount = double.tryParse(amountController.text.trim()) ?? 0.0;
                 final notes = notesController.text.trim();
                 if (name.isNotEmpty) {
@@ -443,10 +524,34 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                     selectedTime.minute,
                   );
                   if (isLending) {
-                    final person = await notifier.addPerson(name, null, notes.isNotEmpty ? notes : null, 'receivable');
+                    final person = await notifier.addPerson(
+                      name,
+                      phone.isNotEmpty ? phone : null,
+                      notes.isNotEmpty ? notes : null,
+                      'receivable',
+                      whatsApp.isNotEmpty ? whatsApp : null,
+                      txDateTime,
+                      null,
+                      upiId.isNotEmpty ? upiId : null,
+                      null,
+                      null,
+                      selectedPhotoPath,
+                    );
                     await notifier.addLendTransaction(person.id, finalAccountId, amount, notes.isNotEmpty ? notes : 'Initial lend', txDateTime);
                   } else {
-                    final person = await notifier.addPerson(name, null, notes.isNotEmpty ? notes : null, selectedType);
+                    final person = await notifier.addPerson(
+                      name,
+                      phone.isNotEmpty ? phone : null,
+                      notes.isNotEmpty ? notes : null,
+                      selectedType,
+                      whatsApp.isNotEmpty ? whatsApp : null,
+                      txDateTime,
+                      null,
+                      upiId.isNotEmpty ? upiId : null,
+                      null,
+                      null,
+                      selectedPhotoPath,
+                    );
                     await notifier.addBorrowTransaction(person.id, finalAccountId, amount, notes.isNotEmpty ? notes : 'Initial borrow', txDateTime);
                   }
                   if (context.mounted) {
@@ -2042,7 +2147,12 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                 children: [
                   CircleAvatar(
                     backgroundColor: AppColors.darkSuccess.withOpacity(0.12),
-                    child: const Icon(Icons.people_alt_outlined, color: AppColors.darkSuccess),
+                    backgroundImage: person.photoPath != null && File(person.photoPath!).existsSync()
+                        ? FileImage(File(person.photoPath!))
+                        : null,
+                    child: person.photoPath == null || !File(person.photoPath!).existsSync()
+                        ? const Icon(Icons.people_alt_outlined, color: AppColors.darkSuccess)
+                        : null,
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -2934,5 +3044,153 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
       default:
         return Icons.account_balance_wallet;
     }
+  }
+}
+
+class _ContactPickerModal extends StatefulWidget {
+  final Function(String name, String phone, String? photoPath) onSelected;
+
+  const _ContactPickerModal({required this.onSelected});
+
+  @override
+  State<_ContactPickerModal> createState() => _ContactPickerModalState();
+}
+
+class _ContactPickerModalState extends State<_ContactPickerModal> {
+  List<Contact> _contacts = [];
+  List<Contact> _filteredContacts = [];
+  bool _isLoading = true;
+  final _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadContacts();
+  }
+
+  Future<void> _loadContacts() async {
+    try {
+      final contacts = await FlutterContacts.getContacts(withProperties: true, withPhoto: true);
+      if (mounted) {
+        setState(() {
+          _contacts = contacts;
+          _filteredContacts = contacts;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load contacts: $e')),
+        );
+      }
+    }
+  }
+
+  void _filterContacts(String query) {
+    setState(() {
+      _filteredContacts = _contacts.where((c) {
+        final name = c.displayName.toLowerCase();
+        final phone = c.phones.isNotEmpty ? c.phones.first.number.replaceAll(RegExp(r'\D'), '') : '';
+        return name.contains(query.toLowerCase()) || phone.contains(query);
+      }).toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.75,
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Select Contact',
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _searchController,
+            onChanged: _filterContacts,
+            style: TextStyle(color: isDark ? Colors.white : Colors.black),
+            decoration: InputDecoration(
+              hintText: 'Search contacts...',
+              hintStyle: const TextStyle(color: AppColors.grey500),
+              prefixIcon: const Icon(Icons.search, color: AppColors.grey500),
+              filled: true,
+              fillColor: isDark ? AppColors.layer2 : Colors.grey[200],
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: AppColors.darkPrimary))
+                : _filteredContacts.isEmpty
+                    ? const Center(child: Text('No contacts found', style: TextStyle(color: AppColors.grey500)))
+                    : ListView.builder(
+                        itemCount: _filteredContacts.length,
+                        itemBuilder: (context, index) {
+                          final contact = _filteredContacts[index];
+                          final phone = contact.phones.isNotEmpty ? contact.phones.first.number : 'No Phone';
+                          final thumbnail = contact.thumbnail;
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: AppColors.darkPrimary.withOpacity(0.12),
+                              backgroundImage: thumbnail != null ? MemoryImage(thumbnail) : null,
+                              child: thumbnail == null
+                                  ? Text(
+                                      contact.displayName.isNotEmpty ? contact.displayName[0].toUpperCase() : '?',
+                                      style: const TextStyle(color: AppColors.darkPrimary, fontWeight: FontWeight.bold),
+                                    )
+                                  : null,
+                            ),
+                            title: Text(
+                              contact.displayName,
+                              style: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: Text(phone, style: const TextStyle(color: AppColors.grey500)),
+                            onTap: () async {
+                              String? photoPath;
+                              final fullContact = await FlutterContacts.getContact(contact.id);
+                              if (fullContact != null && (fullContact.photo != null || fullContact.thumbnail != null)) {
+                                final bytes = fullContact.photo ?? fullContact.thumbnail;
+                                if (bytes != null) {
+                                  final docDir = await getApplicationDocumentsDirectory();
+                                  final file = File('${docDir.path}/contact_${fullContact.id}_${DateTime.now().millisecondsSinceEpoch}.png');
+                                  await file.writeAsBytes(bytes);
+                                  photoPath = file.path;
+                                }
+                              }
+                              widget.onSelected(contact.displayName, phone, photoPath);
+                              Navigator.pop(context);
+                            },
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
+    );
   }
 }

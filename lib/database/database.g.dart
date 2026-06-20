@@ -861,6 +861,12 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PeopleData> {
   late final GeneratedColumn<String> accountHolderName =
       GeneratedColumn<String>('account_holder_name', aliasedName, true,
           type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _photoPathMeta =
+      const VerificationMeta('photoPath');
+  @override
+  late final GeneratedColumn<String> photoPath = GeneratedColumn<String>(
+      'photo_path', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -881,7 +887,8 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PeopleData> {
         borrowDate,
         upiId,
         bankName,
-        accountHolderName
+        accountHolderName,
+        photoPath
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -986,6 +993,10 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PeopleData> {
           accountHolderName.isAcceptableOrUnknown(
               data['account_holder_name']!, _accountHolderNameMeta));
     }
+    if (data.containsKey('photo_path')) {
+      context.handle(_photoPathMeta,
+          photoPath.isAcceptableOrUnknown(data['photo_path']!, _photoPathMeta));
+    }
     return context;
   }
 
@@ -1033,6 +1044,8 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PeopleData> {
           .read(DriftSqlType.string, data['${effectivePrefix}bank_name']),
       accountHolderName: attachedDatabase.typeMapping.read(
           DriftSqlType.string, data['${effectivePrefix}account_holder_name']),
+      photoPath: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}photo_path']),
     );
   }
 
@@ -1062,6 +1075,7 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
   final String? upiId;
   final String? bankName;
   final String? accountHolderName;
+  final String? photoPath;
   const PeopleData(
       {required this.id,
       required this.name,
@@ -1081,7 +1095,8 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       this.borrowDate,
       this.upiId,
       this.bankName,
-      this.accountHolderName});
+      this.accountHolderName,
+      this.photoPath});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1128,6 +1143,9 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
     if (!nullToAbsent || accountHolderName != null) {
       map['account_holder_name'] = Variable<String>(accountHolderName);
     }
+    if (!nullToAbsent || photoPath != null) {
+      map['photo_path'] = Variable<String>(photoPath);
+    }
     return map;
   }
 
@@ -1173,6 +1191,9 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       accountHolderName: accountHolderName == null && nullToAbsent
           ? const Value.absent()
           : Value(accountHolderName),
+      photoPath: photoPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(photoPath),
     );
   }
 
@@ -1200,6 +1221,7 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       bankName: serializer.fromJson<String?>(json['bankName']),
       accountHolderName:
           serializer.fromJson<String?>(json['accountHolderName']),
+      photoPath: serializer.fromJson<String?>(json['photoPath']),
     );
   }
   @override
@@ -1225,6 +1247,7 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       'upiId': serializer.toJson<String?>(upiId),
       'bankName': serializer.toJson<String?>(bankName),
       'accountHolderName': serializer.toJson<String?>(accountHolderName),
+      'photoPath': serializer.toJson<String?>(photoPath),
     };
   }
 
@@ -1247,7 +1270,8 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
           Value<DateTime?> borrowDate = const Value.absent(),
           Value<String?> upiId = const Value.absent(),
           Value<String?> bankName = const Value.absent(),
-          Value<String?> accountHolderName = const Value.absent()}) =>
+          Value<String?> accountHolderName = const Value.absent(),
+          Value<String?> photoPath = const Value.absent()}) =>
       PeopleData(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -1271,6 +1295,7 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
         accountHolderName: accountHolderName.present
             ? accountHolderName.value
             : this.accountHolderName,
+        photoPath: photoPath.present ? photoPath.value : this.photoPath,
       );
   PeopleData copyWithCompanion(PeopleCompanion data) {
     return PeopleData(
@@ -1300,6 +1325,7 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       accountHolderName: data.accountHolderName.present
           ? data.accountHolderName.value
           : this.accountHolderName,
+      photoPath: data.photoPath.present ? data.photoPath.value : this.photoPath,
     );
   }
 
@@ -1324,7 +1350,8 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
           ..write('borrowDate: $borrowDate, ')
           ..write('upiId: $upiId, ')
           ..write('bankName: $bankName, ')
-          ..write('accountHolderName: $accountHolderName')
+          ..write('accountHolderName: $accountHolderName, ')
+          ..write('photoPath: $photoPath')
           ..write(')'))
         .toString();
   }
@@ -1349,7 +1376,8 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       borrowDate,
       upiId,
       bankName,
-      accountHolderName);
+      accountHolderName,
+      photoPath);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1372,7 +1400,8 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
           other.borrowDate == this.borrowDate &&
           other.upiId == this.upiId &&
           other.bankName == this.bankName &&
-          other.accountHolderName == this.accountHolderName);
+          other.accountHolderName == this.accountHolderName &&
+          other.photoPath == this.photoPath);
 }
 
 class PeopleCompanion extends UpdateCompanion<PeopleData> {
@@ -1395,6 +1424,7 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
   final Value<String?> upiId;
   final Value<String?> bankName;
   final Value<String?> accountHolderName;
+  final Value<String?> photoPath;
   final Value<int> rowid;
   const PeopleCompanion({
     this.id = const Value.absent(),
@@ -1416,6 +1446,7 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
     this.upiId = const Value.absent(),
     this.bankName = const Value.absent(),
     this.accountHolderName = const Value.absent(),
+    this.photoPath = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PeopleCompanion.insert({
@@ -1438,6 +1469,7 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
     this.upiId = const Value.absent(),
     this.bankName = const Value.absent(),
     this.accountHolderName = const Value.absent(),
+    this.photoPath = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -1463,6 +1495,7 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
     Expression<String>? upiId,
     Expression<String>? bankName,
     Expression<String>? accountHolderName,
+    Expression<String>? photoPath,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1485,6 +1518,7 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
       if (upiId != null) 'upi_id': upiId,
       if (bankName != null) 'bank_name': bankName,
       if (accountHolderName != null) 'account_holder_name': accountHolderName,
+      if (photoPath != null) 'photo_path': photoPath,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1509,6 +1543,7 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
       Value<String?>? upiId,
       Value<String?>? bankName,
       Value<String?>? accountHolderName,
+      Value<String?>? photoPath,
       Value<int>? rowid}) {
     return PeopleCompanion(
       id: id ?? this.id,
@@ -1530,6 +1565,7 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
       upiId: upiId ?? this.upiId,
       bankName: bankName ?? this.bankName,
       accountHolderName: accountHolderName ?? this.accountHolderName,
+      photoPath: photoPath ?? this.photoPath,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1594,6 +1630,9 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
     if (accountHolderName.present) {
       map['account_holder_name'] = Variable<String>(accountHolderName.value);
     }
+    if (photoPath.present) {
+      map['photo_path'] = Variable<String>(photoPath.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1622,6 +1661,7 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
           ..write('upiId: $upiId, ')
           ..write('bankName: $bankName, ')
           ..write('accountHolderName: $accountHolderName, ')
+          ..write('photoPath: $photoPath, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -17395,6 +17435,7 @@ typedef $$PeopleTableCreateCompanionBuilder = PeopleCompanion Function({
   Value<String?> upiId,
   Value<String?> bankName,
   Value<String?> accountHolderName,
+  Value<String?> photoPath,
   Value<int> rowid,
 });
 typedef $$PeopleTableUpdateCompanionBuilder = PeopleCompanion Function({
@@ -17417,6 +17458,7 @@ typedef $$PeopleTableUpdateCompanionBuilder = PeopleCompanion Function({
   Value<String?> upiId,
   Value<String?> bankName,
   Value<String?> accountHolderName,
+  Value<String?> photoPath,
   Value<int> rowid,
 });
 
@@ -17510,6 +17552,9 @@ class $$PeopleTableFilterComposer
       column: $table.accountHolderName,
       builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<String> get photoPath => $composableBuilder(
+      column: $table.photoPath, builder: (column) => ColumnFilters(column));
+
   Expression<bool> personBalanceCachesRefs(
       Expression<bool> Function($$PersonBalanceCachesTableFilterComposer f) f) {
     final $$PersonBalanceCachesTableFilterComposer composer = $composerBuilder(
@@ -17599,6 +17644,9 @@ class $$PeopleTableOrderingComposer
   ColumnOrderings<String> get accountHolderName => $composableBuilder(
       column: $table.accountHolderName,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get photoPath => $composableBuilder(
+      column: $table.photoPath, builder: (column) => ColumnOrderings(column));
 }
 
 class $$PeopleTableAnnotationComposer
@@ -17667,6 +17715,9 @@ class $$PeopleTableAnnotationComposer
   GeneratedColumn<String> get accountHolderName => $composableBuilder(
       column: $table.accountHolderName, builder: (column) => column);
 
+  GeneratedColumn<String> get photoPath =>
+      $composableBuilder(column: $table.photoPath, builder: (column) => column);
+
   Expression<T> personBalanceCachesRefs<T extends Object>(
       Expression<T> Function($$PersonBalanceCachesTableAnnotationComposer a)
           f) {
@@ -17733,6 +17784,7 @@ class $$PeopleTableTableManager extends RootTableManager<
             Value<String?> upiId = const Value.absent(),
             Value<String?> bankName = const Value.absent(),
             Value<String?> accountHolderName = const Value.absent(),
+            Value<String?> photoPath = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               PeopleCompanion(
@@ -17755,6 +17807,7 @@ class $$PeopleTableTableManager extends RootTableManager<
             upiId: upiId,
             bankName: bankName,
             accountHolderName: accountHolderName,
+            photoPath: photoPath,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -17777,6 +17830,7 @@ class $$PeopleTableTableManager extends RootTableManager<
             Value<String?> upiId = const Value.absent(),
             Value<String?> bankName = const Value.absent(),
             Value<String?> accountHolderName = const Value.absent(),
+            Value<String?> photoPath = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               PeopleCompanion.insert(
@@ -17799,6 +17853,7 @@ class $$PeopleTableTableManager extends RootTableManager<
             upiId: upiId,
             bankName: bankName,
             accountHolderName: accountHolderName,
+            photoPath: photoPath,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
