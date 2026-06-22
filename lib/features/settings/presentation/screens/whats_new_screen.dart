@@ -1,45 +1,71 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_version.dart';
 import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/widgets/tactile_button.dart';
+import '../../../../core/providers/app_providers.dart';
+import '../../../../database/database.dart';
 
-class WhatsNewScreen extends StatelessWidget {
+class WhatsNewScreen extends ConsumerStatefulWidget {
   const WhatsNewScreen({super.key});
+
+  @override
+  ConsumerState<WhatsNewScreen> createState() => _WhatsNewScreenState();
+}
+
+class _WhatsNewScreenState extends ConsumerState<WhatsNewScreen> {
+  final List<Map<String, String>> features = [
+    {
+      'title': 'Premium Update Ecosystem',
+      'desc': 'Seamlessly check for, download, and review minor, optional, and security updates directly within Worth, styled with luxury dark-mode aesthetics.'
+    },
+    {
+      'title': 'Production Image Rendering Engine',
+      'desc': 'Generates and saves professional payment reminders in high-resolution aspect ratios (1080x1350, 1080x1920, 1200x628) using on-device RepaintBoundary rendering.'
+    },
+    {
+      'title': 'Embedded Scan-to-Pay QR Codes',
+      'desc': 'Dynamically generates and embeds UPI scan-to-pay QR codes directly in your generated reminder image with "Scan & Pay" details.'
+    },
+    {
+      'title': 'UPI Options & App Chooser Panel',
+      'desc': 'Quick options to copy UPI ID/payment links, share QR codes, or instantly launch Google Pay, PhonePe, Paytm, or BHIM directly from the receivable screen.'
+    },
+    {
+      'title': 'Smart Contact Picker Import',
+      'desc': 'Search and select contacts using a search sheet to automatically pre-fill names, phone numbers, and WhatsApp IDs for new receivables.'
+    },
+    {
+      'title': 'Debtor Profile Avatars',
+      'desc': 'Synchronize contact photos to local storage and display debtor avatars on dashboard cards, ledgers, and transaction timeline sheets.'
+    },
+  ];
+
+  Future<void> _markAsSeen() async {
+    try {
+      final db = ref.read(realDatabaseProvider);
+      await db.into(db.settings).insertOnConflictUpdate(
+        Setting(
+          key: 'last_displayed_changelog_version',
+          value: AppVersion.version,
+          updatedAt: DateTime.now(),
+        ),
+      );
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
     const goldAccent = Color(0xFFD4AF37);
 
-    final List<Map<String, String>> features = [
-      {
-        'title': 'Production Image Rendering Engine',
-        'desc': 'Generates and saves professional payment reminders in high-resolution aspect ratios (1080x1350, 1080x1920, 1200x628) using on-device RepaintBoundary rendering.'
-      },
-      {
-        'title': 'Embedded Scan-to-Pay QR Codes',
-        'desc': 'Dynamically generates and embeds UPI scan-to-pay QR codes directly in your generated reminder image with "Scan & Pay" details.'
-      },
-      {
-        'title': 'UPI Options & App Chooser Panel',
-        'desc': 'Quick options to copy UPI ID/payment links, share QR codes, or instantly launch Google Pay, PhonePe, Paytm, or BHIM directly from the receivable screen.'
-      },
-      {
-        'title': 'Smart Contact Picker Import',
-        'desc': 'Search and select contacts using a search sheet to automatically pre-fill names, phone numbers, and WhatsApp IDs for new receivables.'
-      },
-      {
-        'title': 'Debtor Profile Avatars',
-        'desc': 'Synchronize contact photos to local storage and display debtor avatars on dashboard cards, ledgers, and transaction timeline sheets.'
-      },
-    ];
-
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
       appBar: AppBar(
         title: Text(
-          "What's New in v1.10.0",
+          "What's New",
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -49,7 +75,12 @@ class WhatsNewScreen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
-          onPressed: () => context.pop(),
+          onPressed: () async {
+            await _markAsSeen();
+            if (context.mounted) {
+              context.pop();
+            }
+          },
         ),
       ),
       body: SafeArea(
@@ -57,6 +88,7 @@ class WhatsNewScreen extends StatelessWidget {
           children: [
             Expanded(
               child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -72,11 +104,11 @@ class WhatsNewScreen extends StatelessWidget {
                               color: goldAccent.withOpacity(0.1),
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(Icons.stars_rounded, color: goldAccent, size: 40),
+                            child: const Icon(Icons.stars_rounded, color: goldAccent, size: 40),
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'Worth v1.10.0',
+                            'Worth v${AppVersion.version}',
                             style: GoogleFonts.outfit(
                               fontSize: 26,
                               fontWeight: FontWeight.bold,
@@ -86,7 +118,7 @@ class WhatsNewScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Smart UPI QR & Premium Image Recovery',
+                            'Seamless Update Systems & Ledger Safeguards',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.inter(
                               fontSize: 14,
@@ -97,7 +129,7 @@ class WhatsNewScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'A major update introducing premium reminders image generation, embedded payment QR codes, contact picker integration, and a comprehensive UPI payment panel.',
+                            'Introducing the premium in-app Update Center, automatic update checking, and warning alerts for backup sync, along with high-res receivable templates and contact picker features.',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.inter(
                               fontSize: 13,
@@ -114,7 +146,7 @@ class WhatsNewScreen extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(left: 4.0, bottom: 12),
                       child: Text(
-                        '10 NEW FEATURES & CAPABILITIES',
+                        'NEW FEATURES & CAPABILITIES',
                         style: GoogleFonts.inter(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
@@ -206,7 +238,12 @@ class WhatsNewScreen extends StatelessWidget {
                       color: AppColors.layer2,
                       border: const BorderSide(color: AppColors.glassBorder),
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      onTap: () => context.pop(),
+                      onTap: () async {
+                        await _markAsSeen();
+                        if (context.mounted) {
+                          context.pop();
+                        }
+                      },
                       child: Text(
                         'Dismiss',
                         textAlign: TextAlign.center,
@@ -223,15 +260,17 @@ class WhatsNewScreen extends StatelessWidget {
                     child: TactileButton(
                       color: AppColors.darkPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      onTap: () {
-                        context.pop(); // Close WhatsNew
-                        context.push('/recovery/dashboard'); // Go to Recovery Dashboard
+                      onTap: () async {
+                        await _markAsSeen();
+                        if (context.mounted) {
+                          context.pop(); // Close WhatsNew
+                        }
                       },
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            'Open Dashboard',
+                            'Continue',
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,

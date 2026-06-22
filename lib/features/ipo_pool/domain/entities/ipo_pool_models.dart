@@ -336,6 +336,10 @@ class IpoPool {
   final String? fundingLiabilityId;
   final String? fundingDetails;
 
+  final DateTime? openDate;
+  final DateTime? closeDate;
+  final DateTime? listingDate;
+
   IpoPool({
     required this.id,
     required this.name,
@@ -359,6 +363,9 @@ class IpoPool {
     this.fundingSource,
     this.fundingLiabilityId,
     this.fundingDetails,
+    this.openDate,
+    this.closeDate,
+    this.listingDate,
   });
 
   // Verification Helpers
@@ -496,6 +503,9 @@ class IpoPool {
     String? fundingSource,
     String? fundingLiabilityId,
     String? fundingDetails,
+    DateTime? Function()? openDate,
+    DateTime? Function()? closeDate,
+    DateTime? Function()? listingDate,
   }) {
     return IpoPool(
       id: id ?? this.id,
@@ -520,6 +530,9 @@ class IpoPool {
       fundingSource: fundingSource ?? this.fundingSource,
       fundingLiabilityId: fundingLiabilityId ?? this.fundingLiabilityId,
       fundingDetails: fundingDetails ?? this.fundingDetails,
+      openDate: openDate != null ? openDate() : this.openDate,
+      closeDate: closeDate != null ? closeDate() : this.closeDate,
+      listingDate: listingDate != null ? listingDate() : this.listingDate,
     );
   }
 
@@ -547,6 +560,9 @@ class IpoPool {
       'fundingSource': fundingSource,
       'fundingLiabilityId': fundingLiabilityId,
       'fundingDetails': fundingDetails,
+      'openDate': openDate?.toIso8601String(),
+      'closeDate': closeDate?.toIso8601String(),
+      'listingDate': listingDate?.toIso8601String(),
     };
   }
 
@@ -592,6 +608,9 @@ class IpoPool {
       fundingSource: json['fundingSource'] as String?,
       fundingLiabilityId: json['fundingLiabilityId'] as String?,
       fundingDetails: json['fundingDetails'] as String?,
+      openDate: json['openDate'] != null ? DateTime.parse(json['openDate'] as String) : null,
+      closeDate: json['closeDate'] != null ? DateTime.parse(json['closeDate'] as String) : null,
+      listingDate: json['listingDate'] != null ? DateTime.parse(json['listingDate'] as String) : null,
     );
   }
 }

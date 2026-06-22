@@ -32,53 +32,68 @@ class _WorthBackgroundState extends State<WorthBackground> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        // Update particles position on animation tick
-        for (var p in _particles) {
-          p.update();
-        }
+    return Stack(
+      children: [
+        // Deep space black base
+        Positioned.fill(
+          child: Container(color: AppColors.darkBackground),
+        ),
 
-        return Stack(
-          children: [
-            // Deep space black base
-            Positioned.fill(
-              child: Container(color: AppColors.darkBackground),
+        // Dynamic background elements with RepaintBoundary (isolated animation layer)
+        Positioned.fill(
+          child: RepaintBoundary(
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, _) {
+                // Update particles position on animation tick
+                for (var p in _particles) {
+                  p.update();
+                }
+
+                return Stack(
+                  children: [
+                    // Dynamic Mesh Gradients (Blobs moving slowly)
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: MeshGradientPainter(
+                          progress: _controller.value,
+                          primaryColor: AppColors.darkPrimary,
+                          glowColor: AppColors.glow,
+                        ),
+                      ),
+                    ),
+
+                    // Floating Star Particles (Tactile depth)
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: ParticlesPainter(particles: _particles),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
+          ),
+        ),
 
-            // Dynamic Mesh Gradients (Blobs moving slowly)
-            Positioned.fill(
+        // Frost glass noise texture overlay
+        Positioned.fill(
+          child: IgnorePointer(
+            child: RepaintBoundary(
               child: CustomPaint(
-                painter: MeshGradientPainter(
-                  progress: _controller.value,
-                  primaryColor: AppColors.darkPrimary,
-                  glowColor: AppColors.glow,
-                ),
+                painter: FrostNoisePainter(),
               ),
             ),
+          ),
+        ),
 
-            // Floating Star Particles (Tactile depth)
-            Positioned.fill(
-              child: CustomPaint(
-                painter: ParticlesPainter(particles: _particles),
-              ),
-            ),
-
-            // Frost glass noise texture overlay
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(
-                  painter: FrostNoisePainter(),
-                ),
-              ),
-            ),
-
-            // Main Content child
-            Positioned.fill(child: widget.child),
-          ],
-        );
-      },
+        // Main Content child with separate RepaintBoundary to prevent content repainting on background ticks
+        Positioned.fill(
+          child: RepaintBoundary(
+            child: widget.child,
+          ),
+        ),
+      ],
     );
   }
 }

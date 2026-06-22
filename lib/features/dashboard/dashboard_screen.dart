@@ -10,6 +10,11 @@ import 'package:collection/collection.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/asset_paths.dart';
 import '../../core/widgets/glass_card.dart';
+import '../../core/constants/app_version.dart';
+import '../../core/services/update_service.dart';
+import '../../core/widgets/update_prompt_sheet.dart';
+import '../../core/widgets/shimmer_loading.dart';
+import '../../core/widgets/animated_number_text.dart';
 import '../../core/widgets/premium_chart.dart';
 import '../../core/providers/mock_database.dart';
 import '../../core/providers/dependency_provider.dart';
@@ -24,11 +29,14 @@ import '../expected_income/domain/entities/expected_income.dart';
 import '../transactions/presentation/widgets/add_transaction_sheet.dart';
 import '../checkins/presentation/widgets/check_in_dashboard_widget.dart';
 import '../spending/presentation/widgets/spending_dashboard_widget.dart';
+import '../education_loan/presentation/widgets/edu_loan_dashboard_widget.dart';
+import 'presentation/widgets/calendar_widget.dart';
 import '../../core/mock_data/mock_constants.dart';
 import '../achievements/presentation/providers/achievements_provider.dart';
 import '../achievements/domain/entities/milestone.dart';
 import '../achievements/domain/entities/achievement.dart';
 import '../sync/presentation/widgets/sync_status_widget.dart';
+import 'presentation/widgets/update_banner_widget.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -48,7 +56,30 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       if (!ref.read(mockModeProvider)) {
         ref.read(realReportServiceProvider).generateMissingSnapshots();
       }
+      _checkWhatsNewChangelog();
     });
+  }
+
+  Future<void> _checkWhatsNewChangelog() async {
+    try {
+      final db = ref.read(realDatabaseProvider);
+      final row = await (db.select(db.settings)..where((tbl) => tbl.key.equals('last_displayed_changelog_version'))).getSingleOrNull();
+      final lastSeen = row?.value;
+      if (lastSeen == null) {
+        // Fresh install: save version, don't show
+        await db.into(db.settings).insertOnConflictUpdate(
+          Setting(
+            key: 'last_displayed_changelog_version',
+            value: AppVersion.version,
+            updatedAt: DateTime.now(),
+          ),
+        );
+      } else if (lastSeen != AppVersion.version) {
+        if (mounted) {
+          context.push('/settings/whats_new');
+        }
+      }
+    } catch (_) {}
   }
 
   void _openAddTransactionSheet(BuildContext context) {
@@ -70,6 +101,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     debugPrint('[ROUTING] Dashboard route reached');
+    ref.listen<UpdateState>(updateServiceProvider, (previous, next) {
+      if (next.status == UpdateStatus.optionalAvailable && next.updateInfo != null) {
+        UpdatePromptSheet.show(context, next.updateInfo!, next.hasPendingSync);
+      }
+    });
+
     final netWorthAsync = ref.watch(netWorthProvider);
     final activeAccountsAsync = ref.watch(activeAccountsProvider);
     final activePeopleAsync = ref.watch(activePeopleProvider);
@@ -106,6 +143,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           
           SafeArea(
             child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
               padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -184,6 +222,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
+                  const UpdateBannerWidget(),
 
                   // Cloud Sync Status Indicator
                   const Align(
@@ -198,10 +237,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       final snapshots = snapshotsAsync.value ?? [];
                       return _buildNetWorthCard(data, currency, snapshots);
                     },
-                    loading: () => const GlassCard(
-                      isPrimary: true,
-                      child: SizedBox(height: 140, child: Center(child: CircularProgressIndicator())),
-                    ),
+                    loading: () => const CardShimmer(height: 140, isPrimary: true),
                     error: (e, s) => GlassCard(
                       isPrimary: true,
                       child: Padding(padding: const EdgeInsets.all(16), child: Text('Error calculating Net Worth: $e')),
@@ -212,7 +248,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   // 2. Summary Grid (Assets, Liabilities, Investments, Expected Income)
                   netWorthAsync.when(
                     data: (data) => _buildSummaryGrid(data, currency, dbState),
-                    loading: () => const SizedBox.shrink(),
+                    loading: () => GridView.count(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 1.35,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: const [
+                        CardShimmer(height: 100),
+                        CardShimmer(height: 100),
+                        CardShimmer(height: 100),
+                        CardShimmer(height: 100),
+                      ],
+                    ),
                     error: (e, s) => const SizedBox.shrink(),
                   ),
                   const SizedBox(height: 24),
@@ -220,7 +269,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   // Funding & Debt Analysis Card
                   netWorthAsync.when(
                     data: (data) => _buildFundingDebtAnalysisCard(data, currency),
-                    loading: () => const SizedBox.shrink(),
+                    loading: () => const CardShimmer(height: 240),
                     error: (e, s) => const SizedBox.shrink(),
                   ),
                   const SizedBox(height: 24),
@@ -228,7 +277,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   // 3. Trend Chart
                   snapshotsAsync.when(
                     data: (snapshots) => _buildTrendChartCard(snapshots, currency),
-                    loading: () => const SizedBox(height: 240, child: Center(child: CircularProgressIndicator())),
+                    loading: () => const ChartShimmer(height: 240),
                     error: (e, s) => const SizedBox.shrink(),
                   ),
                   const SizedBox(height: 24),
@@ -237,6 +286,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   const SizedBox(height: 24),
 
                   const SpendingDashboardWidget(),
+                  const SizedBox(height: 24),
+
+                  const CalendarWidget(),
+                  const SizedBox(height: 24),
+
+                  const EduLoanDashboardWidget(),
                   const SizedBox(height: 24),
 
                   _buildMtfAndSipWidgets(dbState),
@@ -250,7 +305,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       data.netWorth,
                       currency,
                     ),
-                    loading: () => const SizedBox.shrink(),
+                    loading: () => const CardShimmer(height: 100),
                     error: (e, s) => const SizedBox.shrink(),
                   ),
                   const SizedBox(height: 24),
@@ -258,7 +313,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   // 4. Recent Activity Feed
                   transactionsAsync.when(
                     data: (transactions) => _buildRecentActivityCard(transactions, currency),
-                    loading: () => const SizedBox.shrink(),
+                    loading: () => const GlassCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ShimmerLoading(width: 140, height: 18, borderRadius: 4),
+                          SizedBox(height: 16),
+                          ListShimmer(count: 4),
+                        ],
+                      ),
+                    ),
                     error: (e, s) => const SizedBox.shrink(),
                   ),
                   const SizedBox(height: 90), // Spacing for custom FAB
@@ -1674,75 +1738,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 }
 
-// Roll-up animated text for currency values
-class AnimatedNumberText extends StatefulWidget {
-  final double value;
-  final String currency;
-  final TextStyle style;
-  final Duration duration;
-
-  const AnimatedNumberText({
-    required this.value,
-    required this.currency,
-    required this.style,
-    this.duration = const Duration(milliseconds: 1000),
-    super.key,
-  });
-
-  @override
-  State<AnimatedNumberText> createState() => _AnimatedNumberTextState();
-}
-
-class _AnimatedNumberTextState extends State<AnimatedNumberText> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-  double _oldValue = 0.0;
-
-  @override
-  void initState() {
-    super.initState();
-    _oldValue = widget.value;
-    _controller = AnimationController(vsync: this, duration: widget.duration);
-    _animation = Tween<double>(begin: 0.0, end: widget.value).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutExpo),
-    );
-    _controller.forward();
-  }
-
-  @override
-  void didUpdateWidget(covariant AnimatedNumberText oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.value != widget.value) {
-      _oldValue = oldWidget.value;
-      _animation = Tween<double>(begin: _oldValue, end: widget.value).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeOutExpo),
-      );
-      _controller.reset();
-      _controller.forward();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        final val = _animation.value;
-        final formattedVal = NumberFormat.currency(symbol: widget.currency, decimalDigits: 0).format(val);
-        return Text(
-          formattedVal,
-          style: widget.style,
-        );
-      },
-    );
-  }
-}
 
 // Tactile press-scaling Floating Action Button
 class TactileFAB extends StatefulWidget {

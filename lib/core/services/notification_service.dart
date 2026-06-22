@@ -5,6 +5,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:collection/collection.dart';
+import '../../features/calendar/domain/services/calendar_notification_engine.dart';
+
 
 class AppNotification {
   final String id;
@@ -288,6 +290,12 @@ class NotificationService {
         type: 'expected_income',
       );
     }
+
+    // 7. Configurable Calendar Reminders (1 Day, 3 Days, 7 Days, On Due Date)
+    await CalendarNotificationEngine.scheduleCalendarReminders(
+      dbState: dbState,
+      notificationService: this,
+    );
   }
 
   DateTime _getNextDayOfWeek(DateTime from, int dayOfWeek) {

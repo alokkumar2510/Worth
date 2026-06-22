@@ -294,6 +294,7 @@ class _IpoDashboardScreenState extends ConsumerState<IpoDashboardScreen> {
                 description: 'Create a new co-investment pool to start tracking contributions and allotments.',
               )
             : ListView(
+                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                 padding: const EdgeInsets.all(16.0),
                 children: [
                   // Aggregated metrics grid

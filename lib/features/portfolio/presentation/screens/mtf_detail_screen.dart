@@ -406,8 +406,8 @@ class _MtfDetailScreenState extends ConsumerState<MtfDetailScreen> {
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: purchaseDate ?? DateTime.now(),
-                      firstDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
                     );
                     if (picked != null) {
                       setDialogState(() {
@@ -442,8 +442,8 @@ class _MtfDetailScreenState extends ConsumerState<MtfDetailScreen> {
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: openingDate,
-                      firstDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
                     );
                     if (picked != null) {
                       setDialogState(() {
@@ -467,8 +467,8 @@ class _MtfDetailScreenState extends ConsumerState<MtfDetailScreen> {
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: interestStartDate,
-                      firstDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
                     );
                     if (picked != null) {
                       setDialogState(() {

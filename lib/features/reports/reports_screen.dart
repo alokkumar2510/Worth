@@ -14,6 +14,7 @@ import '../../core/providers/mock_database.dart';
 import 'presentation/providers/wealth_intelligence_provider.dart';
 import 'presentation/widgets/export_success_sheet.dart';
 import 'presentation/widgets/export_failure_sheet.dart';
+import 'presentation/screens/calendar_report_view.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
@@ -366,7 +367,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       body: Stack(
         children: [
           CustomScrollView(
-            physics: const BouncingScrollPhysics(),
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
             slivers: [
               // Elegant Header
               SliverAppBar(
@@ -422,6 +423,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
                     // SECTION 3: THIS MONTH SUMMARY
                     _buildThisMonthSummary(data, format),
+                    const SizedBox(height: 24),
+
+                    // SECTION 3.5: FINANCIAL CALENDAR FORECAST
+                    const CalendarReportView(),
                     const SizedBox(height: 24),
 
                     // SECTION 5: BIGGEST CHANGES (Logical order before timeline)
@@ -771,7 +776,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           height: 140,
           child: ListView(
             scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
             children: [
               _buildActivityRingCard('New Assets', data.newAssetsAdded, format, const Color(0xFF22C55E), Icons.add_circle_outline),
               _buildActivityRingCard('Liabilities Reduced', data.liabilitiesReduced, format, const Color(0xFFEF4444), Icons.remove_circle_outline),

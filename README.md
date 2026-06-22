@@ -112,7 +112,7 @@ Worth is structured following clean coding patterns and responsive architectures
 ## 📦 Releases
 
 Download the latest production-ready APK directly from our releases:
-* **[Download Worth v1.7.4 APK](https://github.com/alokkumar2510/Worth/releases/download/v1.7.4/app-release.apk)**
+* **[Download Worth v1.11.0 APK](https://github.com/alokkumar2510/Worth/releases/download/v1.11.0/app-release.apk)**
 
 ---
 

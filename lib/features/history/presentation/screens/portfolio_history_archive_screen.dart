@@ -259,6 +259,7 @@ class _PortfolioHistoryArchiveScreenState extends ConsumerState<PortfolioHistory
                   ),
                 )
               : ListView.builder(
+                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                   padding: const EdgeInsets.all(16),
                   itemCount: filteredHistory.length,
                   itemBuilder: (context, index) {
@@ -410,6 +411,7 @@ class _PortfolioHistoryArchiveScreenState extends ConsumerState<PortfolioHistory
     final recon = _reconstructedState;
 
     return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -467,7 +469,7 @@ class _PortfolioHistoryArchiveScreenState extends ConsumerState<PortfolioHistory
                     final selected = await showDatePicker(
                       context: context,
                       initialDate: _timeMachineDate,
-                      firstDate: DateTime(2020),
+                      firstDate: DateTime(2000),
                       lastDate: DateTime.now(),
                       builder: (context, child) {
                         return Theme(
@@ -803,6 +805,7 @@ class _PortfolioHistoryArchiveScreenState extends ConsumerState<PortfolioHistory
     }
 
     return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1033,6 +1036,7 @@ class _PortfolioHistoryArchiveScreenState extends ConsumerState<PortfolioHistory
   // ==========================================
   Widget _buildExportTab(MockDatabaseState dbState) {
     return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.all(20.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

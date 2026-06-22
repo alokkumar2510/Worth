@@ -1,0 +1,24 @@
+{
+  "name": "Worth Personal Wealth OS",
+  "short_name": "Worth",
+  "description": "Know What You're Worth. Premium local-first private wealth operating system.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#050507",
+  "background_color": "#050507",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -268,6 +268,7 @@ class _ContributorProfileScreenState extends ConsumerState<ContributorProfileScr
         : '${_selectedDateRange!.start.day}/${_selectedDateRange!.start.month} - ${_selectedDateRange!.end.day}/${_selectedDateRange!.end.month}';
 
     return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Row(
@@ -280,8 +281,8 @@ class _ContributorProfileScreenState extends ConsumerState<ContributorProfileScr
             onPressed: () async {
               final picked = await showDateRangePicker(
                 context: context,
-                firstDate: DateTime(2020),
-                lastDate: DateTime(2030),
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2100),
                 initialDateRange: _selectedDateRange,
               );
               if (picked != null) {
@@ -370,6 +371,7 @@ class _ContributorProfileScreenState extends ConsumerState<ContributorProfileScr
     int count,
   ) {
     return ListView(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.all(16.0),
       children: [
         // Profile Info Details
@@ -500,6 +502,7 @@ class _ContributorProfileScreenState extends ConsumerState<ContributorProfileScr
     }).reduce(max);
 
     return ListView(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.all(16),
       children: [
         Text(
@@ -616,6 +619,7 @@ class _ContributorProfileScreenState extends ConsumerState<ContributorProfileScr
     }
 
     return ListView.builder(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.all(16),
       itemCount: events.length,
       itemBuilder: (context, idx) {
@@ -690,6 +694,7 @@ class _ContributorProfileScreenState extends ConsumerState<ContributorProfileScr
     final md = _generateMarkdownReport(events, currency);
 
     return ListView(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.all(16),
       children: [
         _buildExportBox('Copy Markdown Report', md, 'Markdown'),
@@ -732,6 +737,7 @@ class _ContributorProfileScreenState extends ConsumerState<ContributorProfileScr
               border: Border.all(color: AppColors.glassBorder),
             ),
             child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
               child: Text(
                 content,
                 style: GoogleFonts.shareTechMono(fontSize: 10, color: const Color(0xFF00FFCC)),

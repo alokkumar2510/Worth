@@ -69,8 +69,8 @@ class _GoalDetailScreenState extends ConsumerState<GoalDetailScreen> {
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: selectedDeadline ?? DateTime.now().add(const Duration(days: 30)),
-                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                      lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
                     );
                     if (picked != null) {
                       setState(() {

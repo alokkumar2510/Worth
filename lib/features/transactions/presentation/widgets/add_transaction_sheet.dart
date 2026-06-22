@@ -471,8 +471,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: _purchaseDate ?? DateTime.now(),
-                      firstDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
                     );
                     if (picked != null) {
                       setState(() {

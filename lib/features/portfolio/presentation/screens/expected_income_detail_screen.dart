@@ -151,8 +151,8 @@ class _ExpectedIncomeDetailScreenState extends ConsumerState<ExpectedIncomeDetai
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: selectedDate ?? DateTime.now(),
-                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                      lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
                     );
                     if (picked != null) {
                       setState(() {

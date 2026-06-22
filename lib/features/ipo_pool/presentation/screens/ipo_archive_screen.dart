@@ -151,6 +151,7 @@ class _IpoArchiveScreenState extends ConsumerState<IpoArchiveScreen> {
       height: 85,
       margin: const EdgeInsets.only(top: 8, bottom: 4),
       child: ListView(
+        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         children: [
@@ -309,6 +310,7 @@ class _IpoArchiveScreenState extends ConsumerState<IpoArchiveScreen> {
           const SizedBox(height: 8),
           // Row 2: Status, Settlement Filters & Sorting
           SingleChildScrollView(
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
@@ -431,6 +433,7 @@ class _IpoArchiveScreenState extends ConsumerState<IpoArchiveScreen> {
   // 1. TIMELINE VIEW
   Widget _buildTimelineView(List<IpoPool> pools, String currency) {
     return ListView.builder(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.only(left: 24, right: 16, top: 12, bottom: 24),
       itemCount: pools.length,
       itemBuilder: (context, index) {
@@ -586,8 +589,10 @@ class _IpoArchiveScreenState extends ConsumerState<IpoArchiveScreen> {
         return Scrollbar(
           thumbVisibility: true,
           child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
             scrollDirection: Axis.horizontal,
             child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
               scrollDirection: Axis.vertical,
               padding: const EdgeInsets.all(16),
               child: GlassCard(
@@ -677,6 +682,7 @@ class _IpoArchiveScreenState extends ConsumerState<IpoArchiveScreen> {
   // 3. CARD VIEW
   Widget _buildCardView(List<IpoPool> pools, String currency) {
     return ListView.builder(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       itemCount: pools.length,
       itemBuilder: (context, index) {

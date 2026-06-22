@@ -558,8 +558,8 @@ class _ReceivableDetailScreenState extends ConsumerState<ReceivableDetailScreen>
                         final date = await showDatePicker(
                           context: context,
                           initialDate: selectedDueDate ?? DateTime.now().add(const Duration(days: 30)),
-                          firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                          lastDate: DateTime.now().add(const Duration(days: 3650)),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
                         );
                         if (date != null) {
                           setStateDialog(() {

@@ -695,8 +695,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                       final picked = await showDatePicker(
                         context: context,
                         initialDate: purchaseDate ?? DateTime.now(),
-                        firstDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
                       );
                       if (picked != null) {
                         setDialogState(() {
@@ -859,8 +859,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         final picked = await showDatePicker(
                           context: context,
                           initialDate: openingDate,
-                          firstDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
                         );
                         if (picked != null) {
                           setDialogState(() {
@@ -883,8 +883,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         final picked = await showDatePicker(
                           context: context,
                           initialDate: interestStartDate,
-                          firstDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
                         );
                         if (picked != null) {
                           setDialogState(() {
@@ -1055,8 +1055,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: expectedDate,
-                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                      lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
                     );
                     if (picked != null) {
                       setState(() => expectedDate = picked);
@@ -1159,7 +1159,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                       context: context,
                       initialDate: DateTime.now().add(const Duration(days: 30)),
                       firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+                      lastDate: DateTime(2100),
                     );
                     if (picked != null) {
                       setState(() {
@@ -1487,8 +1487,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: selectedDate ?? DateTime.now(),
-                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                      lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
                     );
                     if (picked != null) {
                       setState(() {
@@ -1591,8 +1591,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                   final picked = await showDatePicker(
                     context: context,
                     initialDate: selectedDeadline ?? DateTime.now().add(const Duration(days: 30)),
-                    firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                    lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
                   );
                   if (picked != null) {
                     setState(() {
@@ -1660,6 +1660,14 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
             'Portfolio',
             style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 24, color: Colors.white),
           ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.calendar_month, color: Colors.white),
+              onPressed: () => context.go('/portfolio/calendar'),
+              tooltip: 'Financial Calendar',
+            ),
+            const SizedBox(width: 8),
+          ],
           bottom: TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,
@@ -1737,6 +1745,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     }
 
     return ListView.builder(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.all(16.0),
       itemCount: assets.length + 1,
       itemBuilder: (context, index) {
@@ -1816,6 +1825,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     final int itemCount = totalCount == 0 ? 3 : totalCount + 2;
 
     return ListView.builder(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.all(16.0),
       itemCount: itemCount,
       itemBuilder: (context, index) {
@@ -2009,6 +2019,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     }
 
     return ListView.builder(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.all(16.0),
       itemCount: investments.length + 1,
       itemBuilder: (context, index) {
@@ -2107,6 +2118,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     }
 
     return ListView.builder(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.all(16.0),
       itemCount: receivables.length + 1,
       itemBuilder: (context, index) {
@@ -2195,6 +2207,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     }
 
     return ListView.builder(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.all(16.0),
       itemCount: expected.length + 1,
       itemBuilder: (context, index) {
@@ -2286,6 +2299,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     }
 
     return ListView.builder(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.all(16.0),
       itemCount: goals.length + 1,
       itemBuilder: (context, index) {
@@ -2436,6 +2450,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
         t.category == 'MTF Interest').fold<double>(0.0, (sum, t) => sum + t.amount);
 
     return ListView(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.all(16.0),
       children: [
         // Dashboard Card
@@ -2779,8 +2794,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: purchaseDate ?? DateTime.now(),
-                      firstDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
                     );
                     if (picked != null) {
                       setDialogState(() {
@@ -2815,8 +2830,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: openingDate,
-                      firstDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
                     );
                     if (picked != null) {
                       setDialogState(() {
@@ -2840,8 +2855,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: interestStartDate,
-                      firstDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
                     );
                     if (picked != null) {
                       setDialogState(() {
@@ -3149,6 +3164,7 @@ class _ContactPickerModalState extends State<_ContactPickerModal> {
                 : _filteredContacts.isEmpty
                     ? const Center(child: Text('No contacts found', style: TextStyle(color: AppColors.grey500)))
                     : ListView.builder(
+                        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                         itemCount: _filteredContacts.length,
                         itemBuilder: (context, index) {
                           final contact = _filteredContacts[index];

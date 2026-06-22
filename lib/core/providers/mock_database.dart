@@ -23,6 +23,8 @@ import '../../features/ipo_pool/domain/entities/ipo_pool_models.dart';
 import '../../features/investments/domain/entities/sip.dart' as domain;
 import '../utils/sip_calculator.dart';
 import '../calculation/liability_calculation_service.dart';
+import '../../features/calendar/domain/entities/calendar_event.dart';
+
 
 class MockDatabaseState {
   final List<Account> accounts;
@@ -38,6 +40,7 @@ class MockDatabaseState {
   final List<IpoPool> ipoPools;
   final List<MtfPosition> mtfPositions;
   final List<Sip> sips;
+  final List<CalendarEvent> calendarEvents;
   final List<String> categories;
   final List<String> customLabels;
   final List<PortfolioHistory> portfolioHistory;
@@ -69,6 +72,10 @@ class MockDatabaseState {
   final bool notificationPrefCheckIns;
   final bool notificationPrefSip;
   final bool notificationPrefGoals;
+  final bool notificationPrefCalendarOnDue;
+  final bool notificationPrefCalendar1Day;
+  final bool notificationPrefCalendar3Days;
+  final bool notificationPrefCalendar7Days;
   final bool notificationsAsked;
   final DateTime? userCreatedAt;
 
@@ -86,6 +93,7 @@ class MockDatabaseState {
     this.ipoPools = const [],
     this.mtfPositions = const [],
     this.sips = const [],
+    this.calendarEvents = const [],
     this.categories = const [],
     this.customLabels = const [],
     this.portfolioHistory = const [],
@@ -115,6 +123,10 @@ class MockDatabaseState {
     this.notificationPrefCheckIns = false,
     this.notificationPrefSip = false,
     this.notificationPrefGoals = false,
+    this.notificationPrefCalendarOnDue = true,
+    this.notificationPrefCalendar1Day = true,
+    this.notificationPrefCalendar3Days = true,
+    this.notificationPrefCalendar7Days = false,
     this.notificationsAsked = false,
     this.userCreatedAt,
   });
@@ -133,6 +145,7 @@ class MockDatabaseState {
     List<IpoPool>? ipoPools,
     List<MtfPosition>? mtfPositions,
     List<Sip>? sips,
+    List<CalendarEvent>? calendarEvents,
     List<String>? categories,
     List<String>? customLabels,
     List<PortfolioHistory>? portfolioHistory,
@@ -162,6 +175,10 @@ class MockDatabaseState {
     bool? notificationPrefCheckIns,
     bool? notificationPrefSip,
     bool? notificationPrefGoals,
+    bool? notificationPrefCalendarOnDue,
+    bool? notificationPrefCalendar1Day,
+    bool? notificationPrefCalendar3Days,
+    bool? notificationPrefCalendar7Days,
     bool? notificationsAsked,
     DateTime? userCreatedAt,
   }) {
@@ -179,6 +196,7 @@ class MockDatabaseState {
       ipoPools: ipoPools ?? this.ipoPools,
       mtfPositions: mtfPositions ?? this.mtfPositions,
       sips: sips ?? this.sips,
+      calendarEvents: calendarEvents ?? this.calendarEvents,
       categories: categories ?? this.categories,
       customLabels: customLabels ?? this.customLabels,
       portfolioHistory: portfolioHistory ?? this.portfolioHistory,
@@ -208,6 +226,10 @@ class MockDatabaseState {
       notificationPrefCheckIns: notificationPrefCheckIns ?? this.notificationPrefCheckIns,
       notificationPrefSip: notificationPrefSip ?? this.notificationPrefSip,
       notificationPrefGoals: notificationPrefGoals ?? this.notificationPrefGoals,
+      notificationPrefCalendarOnDue: notificationPrefCalendarOnDue ?? this.notificationPrefCalendarOnDue,
+      notificationPrefCalendar1Day: notificationPrefCalendar1Day ?? this.notificationPrefCalendar1Day,
+      notificationPrefCalendar3Days: notificationPrefCalendar3Days ?? this.notificationPrefCalendar3Days,
+      notificationPrefCalendar7Days: notificationPrefCalendar7Days ?? this.notificationPrefCalendar7Days,
       notificationsAsked: notificationsAsked ?? this.notificationsAsked,
       userCreatedAt: userCreatedAt ?? this.userCreatedAt,
     );
@@ -647,6 +669,10 @@ class MockDatabaseState {
       notificationPrefCheckIns: notificationPrefCheckIns,
       notificationPrefSip: notificationPrefSip,
       notificationPrefGoals: notificationPrefGoals,
+      notificationPrefCalendarOnDue: notificationPrefCalendarOnDue,
+      notificationPrefCalendar1Day: notificationPrefCalendar1Day,
+      notificationPrefCalendar3Days: notificationPrefCalendar3Days,
+      notificationPrefCalendar7Days: notificationPrefCalendar7Days,
       notificationsAsked: notificationsAsked,
       userCreatedAt: userCreatedAt,
     );
@@ -883,6 +909,48 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     _queueSync('setting', key, 'upsert');
   }
 
+  Future<String> _getOrCreateDefaultAccountId() async {
+    final targetAccount = state.accounts.firstWhereOrNull((a) => a.id == 'acc_primary_bank_uuid')
+        ?? state.accounts.firstWhereOrNull((a) => a.type != 'credit')
+        ?? state.accounts.firstOrNull;
+
+    if (targetAccount == null) {
+      final newAcc = await addAccount('Primary Bank', 'bank', 'Auto-created primary bank account', 0.0, id: 'acc_primary_bank_uuid');
+      return newAcc.id;
+    } else {
+      return targetAccount.id;
+    }
+  }
+
+  Future<String> _getOrCreateMtfBrokerPersonId(String brokerName) async {
+    final brokerPersonId = 'person_broker_uuid_placeholder';
+    final existingBroker = state.people.firstWhereOrNull((p) => p.id == brokerPersonId);
+    if (existingBroker == null) {
+      final nowUtc = DateTime.now().toUtc();
+      final newPerson = Person(
+        id: brokerPersonId,
+        name: brokerName.isNotEmpty ? '$brokerName Broker' : 'MTF Broker',
+        phone: null,
+        notes: 'Auto-generated for MTF positions',
+        isArchived: 0,
+        createdAt: nowUtc,
+        updatedAt: nowUtc,
+        syncStatus: 'synced',
+        type: 'broker',
+      );
+      final isMock = _ref.read(mockModeProvider);
+      if (!isMock) {
+        final db = _ref.read(realDatabaseProvider);
+        await db.into(db.people).insert(newPerson);
+      }
+      state = state.copyWith(people: [...state.people, newPerson]);
+      if (!isMock) {
+        await loadStateFromDatabase();
+      }
+    }
+    return brokerPersonId;
+  }
+
   Future<void> loadStateFromDatabase() async {
     try {
       final db = _ref.read(realDatabaseProvider);
@@ -942,6 +1010,10 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final notificationPrefCheckIns = settingsMap['notificationPrefCheckIns'] != 'false';
       final notificationPrefSip = settingsMap['notificationPrefSip'] != 'false';
       final notificationPrefGoals = settingsMap['notificationPrefGoals'] != 'false';
+      final notificationPrefCalendarOnDue = settingsMap['notificationPrefCalendarOnDue'] != 'false';
+      final notificationPrefCalendar1Day = settingsMap['notificationPrefCalendar1Day'] != 'false';
+      final notificationPrefCalendar3Days = settingsMap['notificationPrefCalendar3Days'] != 'false';
+      final notificationPrefCalendar7Days = settingsMap['notificationPrefCalendar7Days'] == 'true';
       final notificationsAsked = settingsMap['notificationsAsked'] == 'true';
 
       List<String> categories = const [
@@ -1023,6 +1095,17 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         }
       }
 
+      List<CalendarEvent> calendarEvents = [];
+      final calendarEventsData = settingsMap['calendar_events_data'];
+      if (calendarEventsData != null) {
+        try {
+          final decoded = jsonDecode(calendarEventsData) as List<dynamic>;
+          calendarEvents = decoded.map((item) => CalendarEvent.fromJson(item as Map<String, dynamic>)).toList();
+        } catch (e) {
+          // ignore parsing issues
+        }
+      }
+
       state = MockDatabaseState(
         accounts: accounts,
         people: people,
@@ -1037,6 +1120,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         ipoPools: ipoPools,
         mtfPositions: mtfPositions,
         sips: sips,
+        calendarEvents: calendarEvents,
         categories: categories,
         customLabels: customLabels,
         portfolioHistory: portfolioHistory,
@@ -1066,6 +1150,10 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         notificationPrefCheckIns: notificationPrefCheckIns,
         notificationPrefSip: notificationPrefSip,
         notificationPrefGoals: notificationPrefGoals,
+        notificationPrefCalendarOnDue: notificationPrefCalendarOnDue,
+        notificationPrefCalendar1Day: notificationPrefCalendar1Day,
+        notificationPrefCalendar3Days: notificationPrefCalendar3Days,
+        notificationPrefCalendar7Days: notificationPrefCalendar7Days,
         notificationsAsked: notificationsAsked,
         userCreatedAt: userCreatedAt,
       );
@@ -1188,6 +1276,34 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         final db = _ref.read(realDatabaseProvider);
         db.into(db.settings).insertOnConflictUpdate(Setting(key: 'notificationPrefGoals', value: value ? 'true' : 'false'));
         _syncSetting('notificationPrefGoals');
+      }
+    } else if (preferenceKey == 'calendarOnDue') {
+      state = state.copyWith(notificationPrefCalendarOnDue: value);
+      if (!isMock) {
+        final db = _ref.read(realDatabaseProvider);
+        db.into(db.settings).insertOnConflictUpdate(Setting(key: 'notificationPrefCalendarOnDue', value: value ? 'true' : 'false'));
+        _syncSetting('notificationPrefCalendarOnDue');
+      }
+    } else if (preferenceKey == 'calendar1Day') {
+      state = state.copyWith(notificationPrefCalendar1Day: value);
+      if (!isMock) {
+        final db = _ref.read(realDatabaseProvider);
+        db.into(db.settings).insertOnConflictUpdate(Setting(key: 'notificationPrefCalendar1Day', value: value ? 'true' : 'false'));
+        _syncSetting('notificationPrefCalendar1Day');
+      }
+    } else if (preferenceKey == 'calendar3Days') {
+      state = state.copyWith(notificationPrefCalendar3Days: value);
+      if (!isMock) {
+        final db = _ref.read(realDatabaseProvider);
+        db.into(db.settings).insertOnConflictUpdate(Setting(key: 'notificationPrefCalendar3Days', value: value ? 'true' : 'false'));
+        _syncSetting('notificationPrefCalendar3Days');
+      }
+    } else if (preferenceKey == 'calendar7Days') {
+      state = state.copyWith(notificationPrefCalendar7Days: value);
+      if (!isMock) {
+        final db = _ref.read(realDatabaseProvider);
+        db.into(db.settings).insertOnConflictUpdate(Setting(key: 'notificationPrefCalendar7Days', value: value ? 'true' : 'false'));
+        _syncSetting('notificationPrefCalendar7Days');
       }
     }
   }
@@ -1318,6 +1434,8 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
             fundingDetails: fundingDetails,
           );
         }
+      } else {
+        await loadStateFromDatabase();
       }
     } else {
       state = state.copyWith(
@@ -1370,6 +1488,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         ..where((tbl) => tbl.id.equals(accountId))
         ..write(AccountsCompanion(isArchived: const Value(1), updatedAt: Value(DateTime.now().toUtc()))));
       _queueSync('account', accountId, 'upsert');
+      await loadStateFromDatabase();
     } else {
       state = state.copyWith(
         accounts: state.accounts.map((a) {
@@ -1411,6 +1530,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
           updatedAt: Value(DateTime.now().toUtc()),
         ));
       _queueSync('account', id, 'upsert');
+      await loadStateFromDatabase();
     } else {
       state = state.copyWith(
         accounts: state.accounts.map((a) {
@@ -1560,6 +1680,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final db = _ref.read(realDatabaseProvider);
       await db.into(db.people).insert(newPerson);
       _queueSync('person', id, 'upsert');
+      await loadStateFromDatabase();
     } else {
       state = state.copyWith(people: [...state.people, newPerson]);
     }
@@ -1598,6 +1719,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
           updatedAt: Value(now),
         ));
       _queueSync('person', id, 'upsert');
+      await loadStateFromDatabase();
     } else {
       state = state.copyWith(
         people: state.people.map((p) {
@@ -2200,11 +2322,14 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     String? fundingLiabilityId,
     String? fundingDetails,
   }) async {
+    final resolvedFromAccountId = (fromAccountId == 'acc_primary_bank_uuid')
+        ? await _getOrCreateDefaultAccountId()
+        : fromAccountId;
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
       await _ref.read(realInvestmentServiceProvider).buyInvestment(
         investmentId: investmentId,
-        fromAccountId: fromAccountId,
+        fromAccountId: resolvedFromAccountId,
         units: units,
         pricePerUnit: pricePerUnit,
         notes: notes,
@@ -2219,7 +2344,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final tx = _createTransactionInternal(
         type: 'investment_buy',
         amount: amount,
-        fromAccountId: fromAccountId,
+        fromAccountId: resolvedFromAccountId,
         investmentId: investmentId,
         notes: notes ?? 'Bought $units units @ ${state.currency} $pricePerUnit',
         date: date,
@@ -2257,12 +2382,15 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     );
   }
 
-  Future<void> sellInvestment(String investmentId, String toAccountId, double unitsToSell, double salePricePerUnit, String? notes, DateTime date) async {
+  Future<void> sellInvestment(String investmentId, String? toAccountId, double unitsToSell, double salePricePerUnit, String? notes, DateTime date) async {
+    final resolvedToAccountId = (toAccountId == 'acc_primary_bank_uuid')
+        ? await _getOrCreateDefaultAccountId()
+        : toAccountId;
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
       await _ref.read(realInvestmentServiceProvider).sellInvestment(
         investmentId: investmentId,
-        toAccountId: toAccountId,
+        toAccountId: resolvedToAccountId!,
         unitsToSell: unitsToSell,
         salePricePerUnit: salePricePerUnit,
         notes: notes,
@@ -2274,7 +2402,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final sellTx = _createTransactionInternal(
         type: 'investment_sell',
         amount: totalProceeds,
-        toAccountId: toAccountId,
+        toAccountId: resolvedToAccountId,
         investmentId: investmentId,
         notes: notes ?? 'Sold $unitsToSell units @ ${state.currency} $salePricePerUnit',
         date: date,
@@ -2841,6 +2969,16 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     String? fundingLiabilityId,
     String? fundingDetails,
   }) async {
+    final resolvedFromAccountId = (fromAccountId == 'acc_primary_bank_uuid')
+        ? await _getOrCreateDefaultAccountId()
+        : fromAccountId;
+    final resolvedToAccountId = (toAccountId == 'acc_primary_bank_uuid')
+        ? await _getOrCreateDefaultAccountId()
+        : toAccountId;
+    final resolvedPersonId = (personId == 'person_broker_uuid_placeholder')
+        ? await _getOrCreateMtfBrokerPersonId('MTF Broker')
+        : personId;
+
     final isMock = _ref.read(mockModeProvider);
     final Transaction tx;
     if (!isMock) {
@@ -2849,9 +2987,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         type: type,
         amount: amount,
         category: category,
-        fromAccountId: fromAccountId,
-        toAccountId: toAccountId,
-        personId: personId,
+        fromAccountId: resolvedFromAccountId,
+        toAccountId: resolvedToAccountId,
+        personId: resolvedPersonId,
         investmentId: investmentId,
         notes: notes,
         transactionDate: date,
@@ -2887,9 +3025,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         type: type,
         amount: amount,
         category: category,
-        fromAccountId: fromAccountId,
-        toAccountId: toAccountId,
-        personId: personId,
+        fromAccountId: resolvedFromAccountId,
+        toAccountId: resolvedToAccountId,
+        personId: resolvedPersonId,
         investmentId: investmentId,
         notes: notes,
         date: date,
@@ -3293,6 +3431,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       await db.into(db.adjustments).insert(newAdj);
       await db.into(db.auditLogs).insert(newAudit);
       _queueSync('adjustment', id, 'upsert');
+      await loadStateFromDatabase();
     } else {
       state = state.copyWith(
         adjustments: [...state.adjustments, newAdj],
@@ -3391,6 +3530,150 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final jsonStr = jsonEncode(state.ipoPools.map((p) => p.toJson()).toList());
       await db.into(db.settings).insertOnConflictUpdate(
         Setting(key: 'ipo_pools_data', value: jsonStr),
+      );
+    }
+  }
+
+  // --- Calendar Event Mutations ---
+
+  Future<void> _saveCalendarEventsToDb() async {
+    final isMock = _ref.read(mockModeProvider);
+    if (!isMock) {
+      final db = _ref.read(realDatabaseProvider);
+      final jsonStr = jsonEncode(state.calendarEvents.map((e) => e.toJson()).toList());
+      await db.into(db.settings).insertOnConflictUpdate(
+        Setting(key: 'calendar_events_data', value: jsonStr),
+      );
+    }
+  }
+
+  Future<void> addCalendarEvent({
+    required String title,
+    required double amount,
+    required String category,
+    required DateTime date,
+    String? time,
+    String status = 'Pending',
+    String? notes,
+    String priority = 'Medium',
+    bool isRecurring = false,
+    String? recurrenceInterval,
+  }) async {
+    final id = _uuid.v4();
+    final now = DateTime.now().toUtc();
+    final newEvent = CalendarEvent(
+      id: id,
+      title: title,
+      amount: amount,
+      category: category,
+      date: date,
+      time: time,
+      status: status,
+      notes: notes,
+      priority: priority,
+      isAutoGenerated: false,
+      isRecurring: isRecurring,
+      recurrenceInterval: recurrenceInterval,
+      createdAt: now,
+      updatedAt: now,
+    );
+    state = state.copyWith(calendarEvents: [...state.calendarEvents, newEvent]);
+    await _saveCalendarEventsToDb();
+    _logHistory(
+      action: 'Calendar Events',
+      entityType: 'Calendar Event',
+      entityId: id,
+      entityName: title,
+      valueChanged: 'Created Event: $title',
+    );
+  }
+
+  Future<void> updateCalendarEvent(CalendarEvent event) async {
+    final updatedEvent = event.copyWith(updatedAt: DateTime.now().toUtc());
+    state = state.copyWith(
+      calendarEvents: state.calendarEvents.map((e) => e.id == event.id ? updatedEvent : e).toList(),
+    );
+    await _saveCalendarEventsToDb();
+    _logHistory(
+      action: 'Calendar Events',
+      entityType: 'Calendar Event',
+      entityId: event.id,
+      entityName: event.title,
+      valueChanged: 'Updated Event: ${event.title}',
+    );
+  }
+
+  Future<void> deleteCalendarEventSoft(String id) async {
+    final event = state.calendarEvents.firstWhereOrNull((e) => e.id == id);
+    if (event != null) {
+      final updatedEvent = event.copyWith(
+        deletedAt: () => DateTime.now().toUtc(),
+        updatedAt: DateTime.now().toUtc(),
+      );
+      state = state.copyWith(
+        calendarEvents: state.calendarEvents.map((e) => e.id == id ? updatedEvent : e).toList(),
+      );
+      await _saveCalendarEventsToDb();
+      _logHistory(
+        action: 'Calendar Events',
+        entityType: 'Calendar Event',
+        entityId: id,
+        entityName: event.title,
+        valueChanged: 'Deleted Event: ${event.title}',
+      );
+    }
+  }
+
+  Future<void> restoreCalendarEvent(String id) async {
+    final event = state.calendarEvents.firstWhereOrNull((e) => e.id == id);
+    if (event != null) {
+      final updatedEvent = event.copyWith(
+        deletedAt: () => null,
+        updatedAt: DateTime.now().toUtc(),
+      );
+      state = state.copyWith(
+        calendarEvents: state.calendarEvents.map((e) => e.id == id ? updatedEvent : e).toList(),
+      );
+      await _saveCalendarEventsToDb();
+      _logHistory(
+        action: 'Calendar Events',
+        entityType: 'Calendar Event',
+        entityId: id,
+        entityName: event.title,
+        valueChanged: 'Restored Event: ${event.title}',
+      );
+    }
+  }
+
+  Future<void> duplicateCalendarEvent(String id) async {
+    final event = state.calendarEvents.firstWhereOrNull((e) => e.id == id);
+    if (event != null) {
+      final newId = _uuid.v4();
+      final now = DateTime.now().toUtc();
+      final dup = CalendarEvent(
+        id: newId,
+        title: '${event.title} (Copy)',
+        amount: event.amount,
+        category: event.category,
+        date: event.date,
+        time: event.time,
+        status: event.status,
+        notes: event.notes,
+        priority: event.priority,
+        isAutoGenerated: false,
+        isRecurring: event.isRecurring,
+        recurrenceInterval: event.recurrenceInterval,
+        createdAt: now,
+        updatedAt: now,
+      );
+      state = state.copyWith(calendarEvents: [...state.calendarEvents, dup]);
+      await _saveCalendarEventsToDb();
+      _logHistory(
+        action: 'Calendar Events',
+        entityType: 'Calendar Event',
+        entityId: newId,
+        entityName: dup.title,
+        valueChanged: 'Duplicated Event: ${event.title}',
       );
     }
   }
@@ -3509,15 +3792,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         ),
       );
       _queueSync('mtf_position', pos.id, 'upsert');
-    }
 
-    // Update linked buy transaction if one exists
-    final buyTx = state.transactions.firstWhereOrNull((t) => t.investmentId == pos.investmentId && t.type == 'investment_buy');
-    if (buyTx != null) {
-      final updatedTxDate = pos.purchaseDate ?? pos.openingDate;
-      if (buyTx.transactionDate != updatedTxDate) {
-        if (!isMock) {
-          final db = _ref.read(realDatabaseProvider);
+      // Update linked buy transaction if one exists
+      final buyTx = state.transactions.firstWhereOrNull((t) => t.investmentId == pos.investmentId && t.type == 'investment_buy');
+      if (buyTx != null) {
+        final updatedTxDate = pos.purchaseDate ?? pos.openingDate;
+        if (buyTx.transactionDate != updatedTxDate) {
           await (db.update(db.transactions)..where((tbl) => tbl.id.equals(buyTx.id))).write(
             TransactionsCompanion(
               transactionDate: Value(updatedTxDate),
@@ -3526,15 +3806,24 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
           );
           _queueSync('transaction', buyTx.id, 'upsert');
         }
-        state = state.copyWith(
-          transactions: state.transactions.map((t) => t.id == buyTx.id ? t.copyWith(transactionDate: updatedTxDate, updatedAt: DateTime.now().toUtc()) : t).toList(),
-        );
       }
-    }
+      await loadStateFromDatabase();
+    } else {
+      // Update linked buy transaction if one exists
+      final buyTx = state.transactions.firstWhereOrNull((t) => t.investmentId == pos.investmentId && t.type == 'investment_buy');
+      if (buyTx != null) {
+        final updatedTxDate = pos.purchaseDate ?? pos.openingDate;
+        if (buyTx.transactionDate != updatedTxDate) {
+          state = state.copyWith(
+            transactions: state.transactions.map((t) => t.id == buyTx.id ? t.copyWith(transactionDate: updatedTxDate, updatedAt: DateTime.now().toUtc()) : t).toList(),
+          );
+        }
+      }
 
-    state = state.copyWith(
-      mtfPositions: state.mtfPositions.map((p) => p.id == pos.id ? pos : p).toList(),
-    );
+      state = state.copyWith(
+        mtfPositions: state.mtfPositions.map((p) => p.id == pos.id ? pos : p).toList(),
+      );
+    }
 
     _logHistory(
       action: 'MTF Positions',
@@ -3570,17 +3859,25 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         ),
       );
       _queueSync('mtf_position', id, 'upsert');
+
+      // 2. Sell Investment (increases cash by units * salePrice)
+      await sellInvestment(pos.investmentId, 'acc_primary_bank_uuid', pos.units, salePrice, 'MTF Position Closed: ${pos.instrument}', date);
+
+      // 3. Repay Borrowed Capital (decreases cash by borrowedCapital)
+      await addRepayTransaction('person_broker_uuid_placeholder', 'acc_primary_bank_uuid', pos.borrowedCapital, 'MTF Loan Repayment for ${pos.instrument}', date);
+
+      await loadStateFromDatabase();
+    } else {
+      state = state.copyWith(
+        mtfPositions: state.mtfPositions.map((p) => p.id == id ? closedPos : p).toList(),
+      );
+
+      // 2. Sell Investment (increases cash by units * salePrice)
+      await sellInvestment(pos.investmentId, 'acc_primary_bank_uuid', pos.units, salePrice, 'MTF Position Closed: ${pos.instrument}', date);
+
+      // 3. Repay Borrowed Capital (decreases cash by borrowedCapital)
+      await addRepayTransaction('person_broker_uuid_placeholder', 'acc_primary_bank_uuid', pos.borrowedCapital, 'MTF Loan Repayment for ${pos.instrument}', date);
     }
-
-    state = state.copyWith(
-      mtfPositions: state.mtfPositions.map((p) => p.id == id ? closedPos : p).toList(),
-    );
-
-    // 2. Sell Investment (increases cash by units * salePrice)
-    sellInvestment(pos.investmentId, 'acc_primary_bank_uuid', pos.units, salePrice, 'MTF Position Closed: ${pos.instrument}', date);
-
-    // 3. Repay Borrowed Capital (decreases cash by borrowedCapital)
-    await addRepayTransaction('person_broker_uuid_placeholder', 'acc_primary_bank_uuid', pos.borrowedCapital, 'MTF Loan Repayment for ${pos.instrument}', date);
 
     _logHistory(
       action: 'MTF Positions',
@@ -3628,10 +3925,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         AccountsCompanion(deletedAt: Value(now)),
       );
       _queueSync('account', id, 'upsert');
+      await loadStateFromDatabase();
+    } else {
+      state = state.copyWith(
+        accounts: state.accounts.where((a) => a.id != id).toList(),
+      );
     }
-    state = state.copyWith(
-      accounts: state.accounts.where((a) => a.id != id).toList(),
-    );
   }
 
   Future<void> restoreAccount(Account item) async {
@@ -3642,10 +3941,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         const AccountsCompanion(deletedAt: Value(null)),
       );
       _queueSync('account', item.id, 'upsert');
+      await loadStateFromDatabase();
+    } else {
+      state = state.copyWith(
+        accounts: [...state.accounts, item.copyWith(deletedAt: const Value(null))],
+      );
     }
-    state = state.copyWith(
-      accounts: [...state.accounts, item.copyWith(deletedAt: const Value(null))],
-    );
   }
 
   Future<Account> duplicateAccount(String id) async {
@@ -3664,10 +3965,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final db = _ref.read(realDatabaseProvider);
       await db.into(db.accounts).insert(copy);
       _queueSync('account', newId, 'upsert');
+      await loadStateFromDatabase();
+    } else {
+      state = state.copyWith(
+        accounts: [...state.accounts, copy],
+      );
     }
-    state = state.copyWith(
-      accounts: [...state.accounts, copy],
-    );
     return copy;
   }
 
@@ -3678,10 +3981,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       await (db.update(db.accounts)..where((tbl) => tbl.id.equals(id)))
         .write(AccountsCompanion(isArchived: const Value(0), updatedAt: Value(DateTime.now().toUtc())));
       _queueSync('account', id, 'upsert');
+      await loadStateFromDatabase();
+    } else {
+      state = state.copyWith(
+        accounts: state.accounts.map((a) => a.id == id ? a.copyWith(isArchived: 0, updatedAt: DateTime.now().toUtc()) : a).toList(),
+      );
     }
-    state = state.copyWith(
-      accounts: state.accounts.map((a) => a.id == id ? a.copyWith(isArchived: 0, updatedAt: DateTime.now().toUtc()) : a).toList(),
-    );
   }
 
   Future<void> unarchivePerson(String id) async {
@@ -3691,10 +3996,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       await (db.update(db.people)..where((tbl) => tbl.id.equals(id)))
         .write(PeopleCompanion(isArchived: const Value(0), updatedAt: Value(DateTime.now().toUtc())));
       _queueSync('person', id, 'upsert');
+      await loadStateFromDatabase();
+    } else {
+      state = state.copyWith(
+        people: state.people.map((p) => p.id == id ? p.copyWith(isArchived: 0, updatedAt: DateTime.now().toUtc()) : p).toList(),
+      );
     }
-    state = state.copyWith(
-      people: state.people.map((p) => p.id == id ? p.copyWith(isArchived: 0, updatedAt: DateTime.now().toUtc()) : p).toList(),
-    );
   }
 
   Future<void> unarchiveInvestment(String id) async {
@@ -3704,10 +4011,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       await (db.update(db.investments)..where((tbl) => tbl.id.equals(id)))
         .write(InvestmentsCompanion(isArchived: const Value(0), updatedAt: Value(DateTime.now().toUtc())));
       _queueSync('investment', id, 'upsert');
+      await loadStateFromDatabase();
+    } else {
+      state = state.copyWith(
+        investments: state.investments.map((i) => i.id == id ? i.copyWith(isArchived: 0, updatedAt: DateTime.now().toUtc()) : i).toList(),
+      );
     }
-    state = state.copyWith(
-      investments: state.investments.map((i) => i.id == id ? i.copyWith(isArchived: 0, updatedAt: DateTime.now().toUtc()) : i).toList(),
-    );
   }
 
   Future<void> unarchiveGoal(String id) async {
@@ -3717,10 +4026,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       await (db.update(db.goals)..where((tbl) => tbl.id.equals(id)))
         .write(GoalsCompanion(isArchived: const Value(0), updatedAt: Value(DateTime.now().toUtc())));
       _queueSync('goal', id, 'upsert');
+      await loadStateFromDatabase();
+    } else {
+      state = state.copyWith(
+        goals: state.goals.map((g) => g.id == id ? g.copyWith(isArchived: 0, updatedAt: DateTime.now().toUtc()) : g).toList(),
+      );
     }
-    state = state.copyWith(
-      goals: state.goals.map((g) => g.id == id ? g.copyWith(isArchived: 0, updatedAt: DateTime.now().toUtc()) : g).toList(),
-    );
   }
 
   Future<void> deletePersonSoft(String id) async {
@@ -3732,10 +4043,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         PeopleCompanion(deletedAt: Value(now)),
       );
       _queueSync('person', id, 'upsert');
+      await loadStateFromDatabase();
+    } else {
+      state = state.copyWith(
+        people: state.people.where((p) => p.id != id).toList(),
+      );
     }
-    state = state.copyWith(
-      people: state.people.where((p) => p.id != id).toList(),
-    );
   }
 
   Future<void> restorePerson(Person item) async {
@@ -3746,10 +4059,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         const PeopleCompanion(deletedAt: Value(null)),
       );
       _queueSync('person', item.id, 'upsert');
+      await loadStateFromDatabase();
+    } else {
+      state = state.copyWith(
+        people: [...state.people, item.copyWith(deletedAt: const Value(null))],
+      );
     }
-    state = state.copyWith(
-      people: [...state.people, item.copyWith(deletedAt: const Value(null))],
-    );
   }
 
   Future<Person> duplicatePerson(String id) async {
@@ -3768,10 +4083,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final db = _ref.read(realDatabaseProvider);
       await db.into(db.people).insert(copy);
       _queueSync('person', newId, 'upsert');
+      await loadStateFromDatabase();
+    } else {
+      state = state.copyWith(
+        people: [...state.people, copy],
+      );
     }
-    state = state.copyWith(
-      people: [...state.people, copy],
-    );
     return copy;
   }
 
@@ -3784,10 +4101,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         InvestmentsCompanion(deletedAt: Value(now)),
       );
       _queueSync('investment', id, 'upsert');
+      await loadStateFromDatabase();
+    } else {
+      state = state.copyWith(
+        investments: state.investments.where((i) => i.id != id).toList(),
+      );
     }
-    state = state.copyWith(
-      investments: state.investments.where((i) => i.id != id).toList(),
-    );
   }
 
   Future<void> restoreInvestment(Investment item) async {
@@ -3798,10 +4117,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         const InvestmentsCompanion(deletedAt: Value(null)),
       );
       _queueSync('investment', item.id, 'upsert');
+      await loadStateFromDatabase();
+    } else {
+      state = state.copyWith(
+        investments: [...state.investments, item.copyWith(deletedAt: const Value(null))],
+      );
     }
-    state = state.copyWith(
-      investments: [...state.investments, item.copyWith(deletedAt: const Value(null))],
-    );
   }
 
   Future<Investment> duplicateInvestment(String id) async {
@@ -3820,10 +4141,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final db = _ref.read(realDatabaseProvider);
       await db.into(db.investments).insert(copy);
       _queueSync('investment', newId, 'upsert');
+      await loadStateFromDatabase();
+    } else {
+      state = state.copyWith(
+        investments: [...state.investments, copy],
+      );
     }
-    state = state.copyWith(
-      investments: [...state.investments, copy],
-    );
     return copy;
   }
 
@@ -3837,10 +4160,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         MtfPositionsCompanion(deletedAt: Value(now)),
       );
       _queueSync('mtf_position', id, 'upsert');
+      await loadStateFromDatabase();
+    } else {
+      state = state.copyWith(
+        mtfPositions: state.mtfPositions.where((p) => p.id != id).toList(),
+      );
     }
-    state = state.copyWith(
-      mtfPositions: state.mtfPositions.where((p) => p.id != id).toList(),
-    );
     if (pos != null) {
       _logHistory(
         action: 'MTF Positions',
@@ -3860,10 +4185,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         const MtfPositionsCompanion(deletedAt: Value(null)),
       );
       _queueSync('mtf_position', item.id, 'upsert');
+      await loadStateFromDatabase();
+    } else {
+      state = state.copyWith(
+        mtfPositions: [...state.mtfPositions, item.copyWith(deletedAt: const Value(null))],
+      );
     }
-    state = state.copyWith(
-      mtfPositions: [...state.mtfPositions, item.copyWith(deletedAt: const Value(null))],
-    );
   }
 
   Future<MtfPosition> duplicateMtfPosition(String id) async {
@@ -3882,10 +4209,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final db = _ref.read(realDatabaseProvider);
       await db.into(db.mtfPositions).insert(copy);
       _queueSync('mtf_position', newId, 'upsert');
+      await loadStateFromDatabase();
+    } else {
+      state = state.copyWith(
+        mtfPositions: [...state.mtfPositions, copy],
+      );
     }
-    state = state.copyWith(
-      mtfPositions: [...state.mtfPositions, copy],
-    );
     return copy;
   }
 
@@ -4539,6 +4868,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       ipoPools: const [],
       mtfPositions: const [],
       sips: const [],
+      calendarEvents: const [],
       categories: const [
         'Food', 'Travel', 'Shopping', 'Education', 'Bills', 'Subscriptions',
         'Health', 'Entertainment', 'Fees', 'General', 'Salary',
@@ -4572,6 +4902,10 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       notificationPrefCheckIns: true,
       notificationPrefSip: true,
       notificationPrefGoals: true,
+      notificationPrefCalendarOnDue: true,
+      notificationPrefCalendar1Day: true,
+      notificationPrefCalendar3Days: true,
+      notificationPrefCalendar7Days: false,
       notificationsAsked: false,
     );
   }

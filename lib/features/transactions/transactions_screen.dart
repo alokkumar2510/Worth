@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/glass_card.dart';
+import '../../core/widgets/shimmer_loading.dart';
 import '../../core/providers/mock_database.dart';
 import '../../core/providers/dependency_provider.dart';
 import 'presentation/widgets/add_transaction_sheet.dart';
@@ -163,8 +164,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: selectedDate,
-                      firstDate: DateTime.now().subtract(const Duration(days: 365 * 5)),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
                     );
                     if (picked != null) {
                       setState(() {
@@ -455,8 +456,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                   onTap: () async {
                     final picked = await showDateRangePicker(
                       context: context,
-                      firstDate: DateTime.now().subtract(const Duration(days: 365 * 5)),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
                       initialDateRange: _filterStartDate != null && _filterEndDate != null
                           ? DateTimeRange(start: _filterStartDate!, end: _filterEndDate!)
                           : null,
@@ -738,7 +739,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                       final groupKeys = timelineMap.keys.toList();
 
                       return CustomScrollView(
-                        physics: const BouncingScrollPhysics(),
+                        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                         slivers: [
                           // 2. Financial Summary Strip
                           SliverToBoxAdapter(
@@ -809,7 +810,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                         ],
                       );
                     },
-                    loading: () => const Center(child: CircularProgressIndicator(color: AppColors.darkPrimary)),
+                    loading: () => const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: ListShimmer(count: 8),
+                    ),
                     error: (err, _) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
                   ),
                 ),

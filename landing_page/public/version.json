@@ -1,0 +1,14 @@
+{
+  "version": "1.11.0",
+  "build": 12,
+  "release_date": "2026-06-22",
+  "force_update": false,
+  "download_url": "https://github.com/alokkumar2510/Worth/releases/download/v1.11.0/app-release.apk",
+  "release_notes": [
+    "Premium Update Ecosystem and In-App Update Center.",
+    "Production Image Rendering Engine for Receivables.",
+    "Embedded Scan-to-Pay QR Codes (UPI integrated).",
+    "Smart Contact Picker Import for receivables.",
+    "Sleek App-Wide Motion and decel scroll physics."
+  ]
+}

@@ -88,6 +88,7 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
             bottom: MediaQuery.of(context).viewInsets.bottom + 24,
           ),
           child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -294,6 +295,7 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
             bottom: MediaQuery.of(context).viewInsets.bottom + 24,
           ),
           child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -705,6 +707,7 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
             bottom: MediaQuery.of(context).viewInsets.bottom + 24,
           ),
           child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1024,6 +1027,7 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
                   ),
                 )
               : ListView.builder(
+                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: pool.contributors.length,
                   itemBuilder: (context, index) {
@@ -1114,6 +1118,7 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
   Widget _buildSoloReserveTab(IpoPool pool, String currency) {
     final maxSolo = pool.fullApplications;
     return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1283,6 +1288,7 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
     }
 
     return GridView.builder(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
@@ -1365,6 +1371,7 @@ class _IpoDetailScreenState extends ConsumerState<IpoDetailScreen> with SingleTi
   // --- 4. LISTING GAINS TAB ---
   Widget _buildListingGainsTab(IpoPool pool, String currency) {
     return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

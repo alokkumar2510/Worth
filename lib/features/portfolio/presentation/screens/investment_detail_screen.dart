@@ -352,8 +352,8 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: purchaseDate ?? DateTime.now(),
-                      firstDate: DateTime.now().subtract(const Duration(days: 365 * 10)),
-                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
                     );
                     if (picked != null) {
                       setDialogState(() {
@@ -1521,8 +1521,8 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                       final picked = await showDatePicker(
                         context: context,
                         initialDate: startDate,
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime(2030),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2100),
                       );
                       if (picked != null) {
                         setDialogState(() => startDate = picked);
@@ -1547,7 +1547,7 @@ class _InvestmentDetailScreenState extends ConsumerState<InvestmentDetailScreen>
                         context: context,
                         initialDate: endDate ?? startDate.add(const Duration(days: 365)),
                         firstDate: startDate,
-                        lastDate: DateTime(2040),
+                        lastDate: DateTime(2100),
                       );
                       if (picked != null) {
                         setDialogState(() => endDate = picked);

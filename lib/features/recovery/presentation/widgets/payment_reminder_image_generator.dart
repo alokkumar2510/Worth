@@ -247,6 +247,30 @@ class _PaymentReminderImageGeneratorState extends State<PaymentReminderImageGene
   CardSize _selectedSize = CardSize.post1080x1350;
   ExportFormat _selectedFormat = ExportFormat.png;
   bool _isExporting = false;
+  late double _customAmount;
+  late TextEditingController _amountController;
+
+  @override
+  void initState() {
+    super.initState();
+    _customAmount = widget.amount;
+    _amountController = TextEditingController(text: widget.amount.toStringAsFixed(0));
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant PaymentReminderImageGenerator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.amount != widget.amount) {
+      _customAmount = widget.amount;
+      _amountController.text = widget.amount.toStringAsFixed(0);
+    }
+  }
 
   double get cardWidth {
     switch (_selectedSize) {
@@ -328,8 +352,12 @@ class _PaymentReminderImageGeneratorState extends State<PaymentReminderImageGene
       final file = File('${tempDir.path}/worth_payment_reminder.$ext');
       await file.writeAsBytes(bytes);
 
+      final isPartial = (_customAmount - widget.amount).abs() > 0.01;
+      final requestedFmt = '${widget.currency}${NumberFormat.decimalPattern().format(_customAmount)}';
       final outstandingFmt = '${widget.currency}${NumberFormat.decimalPattern().format(widget.amount)}';
-      final shareMsg = 'Hi ${widget.debtorName}, here is a payment reminder for the outstanding amount of $outstandingFmt.';
+      final shareMsg = isPartial
+          ? 'Hi ${widget.debtorName}, here is a payment reminder for the requested amount of $requestedFmt (out of total $outstandingFmt outstanding).'
+          : 'Hi ${widget.debtorName}, here is a payment reminder for the outstanding amount of $outstandingFmt.';
 
       await Share.shareXFiles(
         [XFile(file.path)],
@@ -409,6 +437,48 @@ class _PaymentReminderImageGeneratorState extends State<PaymentReminderImageGene
             _buildThemeTab(CardThemeName.corporateBlue, 'Corporate Blue'),
             _buildThemeTab(CardThemeName.minimalWhite, 'Minimal White'),
           ],
+        ),
+        const SizedBox(height: 16),
+
+        // Custom Recovery Amount Input
+        Text(
+          'RECOVERY AMOUNT',
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: AppColors.grey500,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _amountController,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          style: TextStyle(color: isDark ? Colors.white : Colors.black),
+          decoration: InputDecoration(
+            prefixText: '${widget.currency} ',
+            prefixStyle: TextStyle(color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold),
+            hintText: 'Enter amount to recover',
+            hintStyle: const TextStyle(color: AppColors.grey500),
+            filled: true,
+            fillColor: isDark ? AppColors.layer2 : Colors.grey[200],
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: isDark ? AppColors.glassBorder : Colors.grey[300]!),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppColors.darkPrimary),
+            ),
+            helperText: 'Defaults to total outstanding: ${widget.currency}${NumberFormat.decimalPattern().format(widget.amount)}',
+            helperStyle: const TextStyle(color: AppColors.grey500, fontSize: 11),
+          ),
+          onChanged: (val) {
+            final parsed = double.tryParse(val.trim());
+            setState(() {
+              _customAmount = (parsed != null && parsed > 0) ? parsed : widget.amount;
+            });
+          },
         ),
         const SizedBox(height: 16),
 
@@ -650,10 +720,11 @@ class _PaymentReminderImageGeneratorState extends State<PaymentReminderImageGene
     final isLandscape = _selectedSize == CardSize.banner1200x628;
     final isStory = _selectedSize == CardSize.story1080x1920;
 
-    final amountText = '${widget.currency}${NumberFormat.decimalPattern().format(widget.amount)}';
+    final isPartial = (_customAmount - widget.amount).abs() > 0.01;
+    final amountText = '${widget.currency}${NumberFormat.decimalPattern().format(_customAmount)}';
     final borrowDateStr = DateFormat('dd MMM yyyy').format(widget.borrowDate);
     final nowStr = DateFormat('dd MMM yyyy  •  hh:mm a').format(DateTime.now());
-    final upiUri = 'upi://pay?pa=${widget.upiId}&pn=${Uri.encodeComponent(widget.userName)}&am=${widget.amount}';
+    final upiUri = 'upi://pay?pa=${widget.upiId}&pn=${Uri.encodeComponent(widget.userName)}&am=$_customAmount';
     final txId = 'WTH-${widget.borrowDate.millisecondsSinceEpoch.toRadixString(36).toUpperCase().substring(0, 6)}';
 
     // Urgency level
@@ -702,7 +773,7 @@ class _PaymentReminderImageGeneratorState extends State<PaymentReminderImageGene
                 SizedBox(height: 28 * scaleFactor),
 
                 // ── SECTION 2: HERO AMOUNT ──
-                _buildHeroAmount(ct, amountText, scaleFactor),
+                _buildHeroAmount(ct, amountText, scaleFactor, label: isPartial ? 'REQUESTED AMOUNT' : 'OUTSTANDING BALANCE'),
                 SizedBox(height: 24 * scaleFactor),
 
                 // ── SECTION 3: BORROWER PROFILE ──
@@ -848,12 +919,12 @@ class _PaymentReminderImageGeneratorState extends State<PaymentReminderImageGene
   // =======================================================================
   // SECTION 2 — Hero Amount
   // =======================================================================
-  Widget _buildHeroAmount(_CardTheme ct, String amountText, double scale) {
+  Widget _buildHeroAmount(_CardTheme ct, String amountText, double scale, {required String label}) {
     return Center(
       child: Column(
         children: [
           Text(
-            'OUTSTANDING BALANCE',
+            label,
             style: GoogleFonts.inter(
               fontSize: 11 * scale,
               fontWeight: FontWeight.w600,
@@ -1118,13 +1189,16 @@ class _PaymentReminderImageGeneratorState extends State<PaymentReminderImageGene
   // SECTION 5 — Insights Grid (3×2)
   // =======================================================================
   Widget _buildInsightsGrid(_CardTheme ct, String amountText, String borrowDateStr, double scale) {
+    final isPartial = (_customAmount - widget.amount).abs() > 0.01;
     final insights = [
-      _InsightData(Icons.payments_outlined, 'Amount Due', amountText, ct.accent),
+      _InsightData(Icons.payments_outlined, isPartial ? 'Requested Amt' : 'Amount Due', amountText, ct.accent),
       _InsightData(Icons.person_outline, 'Borrower', widget.debtorName, ct.textPrimary),
       _InsightData(Icons.schedule_outlined, 'Pending', '${widget.daysPending} Days', widget.daysPending > 30 ? ct.dangerColor : (widget.daysPending > 7 ? ct.warningColor : ct.successColor)),
-      _InsightData(Icons.qr_code_2_rounded, 'Payment Method', 'UPI QR', ct.textPrimary),
+      isPartial
+          ? _InsightData(Icons.account_balance_wallet_outlined, 'Total Balance', '${widget.currency}${NumberFormat.decimalPattern().format(widget.amount)}', ct.textPrimary)
+          : _InsightData(Icons.qr_code_2_rounded, 'Payment Method', 'UPI QR', ct.textPrimary),
       _InsightData(Icons.calendar_today_outlined, 'Created', borrowDateStr, ct.textPrimary),
-      _InsightData(Icons.hourglass_top_rounded, 'Status', 'Awaiting Payment', ct.warningColor),
+      _InsightData(Icons.hourglass_top_rounded, 'Status', isPartial ? 'Partial Request' : 'Awaiting Payment', ct.warningColor),
     ];
 
     return Column(
@@ -1400,6 +1474,12 @@ class _PaymentReminderImageGeneratorState extends State<PaymentReminderImageGene
   // SECTION 9 — Personalized Message
   // =======================================================================
   Widget _buildPersonalMessage(_CardTheme ct, String amountText, double scale) {
+    final isPartial = (_customAmount - widget.amount).abs() > 0.01;
+    final totalFmt = '${widget.currency}${NumberFormat.decimalPattern().format(widget.amount)}';
+    final message = isPartial
+        ? 'Hi ${widget.debtorName},\nThis is a friendly reminder that a partial payment of $amountText (out of total $totalFmt outstanding) is requested. Scan the QR code to complete payment instantly.'
+        : 'Hi ${widget.debtorName},\nThis is a friendly reminder that $amountText is pending. Scan the QR code to complete payment instantly.';
+
     return Container(
       padding: EdgeInsets.all(16 * scale),
       decoration: BoxDecoration(
@@ -1414,7 +1494,7 @@ class _PaymentReminderImageGeneratorState extends State<PaymentReminderImageGene
           SizedBox(width: 10 * scale),
           Expanded(
             child: Text(
-              'Hi ${widget.debtorName},\nThis is a friendly reminder that $amountText is pending. Scan the QR code to complete payment instantly.',
+              message,
               style: GoogleFonts.inter(
                 fontSize: 11 * scale,
                 fontWeight: FontWeight.w500,
@@ -1543,7 +1623,7 @@ class _PaymentReminderImageGeneratorState extends State<PaymentReminderImageGene
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('OUTSTANDING', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w600, color: ct.textMuted, letterSpacing: 2.5)),
+                          Text((_customAmount - widget.amount).abs() > 0.01 ? 'REQUESTED' : 'OUTSTANDING', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w600, color: ct.textMuted, letterSpacing: 2.5)),
                           const SizedBox(height: 4),
                           ShaderMask(
                             shaderCallback: (bounds) => LinearGradient(

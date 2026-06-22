@@ -293,6 +293,7 @@ class _IpoContributorsListScreenState extends ConsumerState<IpoContributorsListS
                           : 'Try modifying your search or filters.',
                     )
                   : ListView.builder(
+                      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       itemCount: filteredList.length,
                       itemBuilder: (context, index) {

@@ -21,6 +21,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  manifest: "/manifest.json",
   openGraph: {
     title: "Worth — Premium Wealth Intelligence Center & Personal Wealth OS",
     description: "Know What You're Worth. Track your net worth, cash flow assets, liabilities, investments, receivables, expected payouts, and milestone metrics in a dark luxury, privacy-first command center.",
@@ -28,14 +29,24 @@ export const metadata: Metadata = {
     siteName: "Worth",
     type: "website",
     locale: "en_US",
+    images: [
+      {
+        url: "/og/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Worth Private Wealth OS",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Worth — Premium Wealth Intelligence Center & Personal Wealth OS",
     description: "Know What You're Worth. Track your net worth, assets, liabilities, and milestone metrics offline-first.",
+    images: ["/og/og-image.png"],
   },
   icons: {
     icon: "/favicon.ico",
+    apple: "/icons/icon-192.png",
   },
 };
 
@@ -62,7 +73,7 @@ export default function RootLayout({
       "name": "Alok Kumar Sahu",
       "url": "https://alokkumarsahu.in"
     },
-    "downloadUrl": "https://github.com/alokkumar2510/Worth/releases/download/v1.10.0/app-release.apk"
+    "downloadUrl": "https://github.com/alokkumar2510/Worth/releases/download/v1.11.0/app-release.apk"
   };
 
   return (
@@ -74,6 +85,24 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').then(
+                    function(reg) {
+                      console.log('PWA ServiceWorker registered successfully:', reg.scope);
+                    },
+                    function(err) {
+                      console.error('PWA ServiceWorker registration failed:', err);
+                    }
+                  );
+                });
+              }
+            `,
+          }}
         />
       </head>
       <body className="min-h-full flex flex-col bg-[#050507] text-[#f4f4f6]">

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import '../constants/app_motion.dart';
 
 class GlassCard extends StatefulWidget {
   final Widget child;
@@ -35,6 +36,7 @@ class _GlassCardState extends State<GlassCard> with TickerProviderStateMixin {
   late AnimationController _scaleController;
   late Animation<double> _scaleAnimation;
   late AnimationController _shineController;
+  bool _isHovered = false;
 
   @override
   void initState() {
@@ -44,13 +46,13 @@ class _GlassCardState extends State<GlassCard> with TickerProviderStateMixin {
     _scaleController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 80),
-      reverseDuration: const Duration(milliseconds: 250),
+      reverseDuration: AppMotion.normal,
     );
     _scaleAnimation = Tween<double>(begin: 1.0, end: 0.96).animate(
       CurvedAnimation(
         parent: _scaleController,
-        curve: Curves.easeOut,
-        reverseCurve: Curves.elasticOut,
+        curve: AppMotion.easeOut,
+        reverseCurve: AppMotion.easeOut,
       ),
     );
 
@@ -127,21 +129,26 @@ class _GlassCardState extends State<GlassCard> with TickerProviderStateMixin {
 
     Widget animatedCard = ScaleTransition(
       scale: _scaleAnimation,
-      child: Container(
+      child: AnimatedContainer(
+        duration: AppMotion.fast,
+        curve: AppMotion.easeOut,
+        transform: Matrix4.identity()..translate(0.0, _isHovered ? -2.0 : 0.0),
         margin: widget.margin,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(radius),
           boxShadow: [
             BoxShadow(
-              color: isDark ? const Color(0x3F000000) : const Color(0x0A000000),
-              blurRadius: 32,
-              spreadRadius: 2,
-              offset: const Offset(0, 12),
+              color: isDark 
+                  ? const Color(0x3F000000).withOpacity(_isHovered ? 0.35 : 0.25) 
+                  : const Color(0x0A000000).withOpacity(_isHovered ? 0.06 : 0.04),
+              blurRadius: _isHovered ? 40 : 32,
+              spreadRadius: _isHovered ? 3 : 2,
+              offset: Offset(0, _isHovered ? 14 : 12),
             ),
             if (isDark)
               BoxShadow(
-                color: AppColors.darkPrimary.withOpacity(0.03),
-                blurRadius: 40,
+                color: AppColors.darkPrimary.withOpacity(_isHovered ? 0.05 : 0.03),
+                blurRadius: _isHovered ? 48 : 40,
                 spreadRadius: 1,
                 offset: const Offset(0, 0),
               ),
@@ -253,12 +260,16 @@ class _GlassCardState extends State<GlassCard> with TickerProviderStateMixin {
     );
 
     if (widget.onTap != null) {
-      return GestureDetector(
-        onTapDown: _handleTapDown,
-        onTapUp: _handleTapUp,
-        onTapCancel: _handleTapCancel,
-        onTap: widget.onTap,
-        child: animatedCard,
+      return MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: GestureDetector(
+          onTapDown: _handleTapDown,
+          onTapUp: _handleTapUp,
+          onTapCancel: _handleTapCancel,
+          onTap: widget.onTap,
+          child: animatedCard,
+        ),
       );
     }
 

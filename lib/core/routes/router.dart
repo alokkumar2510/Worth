@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart' hide LockState;
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +7,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../constants/app_colors.dart';
 import '../constants/asset_paths.dart';
+import '../constants/app_motion.dart';
+import '../utils/app_haptics.dart';
 import '../providers/dependency_provider.dart';
 import '../../features/accounts/domain/entities/account.dart' as domain;
 import '../../features/dashboard/dashboard_screen.dart';
@@ -23,6 +26,7 @@ import '../../features/settings/presentation/screens/profile_screen.dart';
 import '../../features/settings/presentation/screens/advanced_settings_screen.dart';
 import '../../features/settings/presentation/screens/founder_screen.dart';
 import '../../features/settings/presentation/screens/whats_new_screen.dart';
+import '../../features/settings/presentation/screens/update_center_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/ipo_pool/presentation/screens/ipo_dashboard_screen.dart';
 import '../../features/ipo_pool/presentation/screens/ipo_detail_screen.dart';
@@ -50,6 +54,10 @@ import '../../features/recovery/presentation/screens/recovery_allocation_report_
 import '../../features/settings/presentation/screens/financial_calculation_inspector_screen.dart';
 import '../../features/recovery/presentation/screens/debt_recovery_dashboard_screen.dart';
 import '../../features/recovery/presentation/screens/upi_settings_screen.dart';
+import '../../features/calendar/presentation/screens/calendar_screen.dart';
+import '../../features/education_loan/presentation/screens/education_loan_hub.dart';
+import '../../features/education_loan/presentation/screens/loan_setup_screen.dart';
+import '../../features/education_loan/domain/entities/education_loan.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -65,13 +73,13 @@ CustomTransitionPage<T> buildPremiumTransitionPage<T>({
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       const begin = Offset(0.0, 0.08);
       const end = Offset.zero;
-      const curve = Curves.easeOutQuart;
+      final curve = AppMotion.easeOut;
 
       var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
       var offsetAnimation = animation.drive(tween);
 
       var fadeTween = Tween<double>(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeOut));
-      var scaleTween = Tween<double>(begin: 0.96, end: 1.0).chain(CurveTween(curve: Curves.easeOutQuart));
+      var scaleTween = Tween<double>(begin: 0.96, end: 1.0).chain(CurveTween(curve: AppMotion.easeOut));
 
       return FadeTransition(
         opacity: animation.drive(fadeTween),
@@ -84,8 +92,8 @@ CustomTransitionPage<T> buildPremiumTransitionPage<T>({
         ),
       );
     },
-    transitionDuration: const Duration(milliseconds: 300),
-    reverseTransitionDuration: const Duration(milliseconds: 220),
+    transitionDuration: AppMotion.large,
+    reverseTransitionDuration: AppMotion.normal,
   );
 }
 
@@ -103,124 +111,147 @@ class NavigationShellScreen extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
+      extendBody: true,
       body: navigationShell,
-      bottomNavigationBar: NavigationBar(
-        elevation: 8,
-        shadowColor: isDark ? Colors.black : Colors.black12,
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (int index) {
-          navigationShell.goBranch(
-            index,
-            initialLocation: index == navigationShell.currentIndex,
-          );
-        },
-        destinations: <NavigationDestination>[
-          NavigationDestination(
-            icon: SvgPicture.asset(
-              AssetPaths.icDashboard,
-              width: 24,
-              height: 24,
-              colorFilter: ColorFilter.mode(
-                isDark ? Colors.white60 : Colors.black54,
-                BlendMode.srcIn,
-              ),
-            ),
-            selectedIcon: SvgPicture.asset(
-              AssetPaths.icDashboard,
-              width: 24,
-              height: 24,
-              colorFilter: const ColorFilter.mode(
-                AppColors.darkPrimary,
-                BlendMode.srcIn,
-              ),
-            ),
-            label: 'Dashboard',
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+          height: 64,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(32),
+            color: Colors.transparent,
           ),
-          NavigationDestination(
-            icon: SvgPicture.asset(
-              AssetPaths.icPortfolio,
-              width: 24,
-              height: 24,
-              colorFilter: ColorFilter.mode(
-                isDark ? Colors.white60 : Colors.black54,
-                BlendMode.srcIn,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(32),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 16.0, sigmaY: 16.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(32),
+                  color: isDark 
+                      ? AppColors.darkCard.withOpacity(0.6) 
+                      : Colors.white.withOpacity(0.7),
+                  border: Border.all(
+                    color: isDark 
+                        ? Colors.white.withOpacity(0.08) 
+                        : Colors.black.withOpacity(0.06),
+                    width: 1.0,
+                  ),
+                ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final double itemWidth = constraints.maxWidth / 5;
+                    return Stack(
+                      children: [
+                        // Sliding indicator background pill
+                        AnimatedPositioned(
+                          duration: AppMotion.normal,
+                          curve: AppMotion.easeOut,
+                          left: navigationShell.currentIndex * itemWidth + 8,
+                          top: 8,
+                          width: itemWidth - 16,
+                          height: 48,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(24),
+                              gradient: LinearGradient(
+                                colors: [
+                                  AppColors.darkPrimary.withOpacity(isDark ? 0.15 : 0.1),
+                                  AppColors.darkPrimary.withOpacity(isDark ? 0.05 : 0.02),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              border: Border.all(
+                                color: AppColors.darkPrimary.withOpacity(0.2),
+                                width: 1.0,
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Tab items row
+                        Row(
+                          children: List.generate(5, (index) {
+                            final isSelected = navigationShell.currentIndex == index;
+                            String iconPath;
+                            String label;
+                            switch (index) {
+                              case 0:
+                                iconPath = AssetPaths.icDashboard;
+                                label = 'Dashboard';
+                                break;
+                              case 1:
+                                iconPath = AssetPaths.icPortfolio;
+                                label = 'Portfolio';
+                                break;
+                              case 2:
+                                iconPath = AssetPaths.icTransactions;
+                                label = 'Txns';
+                                break;
+                              case 3:
+                                iconPath = AssetPaths.icReports;
+                                label = 'Reports';
+                                break;
+                              case 4:
+                              default:
+                                iconPath = AssetPaths.icSettings;
+                                label = 'More';
+                                break;
+                            }
+
+                            return Expanded(
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.opaque,
+                                onTap: () {
+                                  if (!isSelected) {
+                                    AppHaptics.light();
+                                  }
+                                  navigationShell.goBranch(
+                                    index,
+                                    initialLocation: index == navigationShell.currentIndex,
+                                  );
+                                },
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SvgPicture.asset(
+                                      iconPath,
+                                      width: 20,
+                                      height: 20,
+                                      colorFilter: ColorFilter.mode(
+                                        isSelected
+                                            ? AppColors.darkPrimary
+                                            : (isDark ? Colors.white38 : Colors.black38),
+                                        BlendMode.srcIn,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      label,
+                                      style: theme.textTheme.labelSmall?.copyWith(
+                                        fontSize: 10,
+                                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                        color: isSelected
+                                            ? AppColors.darkPrimary
+                                            : (isDark ? Colors.white38 : Colors.black38),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
-            selectedIcon: SvgPicture.asset(
-              AssetPaths.icPortfolio,
-              width: 24,
-              height: 24,
-              colorFilter: const ColorFilter.mode(
-                AppColors.darkPrimary,
-                BlendMode.srcIn,
-              ),
-            ),
-            label: 'Portfolio',
           ),
-          NavigationDestination(
-            icon: SvgPicture.asset(
-              AssetPaths.icTransactions,
-              width: 24,
-              height: 24,
-              colorFilter: ColorFilter.mode(
-                isDark ? Colors.white60 : Colors.black54,
-                BlendMode.srcIn,
-              ),
-            ),
-            selectedIcon: SvgPicture.asset(
-              AssetPaths.icTransactions,
-              width: 24,
-              height: 24,
-              colorFilter: const ColorFilter.mode(
-                AppColors.darkPrimary,
-                BlendMode.srcIn,
-              ),
-            ),
-            label: 'Transactions',
-          ),
-          NavigationDestination(
-            icon: SvgPicture.asset(
-              AssetPaths.icReports,
-              width: 24,
-              height: 24,
-              colorFilter: ColorFilter.mode(
-                isDark ? Colors.white60 : Colors.black54,
-                BlendMode.srcIn,
-              ),
-            ),
-            selectedIcon: SvgPicture.asset(
-              AssetPaths.icReports,
-              width: 24,
-              height: 24,
-              colorFilter: const ColorFilter.mode(
-                AppColors.darkPrimary,
-                BlendMode.srcIn,
-              ),
-            ),
-            label: 'Reports',
-          ),
-          NavigationDestination(
-            icon: SvgPicture.asset(
-              AssetPaths.icSettings,
-              width: 24,
-              height: 24,
-              colorFilter: ColorFilter.mode(
-                isDark ? Colors.white60 : Colors.black54,
-                BlendMode.srcIn,
-              ),
-            ),
-            selectedIcon: SvgPicture.asset(
-              AssetPaths.icSettings,
-              width: 24,
-              height: 24,
-              colorFilter: const ColorFilter.mode(
-                AppColors.darkPrimary,
-                BlendMode.srcIn,
-              ),
-            ),
-            label: 'More',
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -584,6 +615,16 @@ final routerProvider = Provider<GoRouter>((ref) {
                       );
                     },
                   ),
+                  GoRoute(
+                    path: 'calendar',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) {
+                      return buildPremiumTransitionPage(
+                        state: state,
+                        child: const CalendarScreen(),
+                      );
+                    },
+                  ),
                 ],
               ),
             ],
@@ -638,6 +679,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                     pageBuilder: (context, state) => buildPremiumTransitionPage(
                       state: state,
                       child: const WhatsNewScreen(),
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'update_center',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) => buildPremiumTransitionPage(
+                      state: state,
+                      child: const UpdateCenterScreen(),
                     ),
                   ),
                   GoRoute(
@@ -737,6 +786,28 @@ final routerProvider = Provider<GoRouter>((ref) {
                       state: state,
                       child: const FinancialCalculationInspectorScreen(),
                     ),
+                  ),
+                  // Education Loan Center
+                  GoRoute(
+                    path: 'education_loan',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) => buildPremiumTransitionPage(
+                      state: state,
+                      child: const EducationLoanHub(),
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: 'setup',
+                        parentNavigatorKey: _rootNavigatorKey,
+                        pageBuilder: (context, state) {
+                          final existing = state.extra as EducationLoan?;
+                          return buildPremiumTransitionPage(
+                            state: state,
+                            child: LoanSetupScreen(existingLoan: existing),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),

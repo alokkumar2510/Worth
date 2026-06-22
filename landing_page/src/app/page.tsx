@@ -194,11 +194,12 @@ export default function Home() {
           </a>
 
           <nav className="hidden lg:flex items-center gap-8 text-xs font-semibold tracking-wider text-foreground/70">
-            <a href="#features" className="hover:text-white transition-colors">OS CAPABILITIES</a>
-            <a href="#simulator" className="hover:text-white transition-colors">CALIBRATOR</a>
-            <a href="#showcase" className="hover:text-white transition-colors">SHOWCASE</a>
-            <a href="#modules" className="hover:text-white transition-colors">MODULES</a>
-            <a href="#timeline" className="hover:text-white transition-colors">TIMELINE</a>
+            <Link href="/features" className="hover:text-white transition-colors">FEATURES</Link>
+            <Link href="/download" className="hover:text-white transition-colors">DOWNLOAD</Link>
+            <Link href="/changelog" className="hover:text-white transition-colors">CHANGELOG</Link>
+            <Link href="/roadmap" className="hover:text-white transition-colors">ROADMAP</Link>
+            <Link href="/support" className="hover:text-white transition-colors">SUPPORT</Link>
+            <Link href="/contact" className="hover:text-white transition-colors">CONTACT</Link>
           </nav>
 
           <div className="flex items-center gap-4">
@@ -211,15 +212,15 @@ export default function Home() {
             >
               <Github className="w-5 h-5" />
             </a>
-            <a
-              href="https://github.com/alokkumar2510/Worth/releases/download/v1.10.0/app-release.apk"
+            <Link
+              href="/download"
               onMouseMove={handleMagneticMove}
               onMouseLeave={handleMagneticLeave}
               className="hidden sm:flex items-center gap-1.5 bg-[#7C4DFF] hover:bg-[#673AB7] text-white text-xs font-bold px-4 py-2.5 rounded-full transition-all duration-300 shadow-[0_4px_20px_rgba(124,77,255,0.4)]"
             >
               DOWNLOAD APK
               <ArrowRight className="w-3.5 h-3.5" />
-            </a>
+            </Link>
           </div>
         </div>
       </motion.header>
@@ -287,15 +288,15 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
             className="flex flex-col sm:flex-row items-center gap-6 justify-center w-full max-w-sm sm:max-w-none"
           >
-            <a
-              href="https://github.com/alokkumar2510/Worth/releases/download/v1.10.0/app-release.apk"
+            <Link
+              href="/download"
               onMouseMove={handleMagneticMove}
               onMouseLeave={handleMagneticLeave}
               className="w-full sm:w-auto flex items-center justify-center gap-2.5 bg-white text-black hover:bg-[#A78BFA] hover:text-black font-bold text-sm px-8 py-5 rounded-full transition-all duration-300 shadow-[0_10px_35px_rgba(255,255,255,0.15)] hover:scale-105"
             >
               <Download className="w-5 h-5" />
               DOWNLOAD APK
-            </a>
+            </Link>
             <a
               href="https://github.com/alokkumar2510/Worth/releases"
               target="_blank"
@@ -856,15 +857,15 @@ export default function Home() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <a
-                href="https://github.com/alokkumar2510/Worth/releases/download/v1.10.0/app-release.apk"
+              <Link
+                href="/download"
                 onMouseMove={handleMagneticMove}
                 onMouseLeave={handleMagneticLeave}
                 className="w-full sm:w-auto flex items-center justify-center gap-2.5 bg-[#7C4DFF] hover:bg-[#673AB7] text-white text-sm font-bold px-8 py-5 rounded-full shadow-[0_6px_25px_rgba(124,77,255,0.4)]"
               >
                 <Download className="w-5 h-5" />
                 DOWNLOAD APK
-              </a>
+              </Link>
               <a
                 href="https://github.com/alokkumar2510/Worth"
                 target="_blank"
@@ -946,9 +947,14 @@ export default function Home() {
           </div>
 
           <div className="flex flex-wrap justify-center gap-6 text-xs text-foreground/40 font-mono">
+            <Link href="/features" className="hover:text-white transition-colors">FEATURES</Link>
+            <Link href="/download" className="hover:text-white transition-colors">DOWNLOAD</Link>
+            <Link href="/changelog" className="hover:text-white transition-colors">CHANGELOG</Link>
+            <Link href="/roadmap" className="hover:text-white transition-colors">ROADMAP</Link>
+            <Link href="/support" className="hover:text-white transition-colors">SUPPORT</Link>
+            <Link href="/contact" className="hover:text-white transition-colors">CONTACT</Link>
             <Link href="/privacy" className="hover:text-white transition-colors">PRIVACY POLICY</Link>
             <Link href="/terms" className="hover:text-white transition-colors">TERMS OF SERVICE</Link>
-            <a href="https://github.com/alokkumar2510/Worth" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GITHUB</a>
           </div>
 
           <div className="text-[10px] text-foreground/30 font-mono flex items-center gap-1.5">
