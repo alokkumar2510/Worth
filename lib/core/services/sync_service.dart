@@ -56,9 +56,17 @@ class SyncService {
       });
 
       // 2. Listen for auth state changes
+      User? previousUser;
       _authSubscription = _auth.authStateChanges().listen((user) async {
         if (user != null) {
+          previousUser = user;
           _runAuthSync(user);
+        } else {
+          if (previousUser != null) {
+            print('[SyncService] User signed out. Clearing local database...');
+            await clearLocalDataBeforeRestore();
+            previousUser = null;
+          }
         }
       });
 

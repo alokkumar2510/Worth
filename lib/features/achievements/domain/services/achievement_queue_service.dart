@@ -19,9 +19,10 @@ class AchievementQueueService {
   void _processNext() {
     if (_isShowing || _queue.isEmpty) return;
 
-    final context = rootNavigatorKey.currentContext;
-    if (context == null) {
-      // If the context is not yet available, wait and retry.
+    final navigatorState = rootNavigatorKey.currentState;
+    final overlay = navigatorState?.overlay;
+    if (navigatorState == null || overlay == null) {
+      // If the navigator or overlay is not yet available, wait and retry.
       Future.delayed(const Duration(milliseconds: 100), _processNext);
       return;
     }
@@ -33,7 +34,7 @@ class AchievementQueueService {
     HapticFeedback.lightImpact();
 
     AchievementOverlayManager.show(
-      context: context,
+      overlay: overlay,
       event: event,
       onDismiss: () {
         _isShowing = false;

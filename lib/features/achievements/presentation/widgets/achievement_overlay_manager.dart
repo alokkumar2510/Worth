@@ -10,13 +10,11 @@ class AchievementOverlayManager {
   static OverlayEntry? _currentEntry;
 
   static void show({
-    required BuildContext context,
+    required OverlayState overlay,
     required GamificationEvent event,
     required VoidCallback onDismiss,
   }) {
     dismiss();
-
-    final overlay = Overlay.of(context);
     
     _currentEntry = OverlayEntry(
       builder: (context) {
