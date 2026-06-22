@@ -941,7 +941,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final isMock = _ref.read(mockModeProvider);
       if (!isMock) {
         final db = _ref.read(realDatabaseProvider);
-        await db.into(db.people).insert(newPerson);
+        await db.into(db.people).insertOnConflictUpdate(newPerson);
       }
       state = state.copyWith(people: [...state.people, newPerson]);
       if (!isMock) {
@@ -1416,7 +1416,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
       final db = _ref.read(realDatabaseProvider);
-      await db.into(db.accounts).insert(newAccount);
+      await db.into(db.accounts).insertOnConflictUpdate(newAccount);
       _queueSync('account', actualId, 'upsert');
       if (openingBalance > 0) {
         if (type == 'credit') {
@@ -3694,6 +3694,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     String? purchaseTime,
     String? investmentId,
     String? notes,
+    String type = 'stock',
   }) async {
     final id = _uuid.v4();
     final now = DateTime.now().toUtc();
@@ -3703,7 +3704,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     if (investmentId != null) {
       actualInvestmentId = investmentId;
     } else {
-      final inv = await addInvestment(instrument, 'stock', null, notes ?? 'MTF Position: $broker', averagePrice);
+      final inv = await addInvestment(instrument, type, null, notes ?? 'MTF Position: $broker', averagePrice);
       actualInvestmentId = inv.id;
     }
 

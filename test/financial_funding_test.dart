@@ -293,5 +293,54 @@ void main() {
       expect(state.getInvestmentInvestedCapital(inv.id), equals(5000.0));
       expect(state.getInvestmentMarketValue(inv.id), equals(5000.0));
     });
+
+    test('Adding MTF Position in real mode succeeds', () async {
+      final notifier = container.read(mockDatabaseProvider.notifier);
+
+      // Add MTF position
+      await notifier.addMtfPosition(
+        broker: 'Zerodha',
+        instrument: 'Nifty 50 ETF',
+        units: 10.0,
+        averagePrice: 200.0,
+        ownCapital: 1000.0,
+        borrowedCapital: 1000.0,
+        interestRate: 12.0,
+        openingDate: DateTime.now(),
+        interestStartDate: DateTime.now(),
+        purchaseDate: DateTime.now(),
+      );
+
+      await notifier.loadStateFromDatabase();
+      final state = container.read(mockDatabaseProvider);
+
+      expect(state.mtfPositions.length, equals(1));
+      expect(state.transactions.length, equals(2)); // Buy investment + Borrow transaction
+    });
+
+    test('Adding ETF MTF Position in real mode succeeds with different type', () async {
+      final notifier = container.read(mockDatabaseProvider.notifier);
+
+      // Add ETF MTF position
+      await notifier.addMtfPosition(
+        broker: 'Groww',
+        instrument: 'Gold ETF',
+        units: 5.0,
+        averagePrice: 100.0,
+        ownCapital: 250.0,
+        borrowedCapital: 250.0,
+        interestRate: 10.0,
+        openingDate: DateTime.now(),
+        interestStartDate: DateTime.now(),
+        purchaseDate: DateTime.now(),
+        type: 'etf',
+      );
+
+      await notifier.loadStateFromDatabase();
+      final state = container.read(mockDatabaseProvider);
+
+      expect(state.mtfPositions.length, equals(1));
+      expect(state.investments.first.type, equals('etf'));
+    });
   });
 }

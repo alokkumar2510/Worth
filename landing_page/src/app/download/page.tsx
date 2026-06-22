@@ -16,12 +16,12 @@ import {
 } from "lucide-react";
 
 export default function DownloadPage() {
-  const latestVersion = "1.11.0";
-  const buildNumber = 12;
+  const latestVersion = "1.12.0";
+  const buildNumber = 13;
   const releaseDate = "June 22, 2026";
-  const apkSize = "18.4 MB";
-  const sha256Checksum = "4b2c18d9f1020a66d0c4c4e7c3b248a705ef283e5606e330f81d19b78e227e99";
-  const downloadUrl = "https://github.com/alokkumar2510/Worth/releases/download/v1.11.0/app-release.apk";
+  const apkSize = "94.1 MB";
+  const sha256Checksum = "4debb71d7152aa31eafee3903fb84524283fea69b35999de920c53191692f7a3";
+  const downloadUrl = "https://github.com/alokkumar2510/Worth/releases/download/v1.12.0/app-release.apk";
 
   const handleCopyChecksum = () => {
     navigator.clipboard.writeText(sha256Checksum);

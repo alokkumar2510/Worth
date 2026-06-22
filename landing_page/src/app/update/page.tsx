@@ -38,17 +38,15 @@ export default function UpdatePage() {
         console.error("Failed to fetch version JSON:", err);
         // Fallback static state if fetch fails
         setUpdateInfo({
-          version: "1.11.0",
-          build: 12,
+          version: "1.12.0",
+          build: 13,
           release_date: "2026-06-22",
           force_update: false,
-          download_url: "https://github.com/alokkumar2510/Worth/releases/download/v1.11.0/app-release.apk",
+          download_url: "https://github.com/alokkumar2510/Worth/releases/download/v1.12.0/app-release.apk",
           release_notes: [
-            "Premium Update Ecosystem and In-App Update Center.",
-            "Production Image Rendering Engine for Receivables.",
-            "Embedded Scan-to-Pay QR Codes (UPI integrated).",
-            "Smart Contact Picker Import for receivables.",
-            "Sleek App-Wide Motion and decel scroll physics."
+            "Fixed application crash when saving MTF ETF and Stock positions.",
+            "Corrected investment type mapping (ETF vs Stock) in Margin Trading Facility.",
+            "Upgraded DB placeholder insertions to prevent Unique constraint collision crashes."
           ]
         });
         setLoading(false);

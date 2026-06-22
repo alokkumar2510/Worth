@@ -200,6 +200,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
             purchaseTime: purchaseTimeStr,
             investmentId: _selectedInvestmentId,
             notes: notes,
+            type: inv.type,
           );
         } else {
           await notifier.buyInvestment(_selectedInvestmentId!, _selectedFromAccountId ?? 'acc_primary_bank_uuid', units, price, notes, finalPurchaseDate);

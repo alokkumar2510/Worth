@@ -21,6 +21,12 @@ export default function RoadmapPage() {
       bgGlow: "rgba(16,185,129,0.02)",
       items: [
         {
+          version: "v1.12.0",
+          date: "June 2026",
+          title: "MTF & ETF Ledger Stabilizations",
+          desc: "Resolved critical SQLite unique constraint crashes during MTF/ETF allocations, optimized type propagation and added auto-conflict resolution."
+        },
+        {
           version: "v1.11.0",
           date: "June 2026",
           title: "Premium Update Ecosystem",
@@ -47,19 +53,19 @@ export default function RoadmapPage() {
       bgGlow: "rgba(124,77,255,0.02)",
       items: [
         {
-          version: "v1.12.0",
+          version: "v1.13.0",
           date: "Target: Q3 2026",
           title: "Mutual Fund NAV Sync",
           desc: "Integrating online NAV crawlers to automatically re-evaluate mutual fund investment allocations."
         },
         {
-          version: "v1.12.0",
+          version: "v1.13.0",
           date: "Target: Q3 2026",
           title: "Secure Web App Companion",
           desc: "Building a read-only React dashboard allowing users to visualize synced Firestore databases in desktop browsers."
         },
         {
-          version: "v1.13.0",
+          version: "v1.14.0",
           date: "Target: Q4 2026",
           title: "Stock Portfolio Tracker",
           desc: "Real-time stock ticker valuation sheets using direct API hooks, integrated into the Investments module."

@@ -20,6 +20,16 @@ class UpdateCenterScreen extends ConsumerStatefulWidget {
 class _UpdateCenterScreenState extends ConsumerState<UpdateCenterScreen> {
   final List<Map<String, dynamic>> _historicalReleases = [
     {
+      'version': '1.12.0',
+      'build': 13,
+      'date': '2026-06-22',
+      'notes': [
+        'Fixed application crash when saving MTF ETF and Stock positions.',
+        'Corrected investment type mapping (ETF vs Stock) in Margin Trading Facility.',
+        'Upgraded DB placeholder insertions to prevent Unique constraint collision crashes.'
+      ]
+    },
+    {
       'version': '1.11.0',
       'build': 12,
       'date': '2026-06-22',

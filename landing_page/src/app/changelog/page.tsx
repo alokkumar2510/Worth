@@ -14,6 +14,21 @@ import {
 export default function ChangelogPage() {
   const releases = [
     {
+      version: "1.12.0",
+      date: "June 22, 2026",
+      tagline: "MTF Ledger Stabilizations & Safe DB Conflict Resolution",
+      features: [
+        "Auto-Conflict Resolution: Upgraded direct SQLite database writes to automatically update existing records on key conflicts.",
+        "Type Propagation: Enforced strict asset and liability classification fields across forms, preventing generic type mismatch errors."
+      ],
+      fixes: [
+        "Resolved database crash triggered when saving mutual funds, stock positions, or ETF portfolios combined with margin trading finance (MTF) borrowing."
+      ],
+      improvements: [
+        "Strengthened database insertion pipelines with transactional safe-guards."
+      ]
+    },
+    {
       version: "1.11.0",
       date: "June 22, 2026",
       tagline: "The Net Worth Ecosystem and Update Center",

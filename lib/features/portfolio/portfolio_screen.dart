@@ -968,6 +968,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         purchaseDate: finalPurchaseDate,
                         purchaseTime: purchaseTimeStr,
                         notes: userNotes.isNotEmpty ? userNotes : null,
+                        type: type,
                       );
                     } else {
                       final inv = await notifier.addInvestment(
