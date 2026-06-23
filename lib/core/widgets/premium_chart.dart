@@ -180,7 +180,7 @@ class NetWorthLineChart extends StatelessWidget {
                 final amount = NumberFormat.decimalPattern().format(touchedSpot.y);
                 return LineTooltipItem(
                   '$dateStr\n$currency$amount',
-                  GoogleFonts.inter(
+                  GoogleFonts.jetBrainsMono(
                     color: isDark ? Colors.white : AppColors.lightText,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
@@ -464,8 +464,8 @@ class _AllocationPieChartState extends State<AllocationPieChart> {
                   ),
                   Text(
                     '${widget.currency}$amount (${percentage.toStringAsFixed(1)}%)',
-                    style: TextStyle(
-                      fontSize: 12,
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 11,
                       fontWeight: FontWeight.w600,
                       color: isDark ? Colors.white : AppColors.lightText,
                     ),
@@ -551,8 +551,8 @@ class _AllocationPieChartState extends State<AllocationPieChart> {
                     const SizedBox(width: 4),
                     Text(
                       '${widget.currency}$amount (${percentage.toStringAsFixed(0)}%)',
-                      style: TextStyle(
-                        fontSize: 11,
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 10.5,
                         fontWeight: FontWeight.w600,
                         color: isDark ? Colors.white : AppColors.lightText,
                       ),
@@ -670,10 +670,10 @@ class GrowthBarChart extends StatelessWidget {
               final sign = rod.toY >= 0 ? '+' : '-';
               return BarTooltipItem(
                 '$sign$currency$amount',
-                TextStyle(
+                GoogleFonts.jetBrainsMono(
                   color: rod.toY >= 0 ? AppColors.darkSuccess : AppColors.darkDanger,
                   fontWeight: FontWeight.bold,
-                  fontSize: 12,
+                  fontSize: 11.5,
                 ),
               );
             },

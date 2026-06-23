@@ -1653,18 +1653,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text(
-          'Command Center',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 24, color: Colors.white),
+        title: ShaderMask(
+          shaderCallback: (bounds) => const LinearGradient(
+            colors: [Color(0xFFF8FAFC), Color(0xFFC084FC)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ).createShader(bounds),
+          child: Text(
+            'Command Center',
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.w800,
+              fontSize: 26,
+              color: Colors.white,
+              letterSpacing: -0.6,
+            ),
+          ),
         ),
       ),
       body: SafeArea(
         child: Column(
           children: [
+
             // Search Bar & Top Actions
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -2472,20 +2485,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: [
               // Premium Glowing Avatar
               Container(
-                width: 64,
-                height: 64,
+                width: 68,
+                height: 68,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: const LinearGradient(
-                    colors: [AppColors.darkPrimary, AppColors.glow],
+                    colors: [Color(0xFF9B6BFF), Color(0xFF7B3FF2), Color(0xFF5A2DB8)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.darkPrimary.withOpacity(0.3),
-                      blurRadius: 16,
-                      spreadRadius: 2,
+                      color: AppColors.darkPrimary.withOpacity(0.45),
+                      blurRadius: 24,
+                      spreadRadius: 3,
+                    ),
+                    BoxShadow(
+                      color: AppColors.darkPrimary.withOpacity(0.15),
+                      blurRadius: 48,
+                      spreadRadius: 0,
                     ),
                   ],
                 ),
@@ -2493,8 +2511,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 child: Text(
                   userName.isNotEmpty ? userName.substring(0, 1).toUpperCase() : 'W',
                   style: GoogleFonts.outfit(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
                     color: Colors.white,
                   ),
                 ),
@@ -2552,7 +2570,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildHeroMetric('Net Worth', formattedNetWorth, AppColors.glow),
+              _buildHeroMetric('Net Worth', formattedNetWorth, AppColors.orange),
               _buildHeroMetric('Wealth Score', '$wealthScore/100', AppColors.darkSuccess),
               _buildHeroMetric('Streak', '$currentStreak Days', AppColors.darkWarning),
             ],
@@ -2701,14 +2719,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 6.0, bottom: 8.0),
-          child: Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: AppColors.grey500,
-              letterSpacing: 1.2,
-            ),
+          child: Row(
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.orange,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.grey400,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ],
           ),
         ),
         GlassCard(
@@ -2731,18 +2762,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildTileFromItem(_SettingItem item) {
+    final iconWidget = Container(
+      padding: const EdgeInsets.all(7),
+      decoration: BoxDecoration(
+        color: item.iconColor.withOpacity(0.13),
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: item.iconColor.withOpacity(0.18), width: 0.8),
+      ),
+      child: Icon(item.icon, color: item.iconColor, size: 17),
+    );
+
     if (item.isSwitch) {
       return SwitchListTile(
         title: Text(item.title, style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w600)),
         subtitle: Text(item.subtitle, style: const TextStyle(color: AppColors.grey500, fontSize: 11)),
-        secondary: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: item.iconColor.withOpacity(0.12),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(item.icon, color: item.iconColor, size: 18),
-        ),
+        secondary: iconWidget,
         activeColor: AppColors.darkPrimary,
         value: item.switchValue ?? false,
         onChanged: item.onSwitchChanged,
@@ -2751,14 +2785,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     if (item.isDropdown) {
       return ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: item.iconColor.withOpacity(0.12),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(item.icon, color: item.iconColor, size: 18),
-        ),
+        leading: iconWidget,
         title: Text(item.title, style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w600)),
         subtitle: Text(item.subtitle, style: const TextStyle(color: AppColors.grey500, fontSize: 11)),
         trailing: DropdownButton<int>(
@@ -2774,14 +2801,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
 
     return ListTile(
-      leading: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: item.iconColor.withOpacity(0.12),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(item.icon, color: item.iconColor, size: 18),
-      ),
+      leading: iconWidget,
       title: Text(item.title, style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w600)),
       subtitle: Text(item.subtitle, style: const TextStyle(color: AppColors.grey500, fontSize: 11)),
       trailing: Row(
@@ -2791,7 +2811,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             item.trailing!,
             const SizedBox(width: 6),
           ],
-          const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.grey500),
+          const Icon(Icons.arrow_forward_ios_rounded, size: 11, color: AppColors.darkPrimary),
         ],
       ),
       onTap: item.onTap,

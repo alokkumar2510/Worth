@@ -154,22 +154,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Worth',
-                            style: GoogleFonts.outfit(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              letterSpacing: -0.5,
+                          ShaderMask(
+                            shaderCallback: (bounds) => const LinearGradient(
+                              colors: [Color(0xFFF8FAFC), Color(0xFFC084FC)],
+                            ).createShader(bounds),
+                            child: Text(
+                              'Worth',
+                              style: GoogleFonts.outfit(
+                                fontSize: 30,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: -0.8,
+                              ),
                             ),
                           ),
                           Text(
-                            'Wealth Management',
+                            'Wealth Intelligence',
                             style: GoogleFonts.inter(
-                              fontSize: 12,
+                              fontSize: 11,
                               fontWeight: FontWeight.w500,
-                              color: AppColors.grey500,
-                              letterSpacing: 0.5,
+                              color: AppColors.grey600,
+                              letterSpacing: 0.6,
                             ),
                           ),
                         ],
@@ -179,13 +184,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       Container(
                         margin: const EdgeInsets.only(right: 8),
                         decoration: BoxDecoration(
-                          color: AppColors.layer1.withOpacity(0.4),
+                          color: AppColors.orange.withOpacity(0.1),
                           shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.glassBorder),
+                          border: Border.all(color: AppColors.orange.withOpacity(0.25)),
                         ),
                         child: IconButton(
                           onPressed: () => _showNaturalLanguageDialog(context),
-                          icon: const Icon(Icons.auto_awesome, color: Colors.amber, size: 20),
+                          icon: const Icon(Icons.auto_awesome, color: AppColors.orange, size: 18),
                           tooltip: 'AI Query',
                         ),
                       ),
@@ -193,7 +198,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       Container(
                         margin: const EdgeInsets.only(right: 8),
                         decoration: BoxDecoration(
-                          color: AppColors.layer1.withOpacity(0.4),
+                          color: AppColors.layer1,
                           shape: BoxShape.circle,
                           border: Border.all(color: AppColors.glassBorder),
                         ),
@@ -203,20 +208,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             AssetPaths.icSearch,
                             width: 18,
                             height: 18,
-                            colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                            colorFilter: const ColorFilter.mode(AppColors.grey400, BlendMode.srcIn),
                           ),
                         ),
                       ),
                       // Profile Action
                       Container(
                         decoration: BoxDecoration(
-                          color: AppColors.layer1.withOpacity(0.4),
+                          color: AppColors.layer1,
                           shape: BoxShape.circle,
                           border: Border.all(color: AppColors.glassBorder),
                         ),
                         child: IconButton(
                           onPressed: () => context.push('/profile'),
-                          icon: const Icon(Icons.person_outline_rounded, color: Colors.white, size: 20),
+                          icon: const Icon(Icons.person_outline_rounded, color: AppColors.grey400, size: 20),
                         ),
                       ),
                     ],
@@ -478,22 +483,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               hoveredSnapshot != null
                   ? Text(
                       NumberFormat.currency(symbol: currency, decimalDigits: 0).format(displayNetWorth),
-                      style: GoogleFonts.inter(
-                        fontSize: 48,
-                        fontWeight: FontWeight.w800,
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 44,
+                        fontWeight: FontWeight.w700,
                         color: Colors.white,
-                        letterSpacing: -1.5,
+                        letterSpacing: -2.0,
                         height: 1.0,
                       ),
                     )
                   : AnimatedNumberText(
                       value: displayNetWorth,
                       currency: currency,
-                      style: GoogleFonts.inter(
-                        fontSize: 48,
-                        fontWeight: FontWeight.w800,
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 44,
+                        fontWeight: FontWeight.w700,
                         color: Colors.white,
-                        letterSpacing: -1.5,
+                        letterSpacing: -2.0,
                         height: 1.0,
                       ),
                     ),
@@ -1790,22 +1795,28 @@ class _TactileFABState extends State<TactileFAB> with SingleTickerProviderStateM
         scale: _scaleAnimation,
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(20),
             gradient: const LinearGradient(
-              colors: [AppColors.darkPrimary, AppColors.glow],
+              colors: [Color(0xFF9B6BFF), Color(0xFF7B3FF2), Color(0xFF5A2DB8)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.darkPrimary.withOpacity(0.35),
-                blurRadius: 16,
-                spreadRadius: 1,
-                offset: const Offset(0, 6),
+                color: AppColors.darkPrimary.withOpacity(0.45),
+                blurRadius: 24,
+                spreadRadius: 2,
+                offset: const Offset(0, 8),
+              ),
+              BoxShadow(
+                color: AppColors.darkPrimary.withOpacity(0.20),
+                blurRadius: 48,
+                spreadRadius: 0,
+                offset: const Offset(0, 0),
               ),
             ],
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1814,10 +1825,10 @@ class _TactileFABState extends State<TactileFAB> with SingleTickerProviderStateM
               Text(
                 widget.label,
                 style: GoogleFonts.inter(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w700,
                   fontSize: 14,
                   color: Colors.white,
-                  letterSpacing: -0.2,
+                  letterSpacing: 0.1,
                 ),
               ),
             ],

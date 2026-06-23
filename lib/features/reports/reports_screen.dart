@@ -381,12 +381,20 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     mainAxisAlignment: MainAxisAlignment.end,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Wealth Intelligence',
-                        style: GoogleFonts.outfit(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 22,
-                          color: Colors.white,
+                      ShaderMask(
+                        shaderCallback: (bounds) => const LinearGradient(
+                          colors: [Color(0xFFF8FAFC), Color(0xFFC084FC)],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ).createShader(bounds),
+                        child: Text(
+                          'Wealth Intelligence',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 22,
+                            color: Colors.white,
+                            letterSpacing: -0.6,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -536,8 +544,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           // Large Net Worth Text
           Text(
             format.format(data.currentNetWorth),
-            style: GoogleFonts.outfit(
-              fontSize: 36,
+            style: GoogleFonts.jetBrainsMono(
+              fontSize: 32,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
@@ -597,14 +605,14 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           const SizedBox(height: 4),
           Text(
             '$prefix${format.format(value)}',
-            style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
+            style: GoogleFonts.jetBrainsMono(fontSize: 12.5, fontWeight: FontWeight.bold, color: Colors.white),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 2),
           Text(
             '$prefix${percent.toStringAsFixed(1)}%',
-            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: color),
+            style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold, color: color),
           ),
         ],
       ),
@@ -719,8 +727,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 const SizedBox(height: 4),
                 Text(
                   format.format(value),
-                  style: GoogleFonts.outfit(
-                    fontSize: 18,
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 16.5,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -834,8 +842,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             const SizedBox(height: 2),
             Text(
               format.format(val),
-              style: GoogleFonts.outfit(
-                fontSize: 13,
+              style: GoogleFonts.jetBrainsMono(
+                fontSize: 12,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
@@ -927,8 +935,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                             ),
                             Text(
                               format.format(item.netWorth),
-                              style: GoogleFonts.outfit(
-                                fontSize: 14,
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 13.5,
                                 fontWeight: FontWeight.bold,
                                 color: isLast ? AppColors.darkPrimary : Colors.white,
                               ),
@@ -1003,8 +1011,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                       const Spacer(),
                       Text(
                         format.format(change.amount),
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
                           color: AppColors.darkPrimary,
                         ),
@@ -1123,7 +1131,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               const Text('Average Holding Period', style: TextStyle(color: AppColors.grey400, fontSize: 13)),
               Text(
                 '${data.averageHoldingPeriod.toStringAsFixed(1)} Days',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                style: GoogleFonts.jetBrainsMono(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
               ),
             ],
           ),
@@ -1152,11 +1160,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                             children: [
                               Text(hdName, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
                               const SizedBox(height: 2),
-                              Text('Age: $ageDays Days', style: const TextStyle(color: AppColors.grey500, fontSize: 10)),
+                              Text('Age: $ageDays Days', style: GoogleFonts.jetBrainsMono(color: AppColors.grey500, fontSize: 9.5)),
                             ],
                           ),
                         ),
-                        Text('Held: $hdDays Days', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                        Text('Held: $hdDays Days', style: GoogleFonts.jetBrainsMono(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w600)),
                       ],
                     ),
                   );
@@ -1186,11 +1194,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 ),
                 child: Text(
                   'Consistency: ${consistencyRate.toStringAsFixed(0)}%',
-                  style: TextStyle(
+                  style: GoogleFonts.jetBrainsMono(
                     color: consistencyRate >= 80.0
                         ? AppColors.darkSuccess
                         : (consistencyRate >= 50.0 ? Colors.orange : AppColors.darkDanger),
-                    fontSize: 9,
+                    fontSize: 8.5,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1202,7 +1210,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Total SIP Capital Invested', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
-              Text(format.format(investedCapital), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+              Text(format.format(investedCapital), style: GoogleFonts.jetBrainsMono(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12.5)),
             ],
           ),
           const SizedBox(height: 6),
@@ -1210,7 +1218,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Current SIP Valuation', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
-              Text(format.format(currentValuation), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+              Text(format.format(currentValuation), style: GoogleFonts.jetBrainsMono(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12.5)),
             ],
           ),
           const SizedBox(height: 6),
@@ -1220,10 +1228,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               const Text('Growth (SIP Profits)', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
               Text(
                 '${growth >= 0.0 ? '+' : ''}${format.format(growth)}',
-                style: TextStyle(
+                style: GoogleFonts.jetBrainsMono(
                   color: growth >= 0.0 ? AppColors.darkSuccess : AppColors.darkDanger,
                   fontWeight: FontWeight.bold,
-                  fontSize: 13,
+                  fontSize: 12.5,
                 ),
               ),
             ],
@@ -1241,7 +1249,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Total Interest Accrued', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
-              Text(formatDec.format(accruedInterest), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+              Text(formatDec.format(accruedInterest), style: GoogleFonts.jetBrainsMono(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12.5)),
             ],
           ),
           const SizedBox(height: 6),
@@ -1249,7 +1257,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Total Interest Paid', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
-              Text(formatDec.format(paidInterest), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+              Text(formatDec.format(paidInterest), style: GoogleFonts.jetBrainsMono(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12.5)),
             ],
           ),
           const SizedBox(height: 6),
@@ -1259,10 +1267,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               const Text('Outstanding Unpaid Interest', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
               Text(
                 formatDec.format(outstandingInterest),
-                style: TextStyle(
+                style: GoogleFonts.jetBrainsMono(
                   color: outstandingInterest > 0.0 ? AppColors.darkWarning : Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 13,
+                  fontSize: 12.5,
                 ),
               ),
             ],
@@ -1299,7 +1307,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                             ],
                           ),
                         ),
-                        Text(formatDec.format(amount), style: const TextStyle(color: AppColors.darkDanger, fontSize: 12, fontWeight: FontWeight.w600)),
+                        Text(formatDec.format(amount), style: GoogleFonts.jetBrainsMono(color: AppColors.darkDanger, fontSize: 11.5, fontWeight: FontWeight.w600)),
                       ],
                     ),
                   );

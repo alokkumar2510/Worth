@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 
+/// Premium violet-tinted shimmer loading placeholders
 class ShimmerLoading extends StatefulWidget {
   final double width;
   final double height;
@@ -27,10 +28,9 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1400),
     )..repeat();
-    
-    _animation = Tween<double>(begin: -1.0, end: 2.0).animate(
+    _animation = Tween<double>(begin: -1.5, end: 2.5).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOutSine),
     );
   }
@@ -43,33 +43,26 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    final baseColor = isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0);
-    final highlightColor = isDark ? AppColors.grey700 : const Color(0xFFF1F5F9);
+    // Violet-tinted shimmer instead of plain grey
+    const baseColor  = Color(0xFF13101F);
+    const midColor   = Color(0xFF1E1835);
+    const glowColor  = Color(0x267B3FF2);
 
     return AnimatedBuilder(
       animation: _animation,
-      builder: (context, child) {
-        return Container(
-          width: widget.width,
-          height: widget.height,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            gradient: LinearGradient(
-              colors: [
-                baseColor,
-                highlightColor,
-                baseColor,
-              ],
-              stops: const [0.0, 0.5, 1.0],
-              begin: Alignment(_animation.value - 1.0, -0.3),
-              end: Alignment(_animation.value, 0.3),
-            ),
+      builder: (context, _) => Container(
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(widget.borderRadius),
+          gradient: LinearGradient(
+            colors: const [baseColor, midColor, glowColor, midColor, baseColor],
+            stops: const [0.0, 0.35, 0.5, 0.65, 1.0],
+            begin: Alignment(_animation.value - 1.0, -0.3),
+            end: Alignment(_animation.value, 0.3),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -85,18 +78,19 @@ class CardShimmer extends StatelessWidget {
       height: height,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? AppColors.darkCard.withOpacity(0.4)
-            : Colors.white.withOpacity(0.5),
+        color: AppColors.layer1,
         borderRadius: BorderRadius.circular(isPrimary ? 32.0 : 24.0),
+        border: Border.all(color: AppColors.glassBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const ShimmerLoading(width: 80, height: 14, borderRadius: 4),
-          const SizedBox(height: 12),
-          const ShimmerLoading(width: 140, height: 24, borderRadius: 6),
+        children: const [
+          ShimmerLoading(width: 80, height: 12, borderRadius: 6),
+          SizedBox(height: 14),
+          ShimmerLoading(width: 150, height: 28, borderRadius: 8),
+          SizedBox(height: 8),
+          ShimmerLoading(width: 100, height: 10, borderRadius: 5),
         ],
       ),
     );
@@ -113,37 +107,40 @@ class ListShimmer extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: count,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4.0),
-          child: Row(
-            children: [
-              const ShimmerLoading(width: 40, height: 40, borderRadius: 20),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ShimmerLoading(width: 120, height: 16, borderRadius: 4),
-                    const SizedBox(height: 8),
-                    ShimmerLoading(width: 80, height: 12, borderRadius: 4),
-                  ],
-                ),
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.layer1,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.glassBorder),
+        ),
+        child: Row(
+          children: const [
+            ShimmerLoading(width: 44, height: 44, borderRadius: 22),
+            SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ShimmerLoading(width: 120, height: 14, borderRadius: 7),
+                  SizedBox(height: 8),
+                  ShimmerLoading(width: 80, height: 10, borderRadius: 5),
+                ],
               ),
-              const SizedBox(width: 16),
-              const ShimmerLoading(width: 60, height: 16, borderRadius: 4),
-            ],
-          ),
-        );
-      },
+            ),
+            SizedBox(width: 14),
+            ShimmerLoading(width: 60, height: 18, borderRadius: 9),
+          ],
+        ),
+      ),
     );
   }
 }
 
 class ChartShimmer extends StatelessWidget {
   final double height;
-  const ChartShimmer({this.height = 180, super.key});
+  const ChartShimmer({this.height = 200, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -151,18 +148,17 @@ class ChartShimmer extends StatelessWidget {
       height: height,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? AppColors.darkCard.withOpacity(0.4)
-            : Colors.white.withOpacity(0.5),
+        color: AppColors.layer1,
         borderRadius: BorderRadius.circular(24.0),
+        border: Border.all(color: AppColors.glassBorder),
       ),
       child: Column(
         children: [
           const Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              ShimmerLoading(width: 100, height: 16, borderRadius: 4),
-              ShimmerLoading(width: 60, height: 16, borderRadius: 4),
+              ShimmerLoading(width: 100, height: 14, borderRadius: 7),
+              ShimmerLoading(width: 60, height: 14, borderRadius: 7),
             ],
           ),
           const Spacer(),
@@ -170,12 +166,12 @@ class ChartShimmer extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: const [
-              ShimmerLoading(width: 24, height: 60, borderRadius: 4),
-              ShimmerLoading(width: 24, height: 100, borderRadius: 4),
-              ShimmerLoading(width: 24, height: 80, borderRadius: 4),
-              ShimmerLoading(width: 24, height: 120, borderRadius: 4),
-              ShimmerLoading(width: 24, height: 70, borderRadius: 4),
-              ShimmerLoading(width: 24, height: 90, borderRadius: 4),
+              ShimmerLoading(width: 28, height: 55, borderRadius: 6),
+              ShimmerLoading(width: 28, height: 95, borderRadius: 6),
+              ShimmerLoading(width: 28, height: 75, borderRadius: 6),
+              ShimmerLoading(width: 28, height: 115, borderRadius: 6),
+              ShimmerLoading(width: 28, height: 65, borderRadius: 6),
+              ShimmerLoading(width: 28, height: 85, borderRadius: 6),
             ],
           ),
         ],

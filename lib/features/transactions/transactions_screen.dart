@@ -8,6 +8,8 @@ import 'package:intl/intl.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../core/widgets/shimmer_loading.dart';
+import '../../core/widgets/worth_dialog.dart';
+import '../../core/widgets/worth_bottom_sheet.dart';
 import '../../core/providers/mock_database.dart';
 import '../../core/providers/dependency_provider.dart';
 import 'presentation/widgets/add_transaction_sheet.dart';
@@ -79,11 +81,13 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   }
 
   void _confirmVoid(BuildContext context, String txId, String? notes) {
-    showDialog(
+    showWorthDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Void Transaction', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: Text(
+      dialog: WorthDialog(
+        title: 'Void Transaction',
+        titleIcon: Icons.block_outlined,
+        isDangerous: true,
+        body: Text(
           'Are you sure you want to void this transaction: "${notes ?? 'Untitled'}"?\nThis will create an inverse adjustment transaction and reverse all balance cache effects.',
           style: const TextStyle(color: AppColors.grey400, fontSize: 13, height: 1.4),
         ),
@@ -120,109 +124,189 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       selectedCategory = dbState.categories.first;
     }
 
-    showDialog(
+    showWorthDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Edit Transaction', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: amountController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      dialog: WorthDialog(
+        title: 'Edit Transaction',
+        titleIcon: Icons.edit_outlined,
+        body: StatefulBuilder(
+          builder: (context, setState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: amountController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Amount',
+                  labelStyle: TextStyle(color: AppColors.grey500),
+                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.glassBorder)),
+                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.darkPrimary)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (tx.type == 'income' || tx.type == 'expense') ...[
+                DropdownButtonFormField<String>(
+                  value: selectedCategory,
+                  dropdownColor: AppColors.layer1,
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Amount'),
+                  decoration: const InputDecoration(
+                    labelText: 'Category',
+                    labelStyle: TextStyle(color: AppColors.grey500),
+                    enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.glassBorder)),
+                    focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.darkPrimary)),
+                  ),
+                  items: dbState.categories.map((c) => DropdownMenuItem(
+                    value: c,
+                    child: Text(c),
+                  )).toList(),
+                  onChanged: (val) => setState(() => selectedCategory = val!),
                 ),
                 const SizedBox(height: 16),
-                if (tx.type == 'income' || tx.type == 'expense') ...[
-                  DropdownButtonFormField<String>(
-                    value: selectedCategory,
-                    dropdownColor: AppColors.layer1,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
-                      labelText: 'Category',
-                      labelStyle: TextStyle(color: AppColors.grey500),
-                    ),
-                    items: dbState.categories.map((c) => DropdownMenuItem(
-                      value: c,
-                      child: Text(c),
-                    )).toList(),
-                    onChanged: (val) => setState(() => selectedCategory = val!),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    'Date: ${DateFormat('yyyy-MM-dd').format(selectedDate)}',
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                  ),
-                  trailing: const Icon(Icons.calendar_today, color: AppColors.darkPrimary),
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: selectedDate,
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
-                    );
-                    if (picked != null) {
-                      setState(() {
-                        selectedDate = picked;
-                      });
-                    }
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: notesController,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(labelText: 'Notes'),
-                ),
               ],
-            ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  'Date: ${DateFormat('yyyy-MM-dd').format(selectedDate)}',
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                ),
+                trailing: const Icon(Icons.calendar_today, color: AppColors.darkPrimary),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: selectedDate,
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                  );
+                  if (picked != null) {
+                    setState(() {
+                      selectedDate = picked;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: notesController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Notes',
+                  labelStyle: TextStyle(color: AppColors.grey500),
+                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.glassBorder)),
+                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.darkPrimary)),
+                ),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
-            ),
-             ElevatedButton(
-              onPressed: () async {
-                final amt = double.tryParse(amountController.text.trim()) ?? tx.amount;
-                final cat = selectedCategory;
-                final notes = notesController.text.trim();
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.grey500)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final amt = double.tryParse(amountController.text.trim()) ?? tx.amount;
+              final cat = selectedCategory;
+              final notes = notesController.text.trim();
 
-                final updated = db.Transaction(
-                  id: tx.id,
-                  type: tx.type,
-                  amount: amt,
-                  category: cat.isNotEmpty ? cat : tx.category,
-                  fromAccountId: tx.fromAccountId,
-                  toAccountId: tx.toAccountId,
-                  personId: tx.personId,
-                  investmentId: tx.investmentId,
-                  voidedTransactionId: tx.voidedTransactionId,
-                  notes: notes.isNotEmpty ? notes : null,
-                  pricePerUnit: tx.pricePerUnit,
-                  units: tx.units,
-                  transactionDate: selectedDate,
-                  createdAt: tx.createdAt,
-                  updatedAt: DateTime.now().toUtc(),
-                  syncStatus: 'pending',
+              final updated = db.Transaction(
+                id: tx.id,
+                type: tx.type,
+                amount: amt,
+                category: cat.isNotEmpty ? cat : tx.category,
+                fromAccountId: tx.fromAccountId,
+                toAccountId: tx.toAccountId,
+                personId: tx.personId,
+                investmentId: tx.investmentId,
+                voidedTransactionId: tx.voidedTransactionId,
+                notes: notes.isNotEmpty ? notes : null,
+                pricePerUnit: tx.pricePerUnit,
+                units: tx.units,
+                transactionDate: selectedDate,
+                createdAt: tx.createdAt,
+                updatedAt: DateTime.now().toUtc(),
+                syncStatus: 'pending',
+              );
+
+              await ref.read(mockDatabaseProvider.notifier).editTransaction(updated);
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Transaction updated successfully.')),
                 );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
+            child: const Text('Save', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
 
-                await ref.read(mockDatabaseProvider.notifier).editTransaction(updated);
-                if (context.mounted) {
+  void _showLongPressMenu(BuildContext context, Transaction tx) {
+    showWorthSheet(
+      context: context,
+      sheet: WorthBottomSheet(
+        title: tx.notes ?? tx.type.replaceAll('_', ' ').toUpperCase(),
+        titleIcon: Icons.menu_open_rounded,
+        body: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.info_outline, color: AppColors.glow),
+              title: const Text('View Details', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _showTransactionDetailsSheet(context, tx);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined, color: AppColors.darkPrimary),
+              title: const Text('Edit Transaction', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _showEditTransactionDialog(context, tx);
+              },
+            ),
+            if (tx.voidedTransactionId == null && tx.type != 'void')
+              ListTile(
+                leading: const Icon(Icons.block_outlined, color: AppColors.darkDanger),
+                title: const Text('Void Transaction', style: TextStyle(color: Colors.white)),
+                onTap: () {
                   Navigator.pop(context);
+                  _confirmVoid(context, tx.id, tx.notes);
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.copy_outlined, color: AppColors.darkSuccess),
+              title: const Text('Duplicate Transaction', style: TextStyle(color: Colors.white)),
+              onTap: () async {
+                Navigator.pop(context);
+                await ref.read(mockDatabaseProvider.notifier).duplicateTransaction(tx.id);
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Transaction updated successfully.')),
+                    const SnackBar(content: Text('Transaction duplicated.')),
                   );
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
-              child: const Text('Save', style: TextStyle(color: Colors.white)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: AppColors.darkDanger),
+              title: const Text('Delete Transaction', style: TextStyle(color: AppColors.darkDanger)),
+              onTap: () async {
+                Navigator.pop(context);
+                final confirm = await _showDeleteConfirmDialog(context);
+                if (confirm == true) {
+                  await ref.read(mockDatabaseProvider.notifier).deleteTransaction(tx.id);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Transaction deleted.')),
+                    );
+                  }
+                }
+              },
             ),
           ],
         ),
@@ -230,95 +314,14 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     );
   }
 
-  void _showLongPressMenu(BuildContext context, Transaction tx) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => GlassCard(
-        borderRadius: 32.0,
-        padding: const EdgeInsets.only(top: 12, left: 16, right: 16, bottom: 24),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(color: AppColors.grey700, borderRadius: BorderRadius.circular(2)),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                tx.notes ?? tx.type.replaceAll('_', ' ').toUpperCase(),
-                style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
-              ),
-              const SizedBox(height: 20),
-              ListTile(
-                leading: const Icon(Icons.info_outline, color: AppColors.glow),
-                title: const Text('View Details', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showTransactionDetailsSheet(context, tx);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.edit_outlined, color: AppColors.darkPrimary),
-                title: const Text('Edit Transaction', style: TextStyle(color: Colors.white)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showEditTransactionDialog(context, tx);
-                },
-              ),
-              if (tx.voidedTransactionId == null && tx.type != 'void')
-                ListTile(
-                  leading: const Icon(Icons.block_outlined, color: AppColors.darkDanger),
-                  title: const Text('Void Transaction', style: TextStyle(color: Colors.white)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _confirmVoid(context, tx.id, tx.notes);
-                  },
-                ),
-              ListTile(
-                leading: const Icon(Icons.copy_outlined, color: AppColors.darkSuccess),
-                title: const Text('Duplicate Transaction', style: TextStyle(color: Colors.white)),
-                onTap: () async {
-                  Navigator.pop(context);
-                  await ref.read(mockDatabaseProvider.notifier).duplicateTransaction(tx.id);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Transaction duplicated.')),
-                    );
-                  }
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete_outline, color: AppColors.darkDanger),
-                title: const Text('Delete Transaction', style: TextStyle(color: AppColors.darkDanger)),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final confirm = await _showDeleteConfirmDialog(context);
-                  if (confirm == true) {
-                    await ref.read(mockDatabaseProvider.notifier).deleteTransaction(tx.id);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Transaction deleted.')),
-                      );
-                    }
-                  }
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Future<bool?> _showDeleteConfirmDialog(BuildContext context) {
-    return showDialog<bool>(
+    return showWorthDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Transaction?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        content: const Text(
+      dialog: WorthDialog(
+        title: 'Delete Transaction?',
+        titleIcon: Icons.delete_outline,
+        isDangerous: true,
+        body: const Text(
           'This action cannot be undone and will permanently remove this record.',
           style: TextStyle(color: AppColors.grey400, fontSize: 13, height: 1.4),
         ),
@@ -346,63 +349,47 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     String linkedPerson = tx.personId != null ? dbState.people.firstWhere((p) => p.id == tx.personId, orElse: () => Person(id: '', name: 'Unknown', phone: null, notes: null, isArchived: 0, createdAt: DateTime.now(), updatedAt: DateTime.now(), syncStatus: 'synced', type: 'personal_loan')).name : 'None';
     String linkedInvestment = tx.investmentId != null ? dbState.investments.firstWhere((i) => i.id == tx.investmentId, orElse: () => Investment(id: '', name: 'None', type: 'mutual_fund', symbol: '', marketValue: 0.0, marketValueUpdatedAt: DateTime.now(), isArchived: 0, notes: null, createdAt: DateTime.now(), updatedAt: DateTime.now(), syncStatus: 'synced')).name : 'None';
 
-    showModalBottomSheet(
+    showWorthSheet(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => GlassCard(
-        borderRadius: 32.0,
-        padding: const EdgeInsets.all(24.0),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(color: AppColors.grey700, borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'TRANSACTION DETAILS',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 1.5),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '$currency${NumberFormat.decimalPattern().format(tx.amount)}',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(fontSize: 36, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -1.0),
-              ),
-              const SizedBox(height: 24),
+      sheet: WorthBottomSheet(
+        title: 'Transaction Details',
+        titleIcon: Icons.info_outline,
+        body: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 12),
+            Text(
+              '$currency${NumberFormat.decimalPattern().format(tx.amount)}',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.jetBrainsMono(fontSize: 36, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -1.0),
+            ),
+            const SizedBox(height: 24),
 
-              _buildDetailRow('Date & Time', DateFormat('EEEE, d MMMM yyyy, h:mm a').format(tx.transactionDate.toLocal())),
-              _buildDetailRow('Type', tx.type.replaceAll('_', ' ').toUpperCase()),
-              if (tx.category != null) _buildDetailRow('Category', tx.category!),
-              if (tx.fromAccountId != null) _buildDetailRow('Source Account', fromAccName),
-              if (tx.toAccountId != null) _buildDetailRow('Destination Account', toAccName),
-              if (tx.personId != null) _buildDetailRow('Linked Entity / Person', linkedPerson),
-              if (tx.investmentId != null) _buildDetailRow('Linked Investment', linkedInvestment),
-              if (tx.units != null && tx.pricePerUnit != null)
-                _buildDetailRow('Units / Price', '${tx.units} units @ $currency${tx.pricePerUnit}'),
-              if (tx.notes != null) _buildDetailRow('Notes', tx.notes!),
-              _buildDetailRow('Status', tx.voidedTransactionId != null ? 'VOIDED' : 'ACTIVE', 
-                valueColor: tx.voidedTransactionId != null ? AppColors.darkDanger : AppColors.darkSuccess),
-              
-              const SizedBox(height: 24),
-              TactileButton(
-                color: AppColors.layer2,
-                border: const BorderSide(color: AppColors.glassBorder),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showEditTransactionDialog(context, tx);
-                },
-                child: const Text('Edit Record', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
+            _buildDetailRow('Date & Time', DateFormat('EEEE, d MMMM yyyy, h:mm a').format(tx.transactionDate.toLocal())),
+            _buildDetailRow('Type', tx.type.replaceAll('_', ' ').toUpperCase()),
+            if (tx.category != null) _buildDetailRow('Category', tx.category!),
+            if (tx.fromAccountId != null) _buildDetailRow('Source Account', fromAccName),
+            if (tx.toAccountId != null) _buildDetailRow('Destination Account', toAccName),
+            if (tx.personId != null) _buildDetailRow('Linked Entity / Person', linkedPerson),
+            if (tx.investmentId != null) _buildDetailRow('Linked Investment', linkedInvestment),
+            if (tx.units != null && tx.pricePerUnit != null)
+              _buildDetailRow('Units / Price', '${tx.units} units @ $currency${tx.pricePerUnit}'),
+            if (tx.notes != null) _buildDetailRow('Notes', tx.notes!),
+            _buildDetailRow('Status', tx.voidedTransactionId != null ? 'VOIDED' : 'ACTIVE', 
+              valueColor: tx.voidedTransactionId != null ? AppColors.darkDanger : AppColors.darkSuccess),
+            
+            const SizedBox(height: 24),
+            TactileButton(
+              color: AppColors.layer2,
+              border: const BorderSide(color: AppColors.glassBorder),
+              onTap: () {
+                Navigator.pop(context);
+                _showEditTransactionDialog(context, tx);
+              },
+              child: const Text('Edit Record', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
         ),
       ),
     );
@@ -432,179 +419,213 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   void _showAdvancedFiltersModal(BuildContext context) {
     final dbState = ref.read(mockDatabaseProvider);
 
-    showDialog(
+    showWorthDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => AlertDialog(
-          title: const Text('Advanced Filters', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Date Range Button
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Date Range', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
-                  subtitle: Text(
-                    _filterStartDate == null && _filterEndDate == null
-                        ? 'All Time'
-                        : '${_filterStartDate != null ? DateFormat('MM/dd/yy').format(_filterStartDate!) : 'Any'} - ${_filterEndDate != null ? DateFormat('MM/dd/yy').format(_filterEndDate!) : 'Any'}',
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
+      dialog: WorthDialog(
+        title: 'Advanced Filters',
+        titleIcon: Icons.tune_rounded,
+        body: StatefulBuilder(
+          builder: (context, setModalState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Date Range Button
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Date Range', style: TextStyle(color: AppColors.grey400, fontSize: 12)),
+                subtitle: Text(
+                  _filterStartDate == null && _filterEndDate == null
+                      ? 'All Time'
+                      : '${_filterStartDate != null ? DateFormat('MM/dd/yy').format(_filterStartDate!) : 'Any'} - ${_filterEndDate != null ? DateFormat('MM/dd/yy').format(_filterEndDate!) : 'Any'}',
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                ),
+                trailing: const Icon(Icons.date_range_outlined, color: AppColors.darkPrimary),
+                onTap: () async {
+                  final picked = await showDateRangePicker(
+                    context: context,
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                    initialDateRange: _filterStartDate != null && _filterEndDate != null
+                        ? DateTimeRange(start: _filterStartDate!, end: _filterEndDate!)
+                        : null,
+                  );
+                  if (picked != null) {
+                    setModalState(() {
+                      _filterStartDate = picked.start;
+                      _filterEndDate = picked.end;
+                    });
+                  }
+                },
+              ),
+              const Divider(color: AppColors.glassBorder),
+
+              // Account Filter
+              DropdownButtonFormField<String?>(
+                value: _filterAccountId,
+                dropdownColor: AppColors.layer1,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: const InputDecoration(
+                  labelText: 'Filter by Account',
+                  labelStyle: TextStyle(color: AppColors.grey500),
+                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.glassBorder)),
+                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.darkPrimary)),
+                ),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('All Accounts')),
+                  ...dbState.accounts.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name))),
+                ],
+                onChanged: (val) => setModalState(() => _filterAccountId = val),
+              ),
+              const SizedBox(height: 16),
+
+              // Type Filter
+              DropdownButtonFormField<String?>(
+                value: _filterType,
+                dropdownColor: AppColors.layer1,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: const InputDecoration(
+                  labelText: 'Filter by Type',
+                  labelStyle: TextStyle(color: AppColors.grey500),
+                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.glassBorder)),
+                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.darkPrimary)),
+                ),
+                items: const [
+                  DropdownMenuItem(value: null, child: Text('All Types')),
+                  DropdownMenuItem(value: 'income', child: Text('Income')),
+                  DropdownMenuItem(value: 'expense', child: Text('Expense')),
+                  DropdownMenuItem(value: 'transfer', child: Text('Transfer')),
+                  DropdownMenuItem(value: 'borrow_money', child: Text('Borrow Loan')),
+                  DropdownMenuItem(value: 'repay_money', child: Text('Repay Loan')),
+                  DropdownMenuItem(value: 'lend_money', child: Text('Lend Money')),
+                  DropdownMenuItem(value: 'recover_money', child: Text('Recover Debt')),
+                  DropdownMenuItem(value: 'investment_buy', child: Text('Buy Investment')),
+                  DropdownMenuItem(value: 'investment_sell', child: Text('Sell Investment')),
+                  DropdownMenuItem(value: 'expected_income_received', child: Text('Received Expected')),
+                ],
+                onChanged: (val) => setModalState(() => _filterType = val),
+              ),
+              const SizedBox(height: 16),
+
+              // Linked Person Filter
+              DropdownButtonFormField<String?>(
+                value: _filterPersonId,
+                dropdownColor: AppColors.layer1,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: const InputDecoration(
+                  labelText: 'Filter by Person',
+                  labelStyle: TextStyle(color: AppColors.grey500),
+                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.glassBorder)),
+                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.darkPrimary)),
+                ),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('No Person Filter')),
+                  ...dbState.people.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))),
+                ],
+                onChanged: (val) => setModalState(() => _filterPersonId = val),
+              ),
+              const SizedBox(height: 16),
+
+              // Linked Investment Filter
+              DropdownButtonFormField<String?>(
+                value: _filterInvestmentId,
+                dropdownColor: AppColors.layer1,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: const InputDecoration(
+                  labelText: 'Filter by Investment',
+                  labelStyle: TextStyle(color: AppColors.grey500),
+                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.glassBorder)),
+                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.darkPrimary)),
+                ),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('No Investment Filter')),
+                  ...dbState.investments.map((i) => DropdownMenuItem(value: i.id, child: Text(i.name))),
+                ],
+                onChanged: (val) => setModalState(() => _filterInvestmentId = val),
+              ),
+              const SizedBox(height: 16),
+
+              // Amount range
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      decoration: const InputDecoration(
+                        labelText: 'Min Amount',
+                        labelStyle: TextStyle(color: AppColors.grey500),
+                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.glassBorder)),
+                        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.darkPrimary)),
+                      ),
+                      onChanged: (val) => _filterMinAmount = double.tryParse(val),
+                    ),
                   ),
-                  trailing: const Icon(Icons.date_range_outlined, color: AppColors.darkPrimary),
-                  onTap: () async {
-                    final picked = await showDateRangePicker(
-                      context: context,
-                      firstDate: DateTime(2000),
-                      lastDate: DateTime(2100),
-                      initialDateRange: _filterStartDate != null && _filterEndDate != null
-                          ? DateTimeRange(start: _filterStartDate!, end: _filterEndDate!)
-                          : null,
-                    );
-                    if (picked != null) {
-                      setModalState(() {
-                        _filterStartDate = picked.start;
-                        _filterEndDate = picked.end;
-                      });
-                    }
-                  },
-                ),
-                const Divider(color: AppColors.glassBorder),
-
-                // Account Filter
-                DropdownButtonFormField<String?>(
-                  value: _filterAccountId,
-                  dropdownColor: AppColors.layer1,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  decoration: const InputDecoration(labelText: 'Filter by Account'),
-                  items: [
-                    const DropdownMenuItem(value: null, child: Text('All Accounts')),
-                    ...dbState.accounts.map((a) => DropdownMenuItem(value: a.id, child: Text(a.name))),
-                  ],
-                  onChanged: (val) => setModalState(() => _filterAccountId = val),
-                ),
-                const SizedBox(height: 16),
-
-                // Type Filter
-                DropdownButtonFormField<String?>(
-                  value: _filterType,
-                  dropdownColor: AppColors.layer1,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  decoration: const InputDecoration(labelText: 'Filter by Type'),
-                  items: const [
-                    DropdownMenuItem(value: null, child: Text('All Types')),
-                    DropdownMenuItem(value: 'income', child: Text('Income')),
-                    DropdownMenuItem(value: 'expense', child: Text('Expense')),
-                    DropdownMenuItem(value: 'transfer', child: Text('Transfer')),
-                    DropdownMenuItem(value: 'borrow_money', child: Text('Borrow Loan')),
-                    DropdownMenuItem(value: 'repay_money', child: Text('Repay Loan')),
-                    DropdownMenuItem(value: 'lend_money', child: Text('Lend Money')),
-                    DropdownMenuItem(value: 'recover_money', child: Text('Recover Debt')),
-                    DropdownMenuItem(value: 'investment_buy', child: Text('Buy Investment')),
-                    DropdownMenuItem(value: 'investment_sell', child: Text('Sell Investment')),
-                    DropdownMenuItem(value: 'expected_income_received', child: Text('Received Expected')),
-                  ],
-                  onChanged: (val) => setModalState(() => _filterType = val),
-                ),
-                const SizedBox(height: 16),
-
-                // Linked Person Filter
-                DropdownButtonFormField<String?>(
-                  value: _filterPersonId,
-                  dropdownColor: AppColors.layer1,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  decoration: const InputDecoration(labelText: 'Filter by Person'),
-                  items: [
-                    const DropdownMenuItem(value: null, child: Text('No Person Filter')),
-                    ...dbState.people.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))),
-                  ],
-                  onChanged: (val) => setModalState(() => _filterPersonId = val),
-                ),
-                const SizedBox(height: 16),
-
-                // Linked Investment Filter
-                DropdownButtonFormField<String?>(
-                  value: _filterInvestmentId,
-                  dropdownColor: AppColors.layer1,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  decoration: const InputDecoration(labelText: 'Filter by Investment'),
-                  items: [
-                    const DropdownMenuItem(value: null, child: Text('No Investment Filter')),
-                    ...dbState.investments.map((i) => DropdownMenuItem(value: i.id, child: Text(i.name))),
-                  ],
-                  onChanged: (val) => setModalState(() => _filterInvestmentId = val),
-                ),
-                const SizedBox(height: 16),
-
-                // Amount range
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        keyboardType: TextInputType.number,
-                        style: const TextStyle(color: Colors.white, fontSize: 14),
-                        decoration: const InputDecoration(labelText: 'Min Amount'),
-                        onChanged: (val) => _filterMinAmount = double.tryParse(val),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      decoration: const InputDecoration(
+                        labelText: 'Max Amount',
+                        labelStyle: TextStyle(color: AppColors.grey500),
+                        enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.glassBorder)),
+                        focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.darkPrimary)),
                       ),
+                      onChanged: (val) => _filterMaxAmount = double.tryParse(val),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        keyboardType: TextInputType.number,
-                        style: const TextStyle(color: Colors.white, fontSize: 14),
-                        decoration: const InputDecoration(labelText: 'Max Amount'),
-                        onChanged: (val) => _filterMaxAmount = double.tryParse(val),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
 
-                // Status Filter
-                DropdownButtonFormField<String?>(
-                  value: _filterStatus,
-                  dropdownColor: AppColors.layer1,
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  decoration: const InputDecoration(labelText: 'Status'),
-                  items: const [
-                    DropdownMenuItem(value: null, child: Text('All Statuses')),
-                    DropdownMenuItem(value: 'active', child: Text('Active Only')),
-                    DropdownMenuItem(value: 'voided', child: Text('Voided Only')),
-                  ],
-                  onChanged: (val) => setModalState(() => _filterStatus = val),
+              // Status Filter
+              DropdownButtonFormField<String?>(
+                value: _filterStatus,
+                dropdownColor: AppColors.layer1,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: const InputDecoration(
+                  labelText: 'Status',
+                  labelStyle: TextStyle(color: AppColors.grey500),
+                  enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.glassBorder)),
+                  focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.darkPrimary)),
                 ),
-              ],
-            ),
+                items: const [
+                  DropdownMenuItem(value: null, child: Text('All Statuses')),
+                  DropdownMenuItem(value: 'active', child: Text('Active Only')),
+                  DropdownMenuItem(value: 'voided', child: Text('Voided Only')),
+                ],
+                onChanged: (val) => setModalState(() => _filterStatus = val),
+              ),
+            ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                setState(() {
-                  _filterStartDate = null;
-                  _filterEndDate = null;
-                  _filterAccountId = null;
-                  _filterType = null;
-                  _filterPersonId = null;
-                  _filterInvestmentId = null;
-                  _filterMinAmount = null;
-                  _filterMaxAmount = null;
-                  _filterStatus = null;
-                });
-                Navigator.pop(context);
-              },
-              child: const Text('Reset', style: TextStyle(color: AppColors.darkDanger)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {}); // Apply state change globally to filter the feed
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
-              child: const Text('Apply', style: TextStyle(color: Colors.white)),
-            ),
-          ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _filterStartDate = null;
+                _filterEndDate = null;
+                _filterAccountId = null;
+                _filterType = null;
+                _filterPersonId = null;
+                _filterInvestmentId = null;
+                _filterMinAmount = null;
+                _filterMaxAmount = null;
+                _filterStatus = null;
+              });
+              Navigator.pop(context);
+            },
+            child: const Text('Reset', style: TextStyle(color: AppColors.darkDanger)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {}); // Apply state change globally to filter the feed
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.darkPrimary),
+            child: const Text('Apply', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
@@ -883,13 +904,20 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              'Activity',
-                              style: GoogleFonts.outfit(
-                                fontSize: 26,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                letterSpacing: -0.5,
+                            ShaderMask(
+                              shaderCallback: (bounds) => const LinearGradient(
+                                colors: [Color(0xFFF8FAFC), Color(0xFFC084FC)],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                              ).createShader(bounds),
+                              child: Text(
+                                'Activity',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: -0.5,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -980,7 +1008,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                             children: [
                               const Icon(Icons.arrow_downward, color: AppColors.darkSuccess, size: 10),
                               const SizedBox(width: 2),
-                              AnimatedMoneyText(value: s['in'] as double, currency: currency, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white70)),
+                              AnimatedMoneyText(value: s['in'] as double, currency: currency, style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white70)),
                             ],
                           ),
                           const SizedBox(height: 2),
@@ -988,7 +1016,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                             children: [
                               const Icon(Icons.arrow_upward, color: AppColors.darkDanger, size: 10),
                               const SizedBox(width: 2),
-                              AnimatedMoneyText(value: s['out'] as double, currency: currency, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white70)),
+                              AnimatedMoneyText(value: s['out'] as double, currency: currency, style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white70)),
                             ],
                           ),
                         ],
@@ -1003,7 +1031,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                           AnimatedMoneyText(
                             value: netVal.abs(),
                             currency: '${netVal < 0 ? '-' : ''}$currency',
-                            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800),
+                            style: GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.w800),
                             color: netColor,
                           ),
                         ],
@@ -1295,7 +1323,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                       children: [
                         Text(
                           amountText,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.jetBrainsMono(
                             color: isVoided ? AppColors.grey500 : valueColor,
                             decoration: isVoided ? TextDecoration.lineThrough : null,
                             fontWeight: FontWeight.bold,
@@ -1500,7 +1528,7 @@ class AnimatedMoneyText extends StatelessWidget {
 // EXPANDABLE MORPHING FAB
 // ─────────────────────────────────────────────────────────────────────────────
 class ExpandableFab extends StatefulWidget {
-  final Function(int segmentedIndex, String? moreType) onSelectType;
+  final void Function(int segmentedIndex, String? moreType) onSelectType;
   const ExpandableFab({required this.onSelectType, super.key});
 
   @override
