@@ -718,6 +718,50 @@ class _AdvancedSettingsScreenState extends ConsumerState<AdvancedSettingsScreen>
                 ],
               ),
             ),
+            const SizedBox(height: 24),
+
+            _buildSectionHeader('DIAGNOSTIC TEST CONTROLS'),
+            const SizedBox(height: 8),
+            GlassCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  _buildActionTile(
+                    icon: Icons.bug_report_outlined,
+                    title: 'Simulate Rendering Crash',
+                    subtitle: 'Forces a widget build crash to verify framework error boundary recovery.',
+                    textColor: AppColors.darkWarning,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => Scaffold(
+                            appBar: AppBar(title: const Text('Crash Test')),
+                            body: Builder(
+                              builder: (context) {
+                                throw Exception('Simulated UI Rendering Crash');
+                              },
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(color: AppColors.glassBorder, height: 1),
+                  _buildActionTile(
+                    icon: Icons.bolt_outlined,
+                    title: 'Simulate Asynchronous Crash',
+                    subtitle: 'Throws an exception out-of-band in an async task to verify runtime auto-restart.',
+                    textColor: AppColors.darkWarning,
+                    onTap: () {
+                      Future.delayed(const Duration(milliseconds: 100), () {
+                        throw Exception('Simulated Asynchronous Task Exception');
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 32),
           ],
         ),

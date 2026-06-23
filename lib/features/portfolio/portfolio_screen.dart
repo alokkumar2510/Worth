@@ -969,6 +969,9 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         purchaseTime: purchaseTimeStr,
                         notes: userNotes.isNotEmpty ? userNotes : null,
                         type: type,
+                        fundingSource: fundingSource,
+                        fundingLiabilityId: fundingLiabilityId,
+                        fundingDetails: fundingSource == 'mixed_sources' ? mixedDetailsController.text.trim() : null,
                       );
                     } else {
                       final inv = await notifier.addInvestment(

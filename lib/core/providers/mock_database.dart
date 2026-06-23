@@ -3695,6 +3695,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     String? investmentId,
     String? notes,
     String type = 'stock',
+    String? fundingSource,
+    String? fundingLiabilityId,
+    String? fundingDetails,
   }) async {
     final id = _uuid.v4();
     final now = DateTime.now().toUtc();
@@ -3704,7 +3707,18 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     if (investmentId != null) {
       actualInvestmentId = investmentId;
     } else {
-      final inv = await addInvestment(instrument, type, null, notes ?? 'MTF Position: $broker', averagePrice);
+      final inv = await addInvestment(
+        instrument,
+        type,
+        null,
+        notes ?? 'MTF Position: $broker',
+        averagePrice,
+        purchaseDate: purchaseDate ?? openingDate,
+        purchaseTime: purchaseTime,
+        fundingSource: fundingSource,
+        fundingLiabilityId: fundingLiabilityId,
+        fundingDetails: fundingDetails,
+      );
       actualInvestmentId = inv.id;
     }
 
@@ -3759,10 +3773,70 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     state = state.copyWith(mtfPositions: [...state.mtfPositions, newPos]);
 
     // 3. Add Buy Transaction (decreases cash by units * averagePrice)
-    await buyInvestment(actualInvestmentId, 'acc_primary_bank_uuid', units, averagePrice, notes ?? 'MTF Buy: $instrument', purchaseDate ?? openingDate);
+    await buyInvestment(
+      actualInvestmentId,
+      'acc_primary_bank_uuid',
+      units,
+      averagePrice,
+      notes ?? 'MTF Buy: $instrument',
+      purchaseDate ?? openingDate,
+      fundingSource: fundingSource,
+      fundingLiabilityId: fundingLiabilityId,
+      fundingDetails: fundingDetails,
+    );
 
     // 4. Add Borrow Transaction (deposits borrowedCapital back to offset cash)
-    await addBorrowTransaction('person_broker_uuid_placeholder', 'acc_primary_bank_uuid', borrowedCapital, 'MTF Borrowed Funding for $instrument', openingDate);
+    await addBorrowTransaction(
+      'person_broker_uuid_placeholder',
+      'acc_primary_bank_uuid',
+      borrowedCapital,
+      'MTF Borrowed Funding for $instrument',
+      openingDate,
+    );
+
+    // 5. If ownCapital is funded by a liability (credit card or lender), record that borrow/transfer transaction to offset primary bank cash
+    if (fundingSource == 'liability_borrowed' && fundingLiabilityId != null && fundingLiabilityId != 'none') {
+      final cleanId = fundingLiabilityId.contains('_') ? fundingLiabilityId.substring(fundingLiabilityId.indexOf('_') + 1) : fundingLiabilityId;
+      if (fundingLiabilityId.startsWith('person_')) {
+        await addBorrowTransaction(
+          cleanId,
+          'acc_primary_bank_uuid',
+          ownCapital,
+          'MTF Own Capital borrowed from creditor',
+          purchaseDate ?? openingDate,
+        );
+      } else if (fundingLiabilityId.startsWith('acc_')) {
+        await addTransaction(
+          type: 'transfer',
+          amount: ownCapital,
+          fromAccountId: cleanId,
+          toAccountId: 'acc_primary_bank_uuid',
+          notes: 'MTF Own Capital funding from credit account',
+          date: purchaseDate ?? openingDate,
+        );
+      } else {
+        // Fallback: check if cleanId matches an account in the state
+        final isAccount = state.accounts.any((a) => a.id == cleanId);
+        if (isAccount) {
+          await addTransaction(
+            type: 'transfer',
+            amount: ownCapital,
+            fromAccountId: cleanId,
+            toAccountId: 'acc_primary_bank_uuid',
+            notes: 'MTF Own Capital funding from credit account',
+            date: purchaseDate ?? openingDate,
+          );
+        } else {
+          await addBorrowTransaction(
+            cleanId,
+            'acc_primary_bank_uuid',
+            ownCapital,
+            'MTF Own Capital funding from lender',
+            purchaseDate ?? openingDate,
+          );
+        }
+      }
+    }
 
     await _logHistory(
       action: 'MTF Positions',

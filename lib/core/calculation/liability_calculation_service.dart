@@ -278,7 +278,7 @@ class LiabilityCalculationService {
     }
 
     // 2. Active Peer Liabilities (outstanding amount > 0)
-    final peers = state.people.where((p) => p.isArchived == 0);
+    final peers = state.people.where((p) => p.isArchived == 0 && p.type != 'broker');
     for (final p in peers) {
       final bal = calculatePeerLiability(p, state.transactions, state.adjustments).finalBalance;
       if (bal > 0) {

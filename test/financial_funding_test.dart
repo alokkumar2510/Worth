@@ -166,6 +166,67 @@ void main() {
       expect(state.selfFundedAssets, equals(15000.0));
       expect(state.fundingSourceBreakdown['mixed_sources'], equals(25000.0));
     });
+
+    test('Adding MTF position funded via liability_borrowed (borrowed money) tracks bank cash and liability correctly', () async {
+      final notifier = container.read(mockDatabaseProvider.notifier);
+
+      // 1. Setup primary bank account with some cash
+      final bank = await notifier.addAccount(
+        'Main Primary Bank',
+        'bank',
+        'Primary storage of funds',
+        50000.0,
+      );
+
+      // 2. Setup lender Bob
+      final creditor = await notifier.addPerson('Lender Bob', null, 'Creditor');
+
+      // 3. Add MTF position with ownCapital funded by Lender Bob
+      await notifier.addMtfPosition(
+        broker: 'Groww',
+        instrument: 'Nifty ETF',
+        units: 100.0,
+        averagePrice: 100.0,
+        ownCapital: 4000.0,
+        borrowedCapital: 6000.0,
+        interestRate: 10.0,
+        openingDate: DateTime.now(),
+        interestStartDate: DateTime.now(),
+        fundingSource: 'liability_borrowed',
+        fundingLiabilityId: 'person_${creditor.id}',
+        type: 'etf',
+      );
+
+      final state = container.read(mockDatabaseProvider);
+
+      // Verify asset and transaction attributes:
+      // The total cost is 10,000 (100 units * 100 price).
+      // Broker borrowed capital = 6,000. Own capital = 4,000.
+      // 4,000 ownCapital is funded by Bob.
+      
+      // The bank account cash balance:
+      // Initial = 50,000.
+      // - 10,000 (ETF buy)
+      // + 6,000 (broker borrow)
+      // + 4,000 (ownCapital borrow from Bob)
+      // Net bank balance = 50,000!
+      expect(state.getAccountCashBalance(bank.id), equals(50000.0));
+
+      // Creditor Bob's liability balance = 4,000 (own capital funded by Bob)
+      expect(state.getPersonLiabilityBalance(creditor.id), equals(4000.0));
+
+      // Total liabilities = 6,000 (broker) + 4,000 (Bob) = 10,000
+      expect(state.totalLiabilities, equals(10000.0));
+
+      // Total assets = 50,000 (bank) + 10,000 (ETF) = 60,000
+      expect(state.totalAssets, equals(60000.0));
+
+      // Net Worth = 60,000 - 10,000 = 50,000 (equal to original bank balance)
+      expect(state.netWorth, equals(50000.0));
+      
+      // Funding metrics
+      expect(state.debtFundedAssets, equals(10000.0)); // both broker and bob are debt-funded
+    });
   });
 
   group('Real SQLite Database Mode Validation Tests', () {

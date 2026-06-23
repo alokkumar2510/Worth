@@ -86,6 +86,9 @@ class AppLockNotifier extends StateNotifier<AppLockState> {
 
     final lastTime = state.lastActiveTime;
     if (lastTime == null) {
+      if (state.lockState == LockState.unlocked) {
+        return;
+      }
       state = state.copyWith(lockState: LockState.locked);
       return;
     }
@@ -95,6 +98,8 @@ class AppLockNotifier extends StateNotifier<AppLockState> {
     
     if (elapsedSeconds >= timeout) {
       state = state.copyWith(lockState: LockState.locked);
+    } else {
+      state = state.copyWith(lastActiveTime: null);
     }
   }
 }

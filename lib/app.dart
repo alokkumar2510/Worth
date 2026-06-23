@@ -10,6 +10,7 @@ import 'core/services/update_service.dart';
 import 'core/widgets/update_prompt_sheet.dart';
 import 'core/services/notification_service.dart';
 import 'database/seeder.dart';
+import 'core/widgets/error_boundary.dart';
 
 
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
@@ -189,8 +190,10 @@ class _WorthAppState extends ConsumerState<WorthApp> with WidgetsBindingObserver
             hasPendingSync: updateState.hasPendingSync,
           );
         }
-        return AppLockGuard(
-          child: WorthBackground(child: child ?? const SizedBox()),
+        return CrashErrorPopupGuard(
+          child: AppLockGuard(
+            child: WorthBackground(child: child ?? const SizedBox()),
+          ),
         );
       },
     );
