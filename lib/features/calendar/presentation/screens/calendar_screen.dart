@@ -167,7 +167,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       body: Container(
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/mesh_gradient_2.png'),
+            image: AssetImage('assets/graphics/backgrounds/portfolio_hero_bg.png'),
             fit: BoxFit.cover,
             opacity: 0.05,
           ),

@@ -511,9 +511,26 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                 final phone = phoneController.text.trim();
                 final whatsApp = whatsAppController.text.trim();
                 final upiId = upiIdController.text.trim();
-                final amount = double.tryParse(amountController.text.trim()) ?? 0.0;
+                final amountText = amountController.text.trim();
+                final amount = double.tryParse(amountText) ?? 0.0;
                 final notes = notesController.text.trim();
-                if (name.isNotEmpty) {
+                if (name.isEmpty) return;
+
+                // Validate amount upfront to give a clear error instead of a crash
+                if (amount <= 0) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Please enter a valid amount greater than 0.'),
+                        backgroundColor: Colors.redAccent,
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                  return;
+                }
+
+                try {
                   final finalAccountId = selectedAccountId ?? 'acc_primary_bank_uuid';
                   final notifier = ref.read(mockDatabaseProvider.notifier);
                   final txDateTime = DateTime(
@@ -556,6 +573,16 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                   }
                   if (context.mounted) {
                     Navigator.pop(context);
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to save: ${e.toString()}'),
+                        backgroundColor: Colors.redAccent,
+                        duration: const Duration(seconds: 4),
+                      ),
+                    );
                   }
                 }
               },

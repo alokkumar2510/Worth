@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:drift/drift.dart';
@@ -682,6 +683,11 @@ class MockDatabaseState {
 class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
   final Ref _ref;
 
+  Future<void>? _activeLoadFuture;
+  bool _needsReload = false;
+  bool _isAccruingInterest = false;
+  bool _isProcessingSip = false;
+
   MockDatabaseNotifier(this._ref) : super(initialState()) {
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
@@ -952,6 +958,41 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
   }
 
   Future<void> loadStateFromDatabase() async {
+    if (_activeLoadFuture != null) {
+      _needsReload = true;
+      await _activeLoadFuture;
+      return;
+    }
+
+    final completer = Completer<void>();
+    _activeLoadFuture = completer.future;
+
+    try {
+      do {
+        _needsReload = false;
+        await _loadStateInternal();
+      } while (_needsReload);
+
+      // Trigger background operations & gamification engine evaluation after state is fully loaded
+      Future.microtask(() async {
+        try {
+          await runAutoInterestAccrual();
+          await runAutoSipProcessing();
+          await _ref.read(gamificationEngineProvider).evaluateAll();
+        } catch (e) {
+          // ignore
+        }
+      });
+      completer.complete();
+    } catch (e, s) {
+      completer.completeError(e, s);
+      rethrow;
+    } finally {
+      _activeLoadFuture = null;
+    }
+  }
+
+  Future<void> _loadStateInternal() async {
     try {
       final db = _ref.read(realDatabaseProvider);
       final rawAccounts = await db.select(db.accounts).get();
@@ -1157,17 +1198,6 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         notificationsAsked: notificationsAsked,
         userCreatedAt: userCreatedAt,
       );
-
-      // Trigger background operations & gamification engine evaluation
-      Future.microtask(() async {
-        try {
-          await runAutoInterestAccrual();
-          await runAutoSipProcessing();
-          await _ref.read(gamificationEngineProvider).evaluateAll();
-        } catch (e) {
-          // ignore
-        }
-      });
     } catch (e) {
       // Fallback silently if db is closed or locked
     }
@@ -4592,37 +4622,43 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
   }
 
   Future<void> runAutoInterestAccrual() async {
-    final now = DateTime.now().toUtc();
-    final today = DateTime(now.year, now.month, now.day);
-    
-    final activePositions = state.mtfPositions.where((pos) => pos.isClosed == 0).toList();
+    if (_isAccruingInterest) return;
+    _isAccruingInterest = true;
+    try {
+      final now = DateTime.now().toUtc();
+      final today = DateTime(now.year, now.month, now.day);
+      
+      final activePositions = state.mtfPositions.where((pos) => pos.isClosed == 0).toList();
 
-    for (final pos in activePositions) {
-      final lastAccrual = pos.lastAccrualDate ?? pos.interestStartDate;
-      final lastAccrualDay = DateTime(lastAccrual.year, lastAccrual.month, lastAccrual.day);
-      final days = today.difference(lastAccrualDay).inDays;
+      for (final pos in activePositions) {
+        final lastAccrual = pos.lastAccrualDate ?? pos.interestStartDate;
+        final lastAccrualDay = DateTime(lastAccrual.year, lastAccrual.month, lastAccrual.day);
+        final days = today.difference(lastAccrualDay).inDays;
 
-      if (days > 0) {
-        final dailyInterest = pos.borrowedCapital * (pos.interestRate / 100) / 365;
-        if (dailyInterest <= 0) continue;
+        if (days > 0) {
+          final dailyInterest = pos.borrowedCapital * (pos.interestRate / 100) / 365;
+          if (dailyInterest <= 0) continue;
 
-        for (int i = 1; i <= days; i++) {
-          final accrualDate = lastAccrualDay.add(Duration(days: i));
-          final txNotes = 'MTF Interest Accrued for ${DateFormat("yyyy-MM-dd").format(accrualDate)}';
-          
-          await addTransaction(
-            type: 'expense',
-            amount: dailyInterest,
-            category: 'MTF Interest',
-            fromAccountId: 'acc_primary_bank_uuid',
-            investmentId: pos.investmentId,
-            notes: txNotes,
-            date: accrualDate,
-          );
+          for (int i = 1; i <= days; i++) {
+            final accrualDate = lastAccrualDay.add(Duration(days: i));
+            final txNotes = 'MTF Interest Accrued for ${DateFormat("yyyy-MM-dd").format(accrualDate)}';
+            
+            await addTransaction(
+              type: 'expense',
+              amount: dailyInterest,
+              category: 'MTF Interest',
+              fromAccountId: 'acc_primary_bank_uuid',
+              investmentId: pos.investmentId,
+              notes: txNotes,
+              date: accrualDate,
+            );
+          }
+
+          await updateMtfPositionAccrual(pos.id, today);
         }
-
-        await updateMtfPositionAccrual(pos.id, today);
       }
+    } finally {
+      _isAccruingInterest = false;
     }
   }
 
@@ -4853,76 +4889,82 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
   }
 
   Future<void> runAutoSipProcessing() async {
-    final now = DateTime.now().toUtc();
-    final today = DateTime(now.year, now.month, now.day);
-    
-    final activeSips = state.sips.where((s) => s.isActive == 1).toList();
-    for (final sip in activeSips) {
-      if (sip.startDate.isAfter(today)) continue;
-      if (sip.endDate != null && sip.endDate!.isBefore(today)) continue;
+    if (_isProcessingSip) return;
+    _isProcessingSip = true;
+    try {
+      final now = DateTime.now().toUtc();
+      final today = DateTime(now.year, now.month, now.day);
+      
+      final activeSips = state.sips.where((s) => s.isActive == 1).toList();
+      for (final sip in activeSips) {
+        if (sip.startDate.isAfter(today)) continue;
+        if (sip.endDate != null && sip.endDate!.isBefore(today)) continue;
 
-      bool matches = false;
-      if (sip.frequency == 'weekly') {
-        if (today.weekday == sip.sipDate) {
-          matches = true;
-        }
-      } else if (sip.frequency == 'monthly') {
-        final daysInMonth = DateTime(today.year, today.month + 1, 0).day;
-        final targetDay = sip.sipDate > daysInMonth ? daysInMonth : sip.sipDate;
-        if (today.day == targetDay) {
-          matches = true;
-        }
-      } else if (sip.frequency == 'quarterly') {
-        final monthDiff = today.month - sip.startDate.month;
-        if (monthDiff % 3 == 0) {
+        bool matches = false;
+        if (sip.frequency == 'weekly') {
+          if (today.weekday == sip.sipDate) {
+            matches = true;
+          }
+        } else if (sip.frequency == 'monthly') {
           final daysInMonth = DateTime(today.year, today.month + 1, 0).day;
           final targetDay = sip.sipDate > daysInMonth ? daysInMonth : sip.sipDate;
           if (today.day == targetDay) {
             matches = true;
           }
+        } else if (sip.frequency == 'quarterly') {
+          final monthDiff = today.month - sip.startDate.month;
+          if (monthDiff % 3 == 0) {
+            final daysInMonth = DateTime(today.year, today.month + 1, 0).day;
+            final targetDay = sip.sipDate > daysInMonth ? daysInMonth : sip.sipDate;
+            if (today.day == targetDay) {
+              matches = true;
+            }
+          }
         }
-      }
 
-      if (matches) {
-        final alreadyProcessed = state.transactions.any((t) =>
-            t.type == 'investment_buy' &&
-            t.investmentId == sip.investmentId &&
-            t.notes != null &&
-            t.notes!.contains('SIP ID: ${sip.id}') &&
-            t.transactionDate.year == today.year &&
-            t.transactionDate.month == today.month &&
-            t.transactionDate.day == today.day);
+        if (matches) {
+          final alreadyProcessed = state.transactions.any((t) =>
+              t.type == 'investment_buy' &&
+              t.investmentId == sip.investmentId &&
+              t.notes != null &&
+              t.notes!.contains('SIP ID: ${sip.id}') &&
+              t.transactionDate.year == today.year &&
+              t.transactionDate.month == today.month &&
+              t.transactionDate.day == today.day);
 
-        if (!alreadyProcessed) {
-          final investment = state.investments.firstWhereOrNull((i) => i.id == sip.investmentId);
-          final invName = investment?.name ?? 'Investment';
-          
-          if (sip.autoCreate == 1) {
-            final fromAcc = state.accounts.firstWhereOrNull((a) => a.id == 'acc_primary_bank_uuid') ?? state.accounts.firstOrNull;
-            if (fromAcc != null) {
-              final marketPrice = investment?.marketValue ?? 1.0;
-              final price = marketPrice > 0 ? marketPrice : 1.0;
-              final units = sip.amount / price;
-              
-              buyInvestment(
-                sip.investmentId,
-                fromAcc.id,
-                units,
-                price,
-                'SIP Auto-Invest: $invName (SIP ID: ${sip.id})',
-                today,
+          if (!alreadyProcessed) {
+            final investment = state.investments.firstWhereOrNull((i) => i.id == sip.investmentId);
+            final invName = investment?.name ?? 'Investment';
+            
+            if (sip.autoCreate == 1) {
+              final fromAcc = state.accounts.firstWhereOrNull((a) => a.id == 'acc_primary_bank_uuid') ?? state.accounts.firstOrNull;
+              if (fromAcc != null) {
+                final marketPrice = investment?.marketValue ?? 1.0;
+                final price = marketPrice > 0 ? marketPrice : 1.0;
+                final units = sip.amount / price;
+                
+                buyInvestment(
+                  sip.investmentId,
+                  fromAcc.id,
+                  units,
+                  price,
+                  'SIP Auto-Invest: $invName (SIP ID: ${sip.id})',
+                  today,
+                );
+              }
+            } else {
+              final notificationService = _ref.read(realNotificationServiceProvider);
+              notificationService.showNotification(
+                title: 'SIP Payment Reminder',
+                body: 'Your SIP of ${state.currency}${sip.amount} for "$invName" is due today.',
+                type: 'sip',
               );
             }
-          } else {
-            final notificationService = _ref.read(realNotificationServiceProvider);
-            notificationService.showNotification(
-              title: 'SIP Payment Reminder',
-              body: 'Your SIP of ${state.currency}${sip.amount} for "$invName" is due today.',
-              type: 'sip',
-            );
           }
         }
       }
+    } finally {
+      _isProcessingSip = false;
     }
   }
 

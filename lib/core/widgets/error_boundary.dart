@@ -63,6 +63,11 @@ class AppRestartBoundaryState extends State<AppRestartBoundary> {
   }
 
   void restartApp(Object error, StackTrace? stack) {
+    if (_isInSafeMode) {
+      debugPrint('[Worth Error Recovery] CRITICAL: Exception occurred while in Safe Mode! Aborting nested restart. Error: $error\n$stack');
+      return;
+    }
+
     final now = DateTime.now();
     debugPrint('[Worth Error Recovery] restartApp called with error: $error');
 
@@ -453,215 +458,203 @@ class SafeModeCrashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: WorthBackground(
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 600),
-                decoration: BoxDecoration(
-                  color: AppColors.layer1.withOpacity(0.85),
-                  borderRadius: BorderRadius.circular(32),
-                  border: Border.all(
-                    color: AppColors.darkDanger.withOpacity(0.4),
-                    width: 1.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.darkDanger.withOpacity(0.1),
-                      blurRadius: 40,
-                      spreadRadius: 2,
-                    ),
-                    const BoxShadow(
-                      color: Colors.black,
-                      blurRadius: 30,
-                      offset: Offset(0, 15),
-                    ),
-                  ],
+      backgroundColor: const Color(0xFF0F0E13), // Deep obsidian background directly
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 600),
+              decoration: BoxDecoration(
+                color: const Color(0xFF15141B), // Solid layer color instead of glassmorphism
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: const Color(0xFFE53935).withOpacity(0.3), // Solid red border
+                  width: 1.5,
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(32),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(32.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Safe Mode Header Icon
-                          Center(
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: AppColors.darkDanger.withOpacity(0.1),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: AppColors.darkDanger.withOpacity(0.3),
-                                  width: 2,
-                                ),
-                              ),
-                              child: const Icon(
-                                Icons.bug_report_rounded,
-                                color: AppColors.darkDanger,
-                                size: 40,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Titles
-                          Center(
-                            child: Text(
-                              'Safe Mode Console',
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 24,
-                                letterSpacing: -0.5,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Center(
-                            child: Text(
-                              'System Recovery & Offline Ledger Protection',
-                              style: GoogleFonts.inter(
-                                color: AppColors.grey400,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Explanation text
-                          Text(
-                            'Worth has detected consecutive crashes during startup. To prevent data corruption or infinite bootloops in your offline SQLite ledger, the app has suspended normal launch and initialized the Safe Mode Console.',
-                            style: GoogleFonts.inter(
-                              color: AppColors.darkText.withOpacity(0.8),
-                              fontSize: 14,
-                              height: 1.5,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Console pane header
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'DIAGNOSTIC SYSTEM LOG',
-                                style: GoogleFonts.inter(
-                                  color: AppColors.grey500,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                              Text(
-                                'LEVEL: CRITICAL',
-                                style: GoogleFonts.inter(
-                                  color: AppColors.darkDanger,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-
-                          // Monospace Code Log Pane
-                          Container(
-                            height: 200,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: AppColors.layer2,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: AppColors.glassBorder,
-                                width: 1,
-                              ),
-                            ),
-                            child: Scrollbar(
-                              thumbVisibility: true,
-                              child: SingleChildScrollView(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'EXCEPTION: $error',
-                                      style: GoogleFonts.jetBrainsMono(
-                                        color: AppColors.darkDanger,
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    if (stackTrace != null) ...[
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        'STACK TRACE:\n$stackTrace',
-                                        style: GoogleFonts.jetBrainsMono(
-                                          color: AppColors.grey400,
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-
-                          // Action Buttons
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  onPressed: () {
-                                    final logText = 'Error: $error\n\nStackTrace:\n$stackTrace';
-                                    Clipboard.setData(ClipboardData(text: logText));
-                                  },
-                                  icon: const Icon(Icons.copy_rounded, size: 16),
-                                  label: const Text('Copy Error Log'),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: AppColors.grey400,
-                                    side: const BorderSide(color: AppColors.glassBorder),
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: onRetry,
-                                  icon: const Icon(Icons.refresh_rounded, size: 16),
-                                  label: const Text('Try Restarting'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.darkPrimary,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.5),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(28.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Safe Mode Header Icon
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE53935).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFE53935).withOpacity(0.3),
+                          width: 2,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.bug_report_rounded,
+                        color: Color(0xFFE53935),
+                        size: 40,
                       ),
                     ),
                   ),
-                ),
+                  const SizedBox(height: 24),
+
+                  // Titles
+                  const Center(
+                    child: Text(
+                      'Safe Mode Console',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 24,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Center(
+                    child: Text(
+                      'System Recovery & Offline Ledger Protection',
+                      style: TextStyle(
+                        color: Color(0xFF9E9E9E),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Explanation text
+                  const Text(
+                    'Worth has detected consecutive crashes during startup. To prevent data corruption or infinite bootloops in your offline SQLite ledger, the app has suspended normal launch and initialized the Safe Mode Console.',
+                    style: TextStyle(
+                      color: Color(0xFFCCCCCC),
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Console pane header
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'DIAGNOSTIC SYSTEM LOG',
+                        style: TextStyle(
+                          color: Color(0xFF757575),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      Text(
+                        'LEVEL: CRITICAL',
+                        style: TextStyle(
+                          color: Color(0xFFE53935),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Monospace Code Log Pane
+                  Container(
+                    height: 200,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F0E13), // Dark solid box
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.08),
+                        width: 1,
+                      ),
+                    ),
+                    child: Scrollbar(
+                      thumbVisibility: true,
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'EXCEPTION: $error',
+                              style: const TextStyle(
+                                color: Color(0xFFE53935),
+                                fontFamily: 'monospace', // Standard fallback monospace
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (stackTrace != null) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                'STACK TRACE:\n$stackTrace',
+                                style: const TextStyle(
+                                  color: Color(0xFF9E9E9E),
+                                  fontFamily: 'monospace',
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
+                  // Action Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            final logText = 'Error: $error\n\nStackTrace:\n$stackTrace';
+                            Clipboard.setData(ClipboardData(text: logText));
+                          },
+                          icon: const Icon(Icons.copy_rounded, size: 16),
+                          label: const Text('Copy Error Log'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF9E9E9E),
+                            side: BorderSide(color: Colors.white.withOpacity(0.08)),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: onRetry,
+                          icon: const Icon(Icons.refresh_rounded, size: 16),
+                          label: const Text('Try Restarting'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF673AB7), // Premium indigo/purple primary
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
