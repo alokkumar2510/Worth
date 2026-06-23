@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../constants/app_motion.dart';
 
@@ -33,10 +32,7 @@ class AnimatedNumberText extends StatelessWidget {
         );
         return Text(
           format.format(val),
-          style: GoogleFonts.jetBrainsMono(
-            textStyle: style,
-            color: color ?? style.color,
-          ),
+          style: style.copyWith(color: color ?? style.color),
         );
       },
     );

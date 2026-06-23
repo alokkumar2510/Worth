@@ -116,60 +116,55 @@ class NavigationShellScreen extends StatelessWidget {
       bottomNavigationBar: SafeArea(
         top: false,
         child: Container(
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+          margin: const EdgeInsets.fromLTRB(24, 0, 24, 16),
           height: 64,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(32),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.darkPrimary.withOpacity(0.28),
-                blurRadius: 32,
-                spreadRadius: 0,
-                offset: const Offset(0, 8),
-              ),
-              const BoxShadow(
-                color: Color(0xBF000000),
-                blurRadius: 20,
-                offset: Offset(0, 4),
-              ),
-            ],
+            color: Colors.transparent,
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(32),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 24.0, sigmaY: 24.0),
+              filter: ImageFilter.blur(sigmaX: 16.0, sigmaY: 16.0),
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(32),
-                  color: AppColors.layer2.withOpacity(isDark ? 0.95 : 0.9),
-                  border: Border.all(color: AppColors.glassBorder),
+                  color: isDark 
+                      ? AppColors.darkCard.withOpacity(0.6) 
+                      : Colors.white.withOpacity(0.7),
+                  border: Border.all(
+                    color: isDark 
+                        ? Colors.white.withOpacity(0.08) 
+                        : Colors.black.withOpacity(0.06),
+                    width: 1.0,
+                  ),
                 ),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final double itemWidth = constraints.maxWidth / 5;
                     return Stack(
                       children: [
-                        // Sliding violet gradient indicator pill
+                        // Sliding indicator background pill
                         AnimatedPositioned(
                           duration: AppMotion.normal,
                           curve: AppMotion.easeOut,
-                          left: navigationShell.currentIndex * itemWidth + 6,
+                          left: navigationShell.currentIndex * itemWidth + 8,
                           top: 8,
-                          width: itemWidth - 12,
+                          width: itemWidth - 16,
                           height: 48,
                           child: Container(
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(24),
                               gradient: LinearGradient(
                                 colors: [
-                                  AppColors.darkPrimary.withOpacity(0.22),
-                                  AppColors.darkPrimary.withOpacity(0.08),
+                                  AppColors.darkPrimary.withOpacity(isDark ? 0.15 : 0.1),
+                                  AppColors.darkPrimary.withOpacity(isDark ? 0.05 : 0.02),
                                 ],
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
                               ),
                               border: Border.all(
-                                color: AppColors.darkPrimary.withOpacity(0.3),
+                                color: AppColors.darkPrimary.withOpacity(0.2),
                                 width: 1.0,
                               ),
                             ),

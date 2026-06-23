@@ -114,10 +114,10 @@ class _GlassCardState extends State<GlassCard> with TickerProviderStateMixin {
             end: Alignment.bottomRight,
             colors: isDark 
                 ? [
-                    Colors.white.withOpacity(0.22),
-                    Colors.white.withOpacity(0.04),
-                    AppColors.darkPrimary.withOpacity(0.20),
-                    Colors.white.withOpacity(0.02),
+                    Colors.white.withOpacity(0.18),
+                    Colors.white.withOpacity(0.03),
+                    AppColors.darkPrimary.withOpacity(0.15),
+                    Colors.white.withOpacity(0.01),
                   ]
                 : [
                     Colors.black.withOpacity(0.1),
@@ -139,16 +139,16 @@ class _GlassCardState extends State<GlassCard> with TickerProviderStateMixin {
           boxShadow: [
             BoxShadow(
               color: isDark 
-                  ? const Color(0x3F000000).withOpacity(_isHovered ? 0.4 : 0.3) 
+                  ? const Color(0x3F000000).withOpacity(_isHovered ? 0.35 : 0.25) 
                   : const Color(0x0A000000).withOpacity(_isHovered ? 0.06 : 0.04),
-              blurRadius: _isHovered ? 44 : 36,
-              spreadRadius: _isHovered ? 4 : 2,
-              offset: Offset(0, _isHovered ? 16 : 12),
+              blurRadius: _isHovered ? 40 : 32,
+              spreadRadius: _isHovered ? 3 : 2,
+              offset: Offset(0, _isHovered ? 14 : 12),
             ),
             if (isDark)
               BoxShadow(
-                color: AppColors.darkPrimary.withOpacity(_isHovered ? 0.10 : 0.06),
-                blurRadius: _isHovered ? 56 : 44,
+                color: AppColors.darkPrimary.withOpacity(_isHovered ? 0.05 : 0.03),
+                blurRadius: _isHovered ? 48 : 40,
                 spreadRadius: 1,
                 offset: const Offset(0, 0),
               ),
@@ -223,7 +223,7 @@ class _GlassCardState extends State<GlassCard> with TickerProviderStateMixin {
                                 end: end,
                                 colors: [
                                   Colors.transparent,
-                                  Colors.white.withOpacity(0.09),
+                                  Colors.white.withOpacity(0.07),
                                   Colors.transparent,
                                 ],
                                 stops: const [0.3, 0.5, 0.7],

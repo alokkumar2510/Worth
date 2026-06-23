@@ -2,9 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
-import '../constants/app_gradients.dart';
 
-/// Premium animated background: 4-blob mesh gradients + floating particles
 class WorthBackground extends StatefulWidget {
   final Widget child;
   const WorthBackground({required this.child, super.key});
@@ -13,18 +11,16 @@ class WorthBackground extends StatefulWidget {
   State<WorthBackground> createState() => _WorthBackgroundState();
 }
 
-class _WorthBackgroundState extends State<WorthBackground>
-    with SingleTickerProviderStateMixin {
+class _WorthBackgroundState extends State<WorthBackground> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  final List<Particle> _particles =
-      List.generate(40, (i) => Particle.random(i));
+  final List<Particle> _particles = List.generate(25, (index) => Particle.random());
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 30),
+      duration: const Duration(seconds: 25),
     )..repeat();
   }
 
@@ -38,132 +34,77 @@ class _WorthBackgroundState extends State<WorthBackground>
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Deep obsidian base
-        Positioned.fill(child: Container(color: AppColors.darkBackground)),
+        // Deep space black base
+        Positioned.fill(
+          child: Container(color: AppColors.darkBackground),
+        ),
 
-        // Animated mesh blobs + particles (isolated paint boundary)
+        // Dynamic background elements with RepaintBoundary (isolated animation layer)
         Positioned.fill(
           child: RepaintBoundary(
             child: AnimatedBuilder(
               animation: _controller,
               builder: (context, _) {
-                for (final p in _particles) {
+                // Update particles position on animation tick
+                for (var p in _particles) {
                   p.update();
                 }
-                return CustomPaint(
-                  painter: _BackgroundPainter(
-                    progress: _controller.value,
-                  ),
+
+                return Stack(
+                  children: [
+                    // Dynamic Mesh Gradients (Blobs moving slowly)
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: MeshGradientPainter(
+                          progress: _controller.value,
+                          primaryColor: AppColors.darkPrimary,
+                          glowColor: AppColors.glow,
+                        ),
+                      ),
+                    ),
+
+                    // Floating Star Particles (Tactile depth)
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: ParticlesPainter(particles: _particles),
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
           ),
         ),
 
-        // Static noise overlay (no repaint needed)
+        // Frost glass noise texture overlay
         Positioned.fill(
           child: IgnorePointer(
             child: RepaintBoundary(
-              child: CustomPaint(painter: _FrostPainter()),
+              child: CustomPaint(
+                painter: FrostNoisePainter(),
+              ),
             ),
           ),
         ),
 
-        // Content
+        // Main Content child with separate RepaintBoundary to prevent content repainting on background ticks
         Positioned.fill(
-          child: RepaintBoundary(child: widget.child),
+          child: RepaintBoundary(
+            child: widget.child,
+          ),
         ),
       ],
     );
   }
 }
 
-// ─── Background Painter ────────────────────────────────────────────────────────
-class _BackgroundPainter extends CustomPainter {
-  final double progress;
-  _BackgroundPainter({required this.progress});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rad = progress * 2.0 * math.pi;
-
-    // ── Blob 1: Electric Violet — Top Right (slow drift)
-    _drawBlob(
-      canvas, size,
-      cx: 0.75 + 0.12 * math.sin(rad * 0.7),
-      cy: 0.15 + 0.08 * math.cos(rad * 0.7),
-      radius: 0.65,
-      color: AppGradients.meshViolet,
-    );
-
-    // ── Blob 2: Vivid Orange — Bottom Left (opposing drift)
-    _drawBlob(
-      canvas, size,
-      cx: 0.18 + 0.10 * math.cos(rad * 0.5 + math.pi),
-      cy: 0.78 + 0.12 * math.sin(rad * 0.5 + math.pi),
-      radius: 0.60,
-      color: AppGradients.meshOrange,
-    );
-
-    // ── Blob 3: Deep Indigo — Center (very slow)
-    _drawBlob(
-      canvas, size,
-      cx: 0.48 + 0.06 * math.sin(rad * 0.3 + 1.0),
-      cy: 0.45 + 0.05 * math.cos(rad * 0.3 + 1.0),
-      radius: 0.72,
-      color: AppGradients.meshIndigo,
-    );
-
-    // ── Blob 4: Lavender — Bottom Right (medium drift)
-    _drawBlob(
-      canvas, size,
-      cx: 0.82 + 0.08 * math.cos(rad * 0.6 + 2.0),
-      cy: 0.80 + 0.10 * math.sin(rad * 0.6 + 2.0),
-      radius: 0.50,
-      color: AppGradients.meshLavender,
-    );
-  }
-
-  void _drawBlob(Canvas canvas, Size size,
-      {required double cx, required double cy,
-      required double radius, required Color color}) {
-    final center = Offset(cx * size.width, cy * size.height);
-    final r = radius * size.width;
-    final paint = Paint()
-      ..shader = RadialGradient(
-        colors: [color, color.withOpacity(0.0)],
-      ).createShader(Rect.fromCircle(center: center, radius: r));
-    canvas.drawCircle(center, r, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _BackgroundPainter old) =>
-      old.progress != progress;
-}
-
-// ─── Frost Noise Overlay ──────────────────────────────────────────────────────
-class _FrostPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.012)
-      ..strokeWidth = 1.0;
-    final rand = math.Random(99);
-    final pts = <Offset>[];
-    for (int i = 0; i < 2500; i++) {
-      pts.add(Offset(rand.nextDouble() * size.width, rand.nextDouble() * size.height));
-    }
-    canvas.drawPoints(PointMode.points, pts, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _FrostPainter _) => false;
-}
-
-// ─── Particle ─────────────────────────────────────────────────────────────────
 class Particle {
-  double x, y, speedY, speedX, size, opacity;
-  final Color color;
+  double x;
+  double y;
+  double speedY;
+  double speedX;
+  double size;
+  double opacity;
 
   Particle({
     required this.x,
@@ -172,27 +113,136 @@ class Particle {
     required this.speedX,
     required this.size,
     required this.opacity,
-    required this.color,
   });
 
-  factory Particle.random(int seed) {
-    final rand = math.Random(seed * 37 + 13);
-    final isOrange = rand.nextBool();
+  factory Particle.random() {
+    final rand = math.Random();
     return Particle(
       x: rand.nextDouble(),
       y: rand.nextDouble(),
-      speedY: -(rand.nextDouble() * 0.0005 + 0.0001),
-      speedX: (rand.nextDouble() - 0.5) * 0.00015,
-      size: rand.nextDouble() * 2.2 + 0.8,
-      opacity: rand.nextDouble() * 0.3 + 0.08,
-      color: isOrange ? AppColors.orange : AppColors.darkPrimary,
+      speedY: -(rand.nextDouble() * 0.0006 + 0.0002),
+      speedX: (rand.nextDouble() - 0.5) * 0.0002,
+      size: rand.nextDouble() * 2.0 + 1.0,
+      opacity: rand.nextDouble() * 0.25 + 0.1,
     );
   }
 
   void update() {
     y += speedY;
     x += speedX;
-    if (y < 0) { y = 1.0; x = math.Random().nextDouble(); }
-    if (x < 0 || x > 1.0) { x = x < 0 ? 1.0 : 0.0; }
+    if (y < 0) {
+      y = 1.0;
+      x = math.Random().nextDouble();
+    }
+    if (x < 0 || x > 1.0) {
+      x = x < 0 ? 1.0 : 0.0;
+    }
   }
+}
+
+class ParticlesPainter extends CustomPainter {
+  final List<Particle> particles;
+  ParticlesPainter({required this.particles});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..style = PaintingStyle.fill;
+    for (var p in particles) {
+      paint.color = Colors.white.withOpacity(p.opacity);
+      canvas.drawCircle(
+        Offset(p.x * size.width, p.y * size.height),
+        p.size,
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class MeshGradientPainter extends CustomPainter {
+  final double progress;
+  final Color primaryColor;
+  final Color glowColor;
+
+  MeshGradientPainter({
+    required this.progress,
+    required this.primaryColor,
+    required this.glowColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double rad = progress * 2.0 * math.pi;
+
+    // Blob 1: Accent Purple (Top-Right movement)
+    final blob1x = size.width * (0.7 + 0.15 * math.sin(rad));
+    final blob1y = size.height * (0.2 + 0.1 * math.cos(rad));
+    final blob1Radius = size.width * 0.75;
+
+    final paint1 = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          primaryColor.withOpacity(0.18),
+          primaryColor.withOpacity(0.0),
+        ],
+      ).createShader(Rect.fromCircle(center: Offset(blob1x, blob1y), radius: blob1Radius));
+    canvas.drawCircle(Offset(blob1x, blob1y), blob1Radius, paint1);
+
+    // Blob 2: Lavender Glow (Bottom-Left movement)
+    final blob2x = size.width * (0.2 + 0.12 * math.cos(rad + math.pi));
+    final blob2y = size.height * (0.75 + 0.15 * math.sin(rad + math.pi));
+    final blob2Radius = size.width * 0.8;
+
+    final paint2 = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          glowColor.withOpacity(0.12),
+          glowColor.withOpacity(0.0),
+        ],
+      ).createShader(Rect.fromCircle(center: Offset(blob2x, blob2y), radius: blob2Radius));
+    canvas.drawCircle(Offset(blob2x, blob2y), blob2Radius, paint2);
+
+    // Blob 3: Ambient Highlight (Center Top)
+    final blob3x = size.width * (0.45 + 0.08 * math.sin(rad * 1.5));
+    final blob3y = size.height * (-0.1 + 0.08 * math.cos(rad * 1.5));
+    final blob3Radius = size.width * 0.55;
+
+    final paint3 = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          primaryColor.withOpacity(0.14),
+          primaryColor.withOpacity(0.0),
+        ],
+      ).createShader(Rect.fromCircle(center: Offset(blob3x, blob3y), radius: blob3Radius));
+    canvas.drawCircle(Offset(blob3x, blob3y), blob3Radius, paint3);
+  }
+
+  @override
+  bool shouldRepaint(covariant MeshGradientPainter oldDelegate) => true;
+}
+
+class FrostNoisePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.015)
+      ..strokeWidth = 1.0;
+
+    final List<Offset> points = [];
+    final rand = math.Random(42); // Deterministic noise seed
+
+    for (int i = 0; i < 3000; i++) {
+      points.add(Offset(
+        rand.nextDouble() * size.width,
+        rand.nextDouble() * size.height,
+      ));
+    }
+
+    canvas.drawPoints(PointMode.points, points, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant FrostNoisePainter oldDelegate) => false;
 }

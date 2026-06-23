@@ -1687,60 +1687,31 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
       length: 7,
       child: Scaffold(
         appBar: AppBar(
-          title: ShaderMask(
-            shaderCallback: (bounds) => const LinearGradient(
-              colors: [Color(0xFFF8FAFC), Color(0xFFC084FC)],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ).createShader(bounds),
-            child: Text(
-              'Portfolio',
-              style: GoogleFonts.outfit(
-                fontWeight: FontWeight.w800,
-                fontSize: 26,
-                color: Colors.white,
-                letterSpacing: -0.6,
-              ),
-            ),
+          title: Text(
+            'Portfolio',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 24, color: Colors.white),
           ),
           actions: [
-            Container(
-              margin: const EdgeInsets.only(right: 8),
-              decoration: BoxDecoration(
-                color: AppColors.layer1,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.glassBorder),
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.calendar_month, color: AppColors.orange, size: 20),
-                onPressed: () => context.go('/portfolio/calendar'),
-                tooltip: 'Financial Calendar',
-              ),
+            IconButton(
+              icon: const Icon(Icons.calendar_month, color: Colors.white),
+              onPressed: () => context.go('/portfolio/calendar'),
+              tooltip: 'Financial Calendar',
             ),
+            const SizedBox(width: 8),
           ],
           bottom: TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,
             dividerColor: Colors.transparent,
             indicatorSize: TabBarIndicatorSize.label,
-            indicator: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: const LinearGradient(
-                colors: [Color(0xFF9B6BFF), Color(0xFF7B3FF2)],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.darkPrimary.withOpacity(0.4),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+            indicator: const UnderlineTabIndicator(
+              borderSide: BorderSide(color: AppColors.darkPrimary, width: 3),
+              insets: EdgeInsets.symmetric(horizontal: 4),
             ),
-            labelPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             labelColor: Colors.white,
             unselectedLabelColor: AppColors.grey500,
-            labelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 0.1),
-            unselectedLabelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
+            labelStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700),
+            unselectedLabelStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
             tabs: const [
               Tab(text: 'Assets'),
               Tab(text: 'Liabilities'),
@@ -1752,15 +1723,39 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
             ],
           ),
         ),
-        body: TabBarView(
+        body: Stack(
           children: [
-            _buildAssetsTab(dbState, currency),
-            _buildLiabilitiesTab(dbState, currency),
-            _buildInvestmentsTab(dbState, currency),
-            _buildMtfTab(dbState, currency),
-            _buildReceivablesTab(dbState, currency),
-            _buildExpectedIncomeTab(dbState, currency),
-            _buildGoalsTab(dbState, currency),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 200,
+              child: Opacity(
+                opacity: 0.12,
+                child: Image.asset(AssetPaths.meshGradient2, fit: BoxFit.cover),
+              ),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 200,
+              child: Opacity(
+                opacity: 0.22,
+                child: Image.asset(AssetPaths.portfolioHeroBg, fit: BoxFit.cover),
+              ),
+            ),
+            TabBarView(
+              children: [
+                _buildAssetsTab(dbState, currency),
+                _buildLiabilitiesTab(dbState, currency),
+                _buildInvestmentsTab(dbState, currency),
+                _buildMtfTab(dbState, currency),
+                _buildReceivablesTab(dbState, currency),
+                _buildExpectedIncomeTab(dbState, currency),
+                _buildGoalsTab(dbState, currency),
+              ],
+            ),
           ],
         ),
       ),
@@ -1817,49 +1812,31 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
           child: Container(
             margin: const EdgeInsets.only(bottom: 12),
             child: GlassCard(
-              borderColor: AppColors.darkPrimary.withOpacity(0.15),
               onTap: () => context.push('/portfolio/asset/${acc.id}'),
               child: Row(
                 children: [
-                  Container(
-                    width: 3.5,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.darkPrimary,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+                  CircleAvatar(
+                    backgroundColor: AppColors.darkPrimary.withOpacity(0.12),
+                    child: Icon(_getAccountIcon(acc.type), color: AppColors.darkPrimary),
                   ),
-                  const SizedBox(width: 12),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.darkPrimary.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(_getAccountIcon(acc.type), color: AppColors.darkPrimary, size: 18),
-                  ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(acc.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: Colors.white)),
+                        Text(acc.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                         const SizedBox(height: 4),
-                        Text('${acc.type.toUpperCase()} • Tap to view details', style: const TextStyle(fontSize: 10.5, color: AppColors.grey500)),
+                        Text('${acc.type.toUpperCase()} • Tap to view details', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
                       ],
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text(
                     format.format(bal),
-                    style: GoogleFonts.jetBrainsMono(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: Colors.white,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
                   ),
-                  const SizedBox(width: 6),
-                  const Icon(Icons.chevron_right, color: AppColors.grey500, size: 18),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
                 ],
               ),
             ),
@@ -1966,49 +1943,31 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
             child: Container(
               margin: const EdgeInsets.only(bottom: 12),
               child: GlassCard(
-                borderColor: AppColors.darkDanger.withOpacity(0.15),
                 onTap: () => context.push('/portfolio/liability/acc_${acc.id}'),
                 child: Row(
                   children: [
-                    Container(
-                      width: 3.5,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: AppColors.darkDanger,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+                    CircleAvatar(
+                      backgroundColor: AppColors.darkDanger.withOpacity(0.12),
+                      child: const Icon(Icons.credit_card_outlined, color: AppColors.darkDanger),
                     ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.darkDanger.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.credit_card_outlined, color: AppColors.darkDanger, size: 18),
-                    ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(acc.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: Colors.white)),
+                          Text(acc.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                           const SizedBox(height: 4),
-                          const Text('CREDIT CARD • Tap to view details', style: TextStyle(fontSize: 10.5, color: AppColors.grey500)),
+                          const Text('CREDIT CARD • Tap to view details', style: TextStyle(fontSize: 11, color: AppColors.grey500)),
                         ],
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       format.format(bal),
-                      style: GoogleFonts.jetBrainsMono(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: AppColors.darkDanger,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.darkDanger),
                     ),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.chevron_right, color: AppColors.grey500, size: 18),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
                   ],
                 ),
               ),
@@ -2042,49 +2001,31 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
             child: Container(
               margin: const EdgeInsets.only(bottom: 12),
               child: GlassCard(
-                borderColor: AppColors.darkDanger.withOpacity(0.15),
                 onTap: () => context.push('/portfolio/liability/person_${person.id}'),
                 child: Row(
                   children: [
-                    Container(
-                      width: 3.5,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: AppColors.darkDanger,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+                    CircleAvatar(
+                      backgroundColor: AppColors.darkDanger.withOpacity(0.12),
+                      child: const Icon(Icons.person_outline, color: AppColors.darkDanger),
                     ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.darkDanger.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.person_outline, color: AppColors.darkDanger, size: 18),
-                    ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(person.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: Colors.white)),
+                          Text(person.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                           const SizedBox(height: 4),
-                          Text('${person.type.replaceAll('_', ' ').toUpperCase()} • Tap to view details', style: const TextStyle(fontSize: 10.5, color: AppColors.grey500)),
+                          Text('${person.type.replaceAll('_', ' ').toUpperCase()} • Tap to view details', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
                         ],
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       format.format(bal),
-                      style: GoogleFonts.jetBrainsMono(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: AppColors.darkDanger,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.darkDanger),
                     ),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.chevron_right, color: AppColors.grey500, size: 18),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
                   ],
                 ),
               ),
@@ -2146,64 +2087,45 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
           child: Container(
             margin: const EdgeInsets.only(bottom: 12),
             child: GlassCard(
-              borderColor: (gain >= 0 ? AppColors.darkSuccess : AppColors.darkDanger).withOpacity(0.15),
               onTap: () => context.push('/portfolio/investment/${inv.id}'),
-              child: Row(
+              child: Column(
                 children: [
-                  Container(
-                    width: 3.5,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: gain >= 0 ? AppColors.darkSuccess : AppColors.darkDanger,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.darkPrimary.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.show_chart, color: AppColors.darkPrimary, size: 18),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(inv.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: Colors.white)),
-                        const SizedBox(height: 4),
-                        Text('${inv.symbol ?? inv.type.toUpperCase()} • Tap to view details', style: const TextStyle(fontSize: 10.5, color: AppColors.grey500)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Row(
                     children: [
-                      Text(
-                        format.format(value),
-                        style: GoogleFonts.jetBrainsMono(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          color: Colors.white,
+                      CircleAvatar(
+                        backgroundColor: AppColors.darkPrimary.withOpacity(0.12),
+                        child: const Icon(Icons.show_chart, color: AppColors.darkPrimary),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(inv.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                            const SizedBox(height: 4),
+                            Text('${inv.symbol ?? inv.type.toUpperCase()} • Tap to view details', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${gain >= 0 ? '+' : ''}${format.format(gain)}',
-                        style: GoogleFonts.jetBrainsMono(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: gain >= 0 ? AppColors.darkSuccess : AppColors.darkDanger,
-                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(format.format(value), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${gain >= 0 ? '+' : ''}${format.format(gain)}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: gain >= 0 ? AppColors.darkSuccess : AppColors.darkDanger,
+                            ),
+                          ),
+                        ],
                       ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
                     ],
                   ),
-                  const SizedBox(width: 6),
-                  const Icon(Icons.chevron_right, color: AppColors.grey500, size: 18),
                 ],
               ),
             ),
@@ -2263,55 +2185,36 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
           child: Container(
             margin: const EdgeInsets.only(bottom: 12),
             child: GlassCard(
-              borderColor: AppColors.darkSuccess.withOpacity(0.15),
               onTap: () => context.push('/portfolio/receivable/${person.id}'),
               child: Row(
                 children: [
-                  Container(
-                    width: 3.5,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: AppColors.darkSuccess,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      color: AppColors.darkSuccess.withOpacity(0.12),
-                      image: person.photoPath != null && File(person.photoPath!).existsSync()
-                          ? DecorationImage(image: FileImage(File(person.photoPath!)), fit: BoxFit.cover)
-                          : null,
-                    ),
+                  CircleAvatar(
+                    backgroundColor: AppColors.darkSuccess.withOpacity(0.12),
+                    backgroundImage: person.photoPath != null && File(person.photoPath!).existsSync()
+                        ? FileImage(File(person.photoPath!))
+                        : null,
                     child: person.photoPath == null || !File(person.photoPath!).existsSync()
-                        ? const Icon(Icons.people_alt_outlined, color: AppColors.darkSuccess, size: 18)
+                        ? const Icon(Icons.people_alt_outlined, color: AppColors.darkSuccess)
                         : null,
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(person.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: Colors.white)),
+                        Text(person.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                         const SizedBox(height: 4),
-                        Text('${person.notes ?? "OUTSTANDING DEBT"} • Tap to view details', style: const TextStyle(fontSize: 10.5, color: AppColors.grey500)),
+                        Text('${person.notes ?? "OUTSTANDING DEBT"} • Tap to view details', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
                       ],
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text(
                     format.format(bal),
-                    style: GoogleFonts.jetBrainsMono(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                      color: AppColors.darkSuccess,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.darkSuccess),
                   ),
-                  const SizedBox(width: 6),
-                  const Icon(Icons.chevron_right, color: AppColors.grey500, size: 18),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
                 ],
               ),
             ),
@@ -2360,32 +2263,17 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
           child: Container(
             margin: const EdgeInsets.only(bottom: 12),
             child: GlassCard(
-              borderColor: statusColor.withOpacity(0.15),
               onTap: () => context.push('/portfolio/expected/${inc.id}'),
               child: Row(
                 children: [
-                  Container(
-                    width: 3.5,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: statusColor,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                  CircleAvatar(
+                    backgroundColor: statusColor.withOpacity(0.12),
                     child: Icon(
                       inc.status == 'received' ? Icons.check : Icons.hourglass_bottom,
                       color: statusColor,
-                      size: 18,
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2394,7 +2282,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                           inc.source,
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 14.5,
+                            fontSize: 16,
                             color: Colors.white,
                             decoration: inc.status == 'expired' ? TextDecoration.lineThrough : null,
                           ),
@@ -2402,7 +2290,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         const SizedBox(height: 4),
                         Text(
                           '${inc.status.toUpperCase()} • Tap to view details',
-                          style: TextStyle(fontSize: 10, color: statusColor, fontWeight: FontWeight.w800),
+                          style: TextStyle(fontSize: 10, color: statusColor, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -2410,15 +2298,15 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                   const SizedBox(width: 8),
                   Text(
                     format.format(inc.amount),
-                    style: GoogleFonts.jetBrainsMono(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
                       color: inc.status == 'expired' ? AppColors.grey500 : Colors.white,
                       decoration: inc.status == 'expired' ? TextDecoration.lineThrough : null,
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  const Icon(Icons.chevron_right, color: AppColors.grey500, size: 18),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
                 ],
               ),
             ),
@@ -2465,36 +2353,22 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
           child: Container(
             margin: const EdgeInsets.only(bottom: 12),
             child: GlassCard(
-              borderColor: AppColors.glow.withOpacity(0.15),
               onTap: () => context.push('/portfolio/goal/${goal.id}'),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: 3.5,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: AppColors.glow,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
+                      CircleAvatar(
+                        backgroundColor: AppColors.darkPrimary.withOpacity(0.12),
+                        child: const Icon(Icons.tour_outlined, color: AppColors.darkPrimary),
                       ),
-                      const SizedBox(width: 12),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.glow.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.tour_outlined, color: AppColors.glow, size: 18),
-                      ),
-                      const SizedBox(width: 14),
+                      const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(goal.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: Colors.white)),
+                            Text(goal.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                             const SizedBox(height: 4),
                             Text(
                               goal.deadline != null
@@ -2505,43 +2379,31 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                           ],
                         ),
                       ),
-                      const SizedBox(width: 8),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text(
-                            format.format(goal.targetAmount),
-                            style: GoogleFonts.jetBrainsMono(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 15,
-                              color: Colors.white,
-                            ),
-                          ),
+                          Text(format.format(goal.targetAmount), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                           const SizedBox(height: 4),
                           Text(
                             '$percent% SAVED',
-                            style: GoogleFonts.jetBrainsMono(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.glow,
-                            ),
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.darkPrimary),
                           ),
                         ],
                       ),
-                      const SizedBox(width: 6),
-                      const Icon(Icons.chevron_right, color: AppColors.grey500, size: 18),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
                     ],
                   ),
                   const SizedBox(height: 12),
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      backgroundColor: Colors.white.withOpacity(0.08),
-                      color: AppColors.darkPrimary,
-                      minHeight: 5,
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: Colors.white.withOpacity(0.08),
+                        color: AppColors.darkPrimary,
+                        minHeight: 6,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -2625,14 +2487,13 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
         // Dashboard Card
         if (activePositions.isNotEmpty) ...[
           GlassCard(
-            borderColor: AppColors.darkPrimary.withOpacity(0.2),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('MTF EXPOSURE DASHBOARD', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5)),
+                    Text('MTF EXPOSURE DASHBOARD', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.grey500)),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
@@ -2654,12 +2515,9 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            format.format(totalBorrowed),
-                            style: GoogleFonts.jetBrainsMono(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white),
-                          ),
+                          Text(format.format(totalBorrowed), style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
                           const SizedBox(height: 4),
-                          const Text('Total Borrowed', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
+                          const Text('Total Borrowed', style: TextStyle(color: AppColors.grey500, fontSize: 12)),
                         ],
                       ),
                     ),
@@ -2667,12 +2525,9 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Text(
-                            format.format(totalInterestAccrued),
-                            style: GoogleFonts.jetBrainsMono(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white),
-                          ),
+                          Text(format.format(totalInterestAccrued), style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
                           const SizedBox(height: 4),
-                          const Text('Total Accrued', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
+                          const Text('Total Interest Accrued', style: TextStyle(color: AppColors.grey500, fontSize: 12)),
                         ],
                       ),
                     ),
@@ -2680,12 +2535,9 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Text(
-                            '${avgLtv.toStringAsFixed(1)}%',
-                            style: GoogleFonts.jetBrainsMono(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white),
-                          ),
+                          Text('${avgLtv.toStringAsFixed(1)}%', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
                           const SizedBox(height: 4),
-                          const Text('Avg LTV Ratio', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
+                          const Text('Avg LTV Ratio', style: TextStyle(color: AppColors.grey500, fontSize: 12)),
                         ],
                       ),
                     ),
@@ -2695,7 +2547,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(6),
                   child: SizedBox(
-                    height: 10,
+                    height: 12,
                     child: Row(
                       children: [
                         if (ownRatio > 0)
@@ -2713,7 +2565,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                           Expanded(
                             flex: ((1 - ownRatio) * 100).round(),
                             child: Container(
-                              color: AppColors.grey800,
+                              color: AppColors.grey700,
                             ),
                           ),
                       ],
@@ -2724,26 +2576,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    RichText(
-                      text: TextSpan(
-                        style: GoogleFonts.jetBrainsMono(fontSize: 10.5, fontWeight: FontWeight.w700, color: AppColors.glow),
-                        children: [
-                          const TextSpan(text: 'Own: ', style: TextStyle(color: AppColors.grey500)),
-                          TextSpan(text: format.format(totalOwn)),
-                          TextSpan(text: ' (${(ownRatio * 100).toStringAsFixed(0)}%)'),
-                        ],
-                      ),
-                    ),
-                    RichText(
-                      text: TextSpan(
-                        style: GoogleFonts.jetBrainsMono(fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.white),
-                        children: [
-                          const TextSpan(text: 'Borrowed: ', style: TextStyle(color: AppColors.grey500)),
-                          TextSpan(text: format.format(totalBorrowed)),
-                          TextSpan(text: ' (${((1 - ownRatio) * 100).toStringAsFixed(0)}%)'),
-                        ],
-                      ),
-                    ),
+                    Text('Own: ${format.format(totalOwn)} (${(ownRatio * 100).toStringAsFixed(0)}%)', style: const TextStyle(color: AppColors.glow, fontSize: 11, fontWeight: FontWeight.bold)),
+                    Text('Borrowed: ${format.format(totalBorrowed)} (${((1 - ownRatio) * 100).toStringAsFixed(0)}%)', style: const TextStyle(color: AppColors.grey400, fontSize: 11, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ],
@@ -2757,8 +2591,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('ACTIVE POSITION TRACKING', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5)),
-              Text('${activePositions.length} Open', style: GoogleFonts.inter(fontSize: 11, color: AppColors.grey500)),
+              Text('ACTIVE POSITION TRACKING', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.grey500)),
+              Text('${activePositions.length} Open', style: GoogleFonts.inter(fontSize: 12, color: AppColors.grey500)),
             ],
           ),
           const SizedBox(height: 12),
@@ -2787,64 +2621,41 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
               child: GlassCard(
-                borderColor: posRiskColor.withOpacity(0.15),
                 onTap: () => context.push('/portfolio/mtf/${pos.id}'),
                 child: Row(
                   children: [
-                    Container(
-                      width: 3.5,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: posRiskColor,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+                    CircleAvatar(
+                      backgroundColor: AppColors.darkPrimary.withOpacity(0.12),
+                      child: const Icon(Icons.show_chart, color: AppColors.darkPrimary),
                     ),
-                    const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.darkPrimary.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.show_chart, color: AppColors.darkPrimary, size: 18),
-                    ),
-                    const SizedBox(width: 14),
+                    const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(pos.instrument, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: Colors.white)),
+                          Text(pos.instrument, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
                           const SizedBox(height: 4),
-                          Text('${pos.broker} • Tap to view details', style: const TextStyle(fontSize: 10.5, color: AppColors.grey500)),
+                          Text('${pos.broker} • Tap to view details', style: const TextStyle(fontSize: 11, color: AppColors.grey500)),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 8),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          format.format(pos.borrowedCapital),
-                          style: GoogleFonts.jetBrainsMono(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15,
-                            color: AppColors.darkDanger,
-                          ),
-                        ),
+                        Text(format.format(pos.borrowedCapital), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.darkDanger)),
                         const SizedBox(height: 4),
                         Text(
                           'LTV: ${ltv.toStringAsFixed(1)}%',
-                          style: GoogleFonts.jetBrainsMono(
+                          style: TextStyle(
                             fontSize: 11,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.bold,
                             color: posRiskColor,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.chevron_right, color: AppColors.grey500, size: 18),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_right, color: AppColors.grey500, size: 20),
                   ],
                 ),
               ),
@@ -2858,7 +2669,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
         // Closed Positions History Section
         if (closedPositions.isNotEmpty) ...[
           const SizedBox(height: 12),
-          Text('CLOSED HISTORY', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.grey500, letterSpacing: 0.5)),
+          Text('CLOSED HISTORY', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.grey500)),
           const SizedBox(height: 12),
           ...closedPositions.map((pos) {
             final totalInterestPaid = state.transactions
@@ -2878,7 +2689,6 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
               child: GlassCard(
-                borderColor: (realizedNetProfit >= 0 ? AppColors.darkSuccess : AppColors.darkDanger).withOpacity(0.15),
                 child: Theme(
                   data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
                   child: ExpansionTile(
@@ -2886,21 +2696,10 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                     childrenPadding: EdgeInsets.zero,
                     collapsedIconColor: Colors.white,
                     iconColor: Colors.white,
-                    title: Text(pos.instrument, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: Colors.white70)),
-                    subtitle: RichText(
-                      text: TextSpan(
-                        style: GoogleFonts.inter(fontSize: 10.5, color: AppColors.grey500),
-                        children: [
-                          TextSpan(text: 'Closed ${pos.closedDate != null ? DateFormat('yyyy-MM-dd').format(pos.closedDate!) : 'n/a'} • Net: '),
-                          TextSpan(
-                            text: '${realizedNetProfit >= 0 ? '+' : ''}${format.format(realizedNetProfit)} (${realizedRoi.toStringAsFixed(1)}% ROI)',
-                            style: GoogleFonts.jetBrainsMono(
-                              fontWeight: FontWeight.w700,
-                              color: realizedNetProfit >= 0 ? AppColors.darkSuccess : AppColors.darkDanger,
-                            ),
-                          ),
-                        ],
-                      ),
+                    title: Text(pos.instrument, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white70)),
+                    subtitle: Text(
+                      'Closed ${pos.closedDate != null ? DateFormat('yyyy-MM-dd').format(pos.closedDate!) : 'n/a'} • Net: ${realizedNetProfit >= 0 ? '+' : ''}${format.format(realizedNetProfit)} (${realizedRoi.toStringAsFixed(1)}% ROI)',
+                      style: TextStyle(fontSize: 11, color: realizedNetProfit >= 0 ? AppColors.darkSuccess.withOpacity(0.8) : AppColors.darkDanger.withOpacity(0.8)),
                     ),
                     children: [
                       const SizedBox(height: 8),
@@ -2908,17 +2707,17 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           _buildMtfStat('Broker', pos.broker),
-                          _buildMtfStat('Buy Price', formatDec.format(pos.averagePrice), isNumeric: true),
-                          _buildMtfStat('Sell Price', formatDec.format(salePrice), isNumeric: true),
+                          _buildMtfStat('Buy Price', formatDec.format(pos.averagePrice)),
+                          _buildMtfStat('Sell Price', formatDec.format(salePrice)),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _buildMtfStat('Own Capital', format.format(pos.ownCapital), isNumeric: true),
-                          _buildMtfStat('Borrowed', format.format(pos.borrowedCapital), isNumeric: true),
-                          _buildMtfStat('Interest Paid', formatDec.format(totalInterestPaid), isNumeric: true),
+                          _buildMtfStat('Own Capital', format.format(pos.ownCapital)),
+                          _buildMtfStat('Borrowed', format.format(pos.borrowedCapital)),
+                          _buildMtfStat('Interest Paid', formatDec.format(totalInterestPaid)),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -2927,8 +2726,8 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
                         children: [
                           const Text('Realized Return (ROI):', style: TextStyle(color: AppColors.grey500, fontSize: 11)),
                           Text(
-                            '${realizedNetProfit >= 0 ? '+' : ''}${format.format(realizedNetProfit)} (${realizedRoi.toStringAsFixed(2)}% ROI)',
-                            style: GoogleFonts.jetBrainsMono(
+                            '${realizedNetProfit >= 0 ? '+' : ''}${realizedNetProfit.toStringAsFixed(2)} (${realizedRoi.toStringAsFixed(2)}% ROI)',
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: realizedNetProfit >= 0 ? AppColors.darkSuccess : AppColors.darkDanger,
@@ -2953,7 +2752,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     );
   }
 
-  Widget _buildMtfStat(String label, String value, {Color? valueColor, bool isNumeric = false}) {
+  Widget _buildMtfStat(String label, String value, {Color? valueColor}) {
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4.0),
@@ -2969,17 +2768,7 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
             const SizedBox(height: 4),
             Text(
               value,
-              style: isNumeric
-                  ? GoogleFonts.jetBrainsMono(
-                      color: valueColor ?? Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12.5,
-                    )
-                  : TextStyle(
-                      color: valueColor ?? Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12.5,
-                    ),
+              style: TextStyle(color: valueColor ?? Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -3267,53 +3056,26 @@ class _PortfolioScreenState extends ConsumerState<PortfolioScreen> {
     return Container(
       margin: const EdgeInsets.only(top: 8, bottom: 24),
       height: 52,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF9B6BFF), Color(0xFF7B3FF2), Color(0xFF5A2DB8)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.darkPrimary.withOpacity(0.40),
-                blurRadius: 20,
-                spreadRadius: 0,
-                offset: const Offset(0, 6),
-              ),
-            ],
+      child: OutlinedButton.icon(
+        onPressed: onTap,
+        icon: const Icon(Icons.add, color: AppColors.glow, size: 18),
+        label: Text(
+          label,
+          style: GoogleFonts.inter(
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 14,
+            letterSpacing: -0.2,
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.add_rounded, color: Colors.white, size: 16),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  letterSpacing: 0.2,
-                ),
-              ),
-            ],
-          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          backgroundColor: AppColors.layer1.withValues(alpha: 0.5),
+          side: const BorderSide(color: AppColors.glassBorder, width: 1.0),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         ),
       ),
     );
   }
-
 
   IconData _getAccountIcon(String type) {
     switch (type) {
