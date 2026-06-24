@@ -150,12 +150,12 @@ class WorkManagerService {
       kTaskDailyInsights,
       frequency: const Duration(hours: 24),
       constraints: Constraints(
-        networkType: NetworkType.not_required,
+        networkType: NetworkType.notRequired,
         requiresBatteryNotLow: false,
         requiresCharging: false,
         requiresDeviceIdle: false,
       ),
-      existingWorkPolicy: ExistingWorkPolicy.keep,
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
       backoffPolicy: BackoffPolicy.linear,
       backoffPolicyDelay: const Duration(minutes: 30),
     );
@@ -166,12 +166,12 @@ class WorkManagerService {
       kTaskDailyReminders,
       frequency: const Duration(hours: 12),
       constraints: Constraints(
-        networkType: NetworkType.not_required,
+        networkType: NetworkType.notRequired,
         requiresBatteryNotLow: false,
         requiresCharging: false,
         requiresDeviceIdle: false,
       ),
-      existingWorkPolicy: ExistingWorkPolicy.keep,
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
       backoffPolicy: BackoffPolicy.linear,
       backoffPolicyDelay: const Duration(minutes: 15),
     );
