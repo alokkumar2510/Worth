@@ -33,14 +33,7 @@ class SnapshotService {
       netWorth = state.netWorth;
       assets = state.totalAssets;
       liabilities = state.totalLiabilities;
-      
-      // Calculate receivables
-      for (final p in state.people) {
-        if (p.isArchived == 0) {
-          receivables += state.getPersonReceivableBalance(p.id);
-        }
-      }
-
+      receivables = state.personalReceivables;
       investedCapital = state.totalInvestedCapital;
       expectedIncome = state.totalExpectedIncome;
 
@@ -66,10 +59,11 @@ class SnapshotService {
     } else {
       final calc = _ref.read(realFinancialCalculatorServiceProvider);
       netWorth = await calc.calculateNetWorth();
-      assets = await calc.calculateAssets();
-      liabilities = await calc.calculateLiabilities();
+      final cashAssets = await calc.calculateAssets();
       receivables = await calc.calculateReceivables();
       investedCapital = await calc.calculateInvestmentPrincipal();
+      assets = cashAssets + receivables + investedCapital;
+      liabilities = await calc.calculateLiabilities();
       expectedIncome = await calc.calculateExpectedIncome();
 
       final id = _uuid.v4();
@@ -232,7 +226,7 @@ class SnapshotService {
 
       double receivables = 0.0;
       for (final p in people) {
-        if (p.isArchived == 0) {
+        if (p.isArchived == 0 && (p.ownershipType == 'PERSONAL' || p.ownershipType == null)) {
           receivables += state.getPersonReceivableBalance(p.id);
         }
       }
@@ -379,7 +373,7 @@ class SnapshotService {
         // 2. Receivables from state
         double receivables = 0.0;
         for (final p in people) {
-          if (p.isArchived == 0) {
+          if (p.isArchived == 0 && (p.ownershipType == 'PERSONAL' || p.ownershipType == null)) {
             receivables += state.getPersonReceivableBalance(p.id);
           }
         }

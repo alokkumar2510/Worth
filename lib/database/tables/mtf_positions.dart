@@ -25,6 +25,8 @@ class MtfPositions extends Table {
   DateTimeColumn get lastAccrualDate => dateTime().nullable()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
   TextColumn get deletedBy => text().nullable()();
+  TextColumn get ownershipType => text().nullable()();
+  TextColumn get liabilityType => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

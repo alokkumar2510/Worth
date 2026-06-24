@@ -32,6 +32,20 @@ class TransactionRepositoryImpl implements TransactionRepository {
       createdAt: tx.createdAt,
       updatedAt: tx.updatedAt,
       syncStatus: tx.syncStatus,
+      fundingSource: tx.fundingSource,
+      fundingLiabilityId: tx.fundingLiabilityId,
+      fundingDetails: tx.fundingDetails,
+      transactionUuid: tx.transactionUuid,
+      operationUuid: tx.operationUuid,
+      sourceRecordId: tx.sourceRecordId,
+      fundSource: tx.fundSource,
+      sourceAccount: tx.sourceAccount,
+      ownershipType: tx.ownershipType,
+      liabilityType: tx.liabilityType,
+      transactionCategory: tx.transactionCategory,
+      sipId: tx.sipId,
+      executionMonth: tx.executionMonth,
+      executionYear: tx.executionYear,
     );
   }
 
@@ -53,6 +67,20 @@ class TransactionRepositoryImpl implements TransactionRepository {
       createdAt: Value(tx.createdAt),
       updatedAt: Value(tx.updatedAt),
       syncStatus: Value(tx.syncStatus),
+      fundingSource: Value(tx.fundingSource),
+      fundingLiabilityId: Value(tx.fundingLiabilityId),
+      fundingDetails: Value(tx.fundingDetails),
+      transactionUuid: Value(tx.transactionUuid),
+      operationUuid: Value(tx.operationUuid),
+      sourceRecordId: Value(tx.sourceRecordId),
+      fundSource: Value(tx.fundSource),
+      sourceAccount: Value(tx.sourceAccount),
+      ownershipType: Value(tx.ownershipType),
+      liabilityType: Value(tx.liabilityType),
+      transactionCategory: Value(tx.transactionCategory),
+      sipId: Value(tx.sipId),
+      executionMonth: Value(tx.executionMonth),
+      executionYear: Value(tx.executionYear),
     );
   }
 
@@ -114,6 +142,20 @@ class TransactionRepositoryImpl implements TransactionRepository {
       createdAt: transaction.createdAt,
       updatedAt: transaction.updatedAt,
       syncStatus: transaction.syncStatus,
+      fundingSource: transaction.fundingSource,
+      fundingLiabilityId: transaction.fundingLiabilityId,
+      fundingDetails: transaction.fundingDetails,
+      transactionUuid: transaction.transactionUuid,
+      operationUuid: transaction.operationUuid,
+      sourceRecordId: transaction.sourceRecordId,
+      fundSource: transaction.fundSource,
+      sourceAccount: transaction.sourceAccount,
+      ownershipType: transaction.ownershipType,
+      liabilityType: transaction.liabilityType,
+      transactionCategory: transaction.transactionCategory,
+      sipId: transaction.sipId,
+      executionMonth: transaction.executionMonth,
+      executionYear: transaction.executionYear,
     );
     await _database.update(_database.transactions).replace(dbTx);
     await _ref.read(syncServiceProvider).queueOperation(

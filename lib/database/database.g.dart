@@ -98,6 +98,18 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
   late final GeneratedColumn<String> fundingDetails = GeneratedColumn<String>(
       'funding_details', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _ownershipTypeMeta =
+      const VerificationMeta('ownershipType');
+  @override
+  late final GeneratedColumn<String> ownershipType = GeneratedColumn<String>(
+      'ownership_type', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _liabilityTypeMeta =
+      const VerificationMeta('liabilityType');
+  @override
+  late final GeneratedColumn<String> liabilityType = GeneratedColumn<String>(
+      'liability_type', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -114,7 +126,9 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         deletedBy,
         fundingSource,
         fundingLiabilityId,
-        fundingDetails
+        fundingDetails,
+        ownershipType,
+        liabilityType
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -207,6 +221,18 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
           fundingDetails.isAcceptableOrUnknown(
               data['funding_details']!, _fundingDetailsMeta));
     }
+    if (data.containsKey('ownership_type')) {
+      context.handle(
+          _ownershipTypeMeta,
+          ownershipType.isAcceptableOrUnknown(
+              data['ownership_type']!, _ownershipTypeMeta));
+    }
+    if (data.containsKey('liability_type')) {
+      context.handle(
+          _liabilityTypeMeta,
+          liabilityType.isAcceptableOrUnknown(
+              data['liability_type']!, _liabilityTypeMeta));
+    }
     return context;
   }
 
@@ -246,6 +272,10 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
           DriftSqlType.string, data['${effectivePrefix}funding_liability_id']),
       fundingDetails: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}funding_details']),
+      ownershipType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}ownership_type']),
+      liabilityType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}liability_type']),
     );
   }
 
@@ -271,6 +301,8 @@ class Account extends DataClass implements Insertable<Account> {
   final String? fundingSource;
   final String? fundingLiabilityId;
   final String? fundingDetails;
+  final String? ownershipType;
+  final String? liabilityType;
   const Account(
       {required this.id,
       required this.name,
@@ -286,7 +318,9 @@ class Account extends DataClass implements Insertable<Account> {
       this.deletedBy,
       this.fundingSource,
       this.fundingLiabilityId,
-      this.fundingDetails});
+      this.fundingDetails,
+      this.ownershipType,
+      this.liabilityType});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -320,6 +354,12 @@ class Account extends DataClass implements Insertable<Account> {
     }
     if (!nullToAbsent || fundingDetails != null) {
       map['funding_details'] = Variable<String>(fundingDetails);
+    }
+    if (!nullToAbsent || ownershipType != null) {
+      map['ownership_type'] = Variable<String>(ownershipType);
+    }
+    if (!nullToAbsent || liabilityType != null) {
+      map['liability_type'] = Variable<String>(liabilityType);
     }
     return map;
   }
@@ -356,6 +396,12 @@ class Account extends DataClass implements Insertable<Account> {
       fundingDetails: fundingDetails == null && nullToAbsent
           ? const Value.absent()
           : Value(fundingDetails),
+      ownershipType: ownershipType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownershipType),
+      liabilityType: liabilityType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(liabilityType),
     );
   }
 
@@ -379,6 +425,8 @@ class Account extends DataClass implements Insertable<Account> {
       fundingLiabilityId:
           serializer.fromJson<String?>(json['fundingLiabilityId']),
       fundingDetails: serializer.fromJson<String?>(json['fundingDetails']),
+      ownershipType: serializer.fromJson<String?>(json['ownershipType']),
+      liabilityType: serializer.fromJson<String?>(json['liabilityType']),
     );
   }
   @override
@@ -400,6 +448,8 @@ class Account extends DataClass implements Insertable<Account> {
       'fundingSource': serializer.toJson<String?>(fundingSource),
       'fundingLiabilityId': serializer.toJson<String?>(fundingLiabilityId),
       'fundingDetails': serializer.toJson<String?>(fundingDetails),
+      'ownershipType': serializer.toJson<String?>(ownershipType),
+      'liabilityType': serializer.toJson<String?>(liabilityType),
     };
   }
 
@@ -418,7 +468,9 @@ class Account extends DataClass implements Insertable<Account> {
           Value<String?> deletedBy = const Value.absent(),
           Value<String?> fundingSource = const Value.absent(),
           Value<String?> fundingLiabilityId = const Value.absent(),
-          Value<String?> fundingDetails = const Value.absent()}) =>
+          Value<String?> fundingDetails = const Value.absent(),
+          Value<String?> ownershipType = const Value.absent(),
+          Value<String?> liabilityType = const Value.absent()}) =>
       Account(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -440,6 +492,10 @@ class Account extends DataClass implements Insertable<Account> {
             : this.fundingLiabilityId,
         fundingDetails:
             fundingDetails.present ? fundingDetails.value : this.fundingDetails,
+        ownershipType:
+            ownershipType.present ? ownershipType.value : this.ownershipType,
+        liabilityType:
+            liabilityType.present ? liabilityType.value : this.liabilityType,
       );
   Account copyWithCompanion(AccountsCompanion data) {
     return Account(
@@ -468,6 +524,12 @@ class Account extends DataClass implements Insertable<Account> {
       fundingDetails: data.fundingDetails.present
           ? data.fundingDetails.value
           : this.fundingDetails,
+      ownershipType: data.ownershipType.present
+          ? data.ownershipType.value
+          : this.ownershipType,
+      liabilityType: data.liabilityType.present
+          ? data.liabilityType.value
+          : this.liabilityType,
     );
   }
 
@@ -488,7 +550,9 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('deletedBy: $deletedBy, ')
           ..write('fundingSource: $fundingSource, ')
           ..write('fundingLiabilityId: $fundingLiabilityId, ')
-          ..write('fundingDetails: $fundingDetails')
+          ..write('fundingDetails: $fundingDetails, ')
+          ..write('ownershipType: $ownershipType, ')
+          ..write('liabilityType: $liabilityType')
           ..write(')'))
         .toString();
   }
@@ -509,7 +573,9 @@ class Account extends DataClass implements Insertable<Account> {
       deletedBy,
       fundingSource,
       fundingLiabilityId,
-      fundingDetails);
+      fundingDetails,
+      ownershipType,
+      liabilityType);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -528,7 +594,9 @@ class Account extends DataClass implements Insertable<Account> {
           other.deletedBy == this.deletedBy &&
           other.fundingSource == this.fundingSource &&
           other.fundingLiabilityId == this.fundingLiabilityId &&
-          other.fundingDetails == this.fundingDetails);
+          other.fundingDetails == this.fundingDetails &&
+          other.ownershipType == this.ownershipType &&
+          other.liabilityType == this.liabilityType);
 }
 
 class AccountsCompanion extends UpdateCompanion<Account> {
@@ -547,6 +615,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<String?> fundingSource;
   final Value<String?> fundingLiabilityId;
   final Value<String?> fundingDetails;
+  final Value<String?> ownershipType;
+  final Value<String?> liabilityType;
   final Value<int> rowid;
   const AccountsCompanion({
     this.id = const Value.absent(),
@@ -564,6 +634,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.fundingSource = const Value.absent(),
     this.fundingLiabilityId = const Value.absent(),
     this.fundingDetails = const Value.absent(),
+    this.ownershipType = const Value.absent(),
+    this.liabilityType = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   AccountsCompanion.insert({
@@ -582,6 +654,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.fundingSource = const Value.absent(),
     this.fundingLiabilityId = const Value.absent(),
     this.fundingDetails = const Value.absent(),
+    this.ownershipType = const Value.absent(),
+    this.liabilityType = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -604,6 +678,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<String>? fundingSource,
     Expression<String>? fundingLiabilityId,
     Expression<String>? fundingDetails,
+    Expression<String>? ownershipType,
+    Expression<String>? liabilityType,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -623,6 +699,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (fundingLiabilityId != null)
         'funding_liability_id': fundingLiabilityId,
       if (fundingDetails != null) 'funding_details': fundingDetails,
+      if (ownershipType != null) 'ownership_type': ownershipType,
+      if (liabilityType != null) 'liability_type': liabilityType,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -643,6 +721,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       Value<String?>? fundingSource,
       Value<String?>? fundingLiabilityId,
       Value<String?>? fundingDetails,
+      Value<String?>? ownershipType,
+      Value<String?>? liabilityType,
       Value<int>? rowid}) {
     return AccountsCompanion(
       id: id ?? this.id,
@@ -660,6 +740,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       fundingSource: fundingSource ?? this.fundingSource,
       fundingLiabilityId: fundingLiabilityId ?? this.fundingLiabilityId,
       fundingDetails: fundingDetails ?? this.fundingDetails,
+      ownershipType: ownershipType ?? this.ownershipType,
+      liabilityType: liabilityType ?? this.liabilityType,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -712,6 +794,12 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (fundingDetails.present) {
       map['funding_details'] = Variable<String>(fundingDetails.value);
     }
+    if (ownershipType.present) {
+      map['ownership_type'] = Variable<String>(ownershipType.value);
+    }
+    if (liabilityType.present) {
+      map['liability_type'] = Variable<String>(liabilityType.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -736,6 +824,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('fundingSource: $fundingSource, ')
           ..write('fundingLiabilityId: $fundingLiabilityId, ')
           ..write('fundingDetails: $fundingDetails, ')
+          ..write('ownershipType: $ownershipType, ')
+          ..write('liabilityType: $liabilityType, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -867,6 +957,18 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PeopleData> {
   late final GeneratedColumn<String> photoPath = GeneratedColumn<String>(
       'photo_path', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _ownershipTypeMeta =
+      const VerificationMeta('ownershipType');
+  @override
+  late final GeneratedColumn<String> ownershipType = GeneratedColumn<String>(
+      'ownership_type', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _liabilityTypeMeta =
+      const VerificationMeta('liabilityType');
+  @override
+  late final GeneratedColumn<String> liabilityType = GeneratedColumn<String>(
+      'liability_type', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -888,7 +990,9 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PeopleData> {
         upiId,
         bankName,
         accountHolderName,
-        photoPath
+        photoPath,
+        ownershipType,
+        liabilityType
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -997,6 +1101,18 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PeopleData> {
       context.handle(_photoPathMeta,
           photoPath.isAcceptableOrUnknown(data['photo_path']!, _photoPathMeta));
     }
+    if (data.containsKey('ownership_type')) {
+      context.handle(
+          _ownershipTypeMeta,
+          ownershipType.isAcceptableOrUnknown(
+              data['ownership_type']!, _ownershipTypeMeta));
+    }
+    if (data.containsKey('liability_type')) {
+      context.handle(
+          _liabilityTypeMeta,
+          liabilityType.isAcceptableOrUnknown(
+              data['liability_type']!, _liabilityTypeMeta));
+    }
     return context;
   }
 
@@ -1046,6 +1162,10 @@ class $PeopleTable extends People with TableInfo<$PeopleTable, PeopleData> {
           DriftSqlType.string, data['${effectivePrefix}account_holder_name']),
       photoPath: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}photo_path']),
+      ownershipType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}ownership_type']),
+      liabilityType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}liability_type']),
     );
   }
 
@@ -1076,6 +1196,8 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
   final String? bankName;
   final String? accountHolderName;
   final String? photoPath;
+  final String? ownershipType;
+  final String? liabilityType;
   const PeopleData(
       {required this.id,
       required this.name,
@@ -1096,7 +1218,9 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       this.upiId,
       this.bankName,
       this.accountHolderName,
-      this.photoPath});
+      this.photoPath,
+      this.ownershipType,
+      this.liabilityType});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -1146,6 +1270,12 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
     if (!nullToAbsent || photoPath != null) {
       map['photo_path'] = Variable<String>(photoPath);
     }
+    if (!nullToAbsent || ownershipType != null) {
+      map['ownership_type'] = Variable<String>(ownershipType);
+    }
+    if (!nullToAbsent || liabilityType != null) {
+      map['liability_type'] = Variable<String>(liabilityType);
+    }
     return map;
   }
 
@@ -1194,6 +1324,12 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       photoPath: photoPath == null && nullToAbsent
           ? const Value.absent()
           : Value(photoPath),
+      ownershipType: ownershipType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownershipType),
+      liabilityType: liabilityType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(liabilityType),
     );
   }
 
@@ -1222,6 +1358,8 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       accountHolderName:
           serializer.fromJson<String?>(json['accountHolderName']),
       photoPath: serializer.fromJson<String?>(json['photoPath']),
+      ownershipType: serializer.fromJson<String?>(json['ownershipType']),
+      liabilityType: serializer.fromJson<String?>(json['liabilityType']),
     );
   }
   @override
@@ -1248,6 +1386,8 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
       'bankName': serializer.toJson<String?>(bankName),
       'accountHolderName': serializer.toJson<String?>(accountHolderName),
       'photoPath': serializer.toJson<String?>(photoPath),
+      'ownershipType': serializer.toJson<String?>(ownershipType),
+      'liabilityType': serializer.toJson<String?>(liabilityType),
     };
   }
 
@@ -1271,7 +1411,9 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
           Value<String?> upiId = const Value.absent(),
           Value<String?> bankName = const Value.absent(),
           Value<String?> accountHolderName = const Value.absent(),
-          Value<String?> photoPath = const Value.absent()}) =>
+          Value<String?> photoPath = const Value.absent(),
+          Value<String?> ownershipType = const Value.absent(),
+          Value<String?> liabilityType = const Value.absent()}) =>
       PeopleData(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -1296,6 +1438,10 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
             ? accountHolderName.value
             : this.accountHolderName,
         photoPath: photoPath.present ? photoPath.value : this.photoPath,
+        ownershipType:
+            ownershipType.present ? ownershipType.value : this.ownershipType,
+        liabilityType:
+            liabilityType.present ? liabilityType.value : this.liabilityType,
       );
   PeopleData copyWithCompanion(PeopleCompanion data) {
     return PeopleData(
@@ -1326,6 +1472,12 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
           ? data.accountHolderName.value
           : this.accountHolderName,
       photoPath: data.photoPath.present ? data.photoPath.value : this.photoPath,
+      ownershipType: data.ownershipType.present
+          ? data.ownershipType.value
+          : this.ownershipType,
+      liabilityType: data.liabilityType.present
+          ? data.liabilityType.value
+          : this.liabilityType,
     );
   }
 
@@ -1351,33 +1503,38 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
           ..write('upiId: $upiId, ')
           ..write('bankName: $bankName, ')
           ..write('accountHolderName: $accountHolderName, ')
-          ..write('photoPath: $photoPath')
+          ..write('photoPath: $photoPath, ')
+          ..write('ownershipType: $ownershipType, ')
+          ..write('liabilityType: $liabilityType')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      name,
-      phone,
-      notes,
-      isArchived,
-      createdAt,
-      updatedAt,
-      syncStatus,
-      lastSyncedAt,
-      deviceId,
-      deletedAt,
-      deletedBy,
-      type,
-      whatsApp,
-      dueDate,
-      borrowDate,
-      upiId,
-      bankName,
-      accountHolderName,
-      photoPath);
+  int get hashCode => Object.hashAll([
+        id,
+        name,
+        phone,
+        notes,
+        isArchived,
+        createdAt,
+        updatedAt,
+        syncStatus,
+        lastSyncedAt,
+        deviceId,
+        deletedAt,
+        deletedBy,
+        type,
+        whatsApp,
+        dueDate,
+        borrowDate,
+        upiId,
+        bankName,
+        accountHolderName,
+        photoPath,
+        ownershipType,
+        liabilityType
+      ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1401,7 +1558,9 @@ class PeopleData extends DataClass implements Insertable<PeopleData> {
           other.upiId == this.upiId &&
           other.bankName == this.bankName &&
           other.accountHolderName == this.accountHolderName &&
-          other.photoPath == this.photoPath);
+          other.photoPath == this.photoPath &&
+          other.ownershipType == this.ownershipType &&
+          other.liabilityType == this.liabilityType);
 }
 
 class PeopleCompanion extends UpdateCompanion<PeopleData> {
@@ -1425,6 +1584,8 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
   final Value<String?> bankName;
   final Value<String?> accountHolderName;
   final Value<String?> photoPath;
+  final Value<String?> ownershipType;
+  final Value<String?> liabilityType;
   final Value<int> rowid;
   const PeopleCompanion({
     this.id = const Value.absent(),
@@ -1447,6 +1608,8 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
     this.bankName = const Value.absent(),
     this.accountHolderName = const Value.absent(),
     this.photoPath = const Value.absent(),
+    this.ownershipType = const Value.absent(),
+    this.liabilityType = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   PeopleCompanion.insert({
@@ -1470,6 +1633,8 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
     this.bankName = const Value.absent(),
     this.accountHolderName = const Value.absent(),
     this.photoPath = const Value.absent(),
+    this.ownershipType = const Value.absent(),
+    this.liabilityType = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -1496,6 +1661,8 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
     Expression<String>? bankName,
     Expression<String>? accountHolderName,
     Expression<String>? photoPath,
+    Expression<String>? ownershipType,
+    Expression<String>? liabilityType,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1519,6 +1686,8 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
       if (bankName != null) 'bank_name': bankName,
       if (accountHolderName != null) 'account_holder_name': accountHolderName,
       if (photoPath != null) 'photo_path': photoPath,
+      if (ownershipType != null) 'ownership_type': ownershipType,
+      if (liabilityType != null) 'liability_type': liabilityType,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1544,6 +1713,8 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
       Value<String?>? bankName,
       Value<String?>? accountHolderName,
       Value<String?>? photoPath,
+      Value<String?>? ownershipType,
+      Value<String?>? liabilityType,
       Value<int>? rowid}) {
     return PeopleCompanion(
       id: id ?? this.id,
@@ -1566,6 +1737,8 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
       bankName: bankName ?? this.bankName,
       accountHolderName: accountHolderName ?? this.accountHolderName,
       photoPath: photoPath ?? this.photoPath,
+      ownershipType: ownershipType ?? this.ownershipType,
+      liabilityType: liabilityType ?? this.liabilityType,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1633,6 +1806,12 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
     if (photoPath.present) {
       map['photo_path'] = Variable<String>(photoPath.value);
     }
+    if (ownershipType.present) {
+      map['ownership_type'] = Variable<String>(ownershipType.value);
+    }
+    if (liabilityType.present) {
+      map['liability_type'] = Variable<String>(liabilityType.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1662,6 +1841,8 @@ class PeopleCompanion extends UpdateCompanion<PeopleData> {
           ..write('bankName: $bankName, ')
           ..write('accountHolderName: $accountHolderName, ')
           ..write('photoPath: $photoPath, ')
+          ..write('ownershipType: $ownershipType, ')
+          ..write('liabilityType: $liabilityType, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1793,6 +1974,24 @@ class $InvestmentsTable extends Investments
   late final GeneratedColumn<String> fundingDetails = GeneratedColumn<String>(
       'funding_details', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _fundSourceMeta =
+      const VerificationMeta('fundSource');
+  @override
+  late final GeneratedColumn<String> fundSource = GeneratedColumn<String>(
+      'fund_source', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _sourceAccountMeta =
+      const VerificationMeta('sourceAccount');
+  @override
+  late final GeneratedColumn<String> sourceAccount = GeneratedColumn<String>(
+      'source_account', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _ownershipTypeMeta =
+      const VerificationMeta('ownershipType');
+  @override
+  late final GeneratedColumn<String> ownershipType = GeneratedColumn<String>(
+      'ownership_type', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -1814,7 +2013,10 @@ class $InvestmentsTable extends Investments
         deletedBy,
         fundingSource,
         fundingLiabilityId,
-        fundingDetails
+        fundingDetails,
+        fundSource,
+        sourceAccount,
+        ownershipType
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1935,6 +2137,24 @@ class $InvestmentsTable extends Investments
           fundingDetails.isAcceptableOrUnknown(
               data['funding_details']!, _fundingDetailsMeta));
     }
+    if (data.containsKey('fund_source')) {
+      context.handle(
+          _fundSourceMeta,
+          fundSource.isAcceptableOrUnknown(
+              data['fund_source']!, _fundSourceMeta));
+    }
+    if (data.containsKey('source_account')) {
+      context.handle(
+          _sourceAccountMeta,
+          sourceAccount.isAcceptableOrUnknown(
+              data['source_account']!, _sourceAccountMeta));
+    }
+    if (data.containsKey('ownership_type')) {
+      context.handle(
+          _ownershipTypeMeta,
+          ownershipType.isAcceptableOrUnknown(
+              data['ownership_type']!, _ownershipTypeMeta));
+    }
     return context;
   }
 
@@ -1985,6 +2205,12 @@ class $InvestmentsTable extends Investments
           DriftSqlType.string, data['${effectivePrefix}funding_liability_id']),
       fundingDetails: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}funding_details']),
+      fundSource: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}fund_source']),
+      sourceAccount: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}source_account']),
+      ownershipType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}ownership_type']),
     );
   }
 
@@ -2015,6 +2241,9 @@ class Investment extends DataClass implements Insertable<Investment> {
   final String? fundingSource;
   final String? fundingLiabilityId;
   final String? fundingDetails;
+  final String? fundSource;
+  final String? sourceAccount;
+  final String? ownershipType;
   const Investment(
       {required this.id,
       required this.name,
@@ -2035,7 +2264,10 @@ class Investment extends DataClass implements Insertable<Investment> {
       this.deletedBy,
       this.fundingSource,
       this.fundingLiabilityId,
-      this.fundingDetails});
+      this.fundingDetails,
+      this.fundSource,
+      this.sourceAccount,
+      this.ownershipType});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -2084,6 +2316,15 @@ class Investment extends DataClass implements Insertable<Investment> {
     }
     if (!nullToAbsent || fundingDetails != null) {
       map['funding_details'] = Variable<String>(fundingDetails);
+    }
+    if (!nullToAbsent || fundSource != null) {
+      map['fund_source'] = Variable<String>(fundSource);
+    }
+    if (!nullToAbsent || sourceAccount != null) {
+      map['source_account'] = Variable<String>(sourceAccount);
+    }
+    if (!nullToAbsent || ownershipType != null) {
+      map['ownership_type'] = Variable<String>(ownershipType);
     }
     return map;
   }
@@ -2134,6 +2375,15 @@ class Investment extends DataClass implements Insertable<Investment> {
       fundingDetails: fundingDetails == null && nullToAbsent
           ? const Value.absent()
           : Value(fundingDetails),
+      fundSource: fundSource == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fundSource),
+      sourceAccount: sourceAccount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceAccount),
+      ownershipType: ownershipType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownershipType),
     );
   }
 
@@ -2163,6 +2413,9 @@ class Investment extends DataClass implements Insertable<Investment> {
       fundingLiabilityId:
           serializer.fromJson<String?>(json['fundingLiabilityId']),
       fundingDetails: serializer.fromJson<String?>(json['fundingDetails']),
+      fundSource: serializer.fromJson<String?>(json['fundSource']),
+      sourceAccount: serializer.fromJson<String?>(json['sourceAccount']),
+      ownershipType: serializer.fromJson<String?>(json['ownershipType']),
     );
   }
   @override
@@ -2190,6 +2443,9 @@ class Investment extends DataClass implements Insertable<Investment> {
       'fundingSource': serializer.toJson<String?>(fundingSource),
       'fundingLiabilityId': serializer.toJson<String?>(fundingLiabilityId),
       'fundingDetails': serializer.toJson<String?>(fundingDetails),
+      'fundSource': serializer.toJson<String?>(fundSource),
+      'sourceAccount': serializer.toJson<String?>(sourceAccount),
+      'ownershipType': serializer.toJson<String?>(ownershipType),
     };
   }
 
@@ -2213,7 +2469,10 @@ class Investment extends DataClass implements Insertable<Investment> {
           Value<String?> deletedBy = const Value.absent(),
           Value<String?> fundingSource = const Value.absent(),
           Value<String?> fundingLiabilityId = const Value.absent(),
-          Value<String?> fundingDetails = const Value.absent()}) =>
+          Value<String?> fundingDetails = const Value.absent(),
+          Value<String?> fundSource = const Value.absent(),
+          Value<String?> sourceAccount = const Value.absent(),
+          Value<String?> ownershipType = const Value.absent()}) =>
       Investment(
         id: id ?? this.id,
         name: name ?? this.name,
@@ -2244,6 +2503,11 @@ class Investment extends DataClass implements Insertable<Investment> {
             : this.fundingLiabilityId,
         fundingDetails:
             fundingDetails.present ? fundingDetails.value : this.fundingDetails,
+        fundSource: fundSource.present ? fundSource.value : this.fundSource,
+        sourceAccount:
+            sourceAccount.present ? sourceAccount.value : this.sourceAccount,
+        ownershipType:
+            ownershipType.present ? ownershipType.value : this.ownershipType,
       );
   Investment copyWithCompanion(InvestmentsCompanion data) {
     return Investment(
@@ -2284,6 +2548,14 @@ class Investment extends DataClass implements Insertable<Investment> {
       fundingDetails: data.fundingDetails.present
           ? data.fundingDetails.value
           : this.fundingDetails,
+      fundSource:
+          data.fundSource.present ? data.fundSource.value : this.fundSource,
+      sourceAccount: data.sourceAccount.present
+          ? data.sourceAccount.value
+          : this.sourceAccount,
+      ownershipType: data.ownershipType.present
+          ? data.ownershipType.value
+          : this.ownershipType,
     );
   }
 
@@ -2309,33 +2581,40 @@ class Investment extends DataClass implements Insertable<Investment> {
           ..write('deletedBy: $deletedBy, ')
           ..write('fundingSource: $fundingSource, ')
           ..write('fundingLiabilityId: $fundingLiabilityId, ')
-          ..write('fundingDetails: $fundingDetails')
+          ..write('fundingDetails: $fundingDetails, ')
+          ..write('fundSource: $fundSource, ')
+          ..write('sourceAccount: $sourceAccount, ')
+          ..write('ownershipType: $ownershipType')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      name,
-      type,
-      symbol,
-      marketValue,
-      marketValueUpdatedAt,
-      isArchived,
-      notes,
-      purchaseDate,
-      purchaseTime,
-      createdAt,
-      updatedAt,
-      syncStatus,
-      lastSyncedAt,
-      deviceId,
-      deletedAt,
-      deletedBy,
-      fundingSource,
-      fundingLiabilityId,
-      fundingDetails);
+  int get hashCode => Object.hashAll([
+        id,
+        name,
+        type,
+        symbol,
+        marketValue,
+        marketValueUpdatedAt,
+        isArchived,
+        notes,
+        purchaseDate,
+        purchaseTime,
+        createdAt,
+        updatedAt,
+        syncStatus,
+        lastSyncedAt,
+        deviceId,
+        deletedAt,
+        deletedBy,
+        fundingSource,
+        fundingLiabilityId,
+        fundingDetails,
+        fundSource,
+        sourceAccount,
+        ownershipType
+      ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2359,7 +2638,10 @@ class Investment extends DataClass implements Insertable<Investment> {
           other.deletedBy == this.deletedBy &&
           other.fundingSource == this.fundingSource &&
           other.fundingLiabilityId == this.fundingLiabilityId &&
-          other.fundingDetails == this.fundingDetails);
+          other.fundingDetails == this.fundingDetails &&
+          other.fundSource == this.fundSource &&
+          other.sourceAccount == this.sourceAccount &&
+          other.ownershipType == this.ownershipType);
 }
 
 class InvestmentsCompanion extends UpdateCompanion<Investment> {
@@ -2383,6 +2665,9 @@ class InvestmentsCompanion extends UpdateCompanion<Investment> {
   final Value<String?> fundingSource;
   final Value<String?> fundingLiabilityId;
   final Value<String?> fundingDetails;
+  final Value<String?> fundSource;
+  final Value<String?> sourceAccount;
+  final Value<String?> ownershipType;
   final Value<int> rowid;
   const InvestmentsCompanion({
     this.id = const Value.absent(),
@@ -2405,6 +2690,9 @@ class InvestmentsCompanion extends UpdateCompanion<Investment> {
     this.fundingSource = const Value.absent(),
     this.fundingLiabilityId = const Value.absent(),
     this.fundingDetails = const Value.absent(),
+    this.fundSource = const Value.absent(),
+    this.sourceAccount = const Value.absent(),
+    this.ownershipType = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   InvestmentsCompanion.insert({
@@ -2428,6 +2716,9 @@ class InvestmentsCompanion extends UpdateCompanion<Investment> {
     this.fundingSource = const Value.absent(),
     this.fundingLiabilityId = const Value.absent(),
     this.fundingDetails = const Value.absent(),
+    this.fundSource = const Value.absent(),
+    this.sourceAccount = const Value.absent(),
+    this.ownershipType = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         name = Value(name),
@@ -2455,6 +2746,9 @@ class InvestmentsCompanion extends UpdateCompanion<Investment> {
     Expression<String>? fundingSource,
     Expression<String>? fundingLiabilityId,
     Expression<String>? fundingDetails,
+    Expression<String>? fundSource,
+    Expression<String>? sourceAccount,
+    Expression<String>? ownershipType,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -2480,6 +2774,9 @@ class InvestmentsCompanion extends UpdateCompanion<Investment> {
       if (fundingLiabilityId != null)
         'funding_liability_id': fundingLiabilityId,
       if (fundingDetails != null) 'funding_details': fundingDetails,
+      if (fundSource != null) 'fund_source': fundSource,
+      if (sourceAccount != null) 'source_account': sourceAccount,
+      if (ownershipType != null) 'ownership_type': ownershipType,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -2505,6 +2802,9 @@ class InvestmentsCompanion extends UpdateCompanion<Investment> {
       Value<String?>? fundingSource,
       Value<String?>? fundingLiabilityId,
       Value<String?>? fundingDetails,
+      Value<String?>? fundSource,
+      Value<String?>? sourceAccount,
+      Value<String?>? ownershipType,
       Value<int>? rowid}) {
     return InvestmentsCompanion(
       id: id ?? this.id,
@@ -2527,6 +2827,9 @@ class InvestmentsCompanion extends UpdateCompanion<Investment> {
       fundingSource: fundingSource ?? this.fundingSource,
       fundingLiabilityId: fundingLiabilityId ?? this.fundingLiabilityId,
       fundingDetails: fundingDetails ?? this.fundingDetails,
+      fundSource: fundSource ?? this.fundSource,
+      sourceAccount: sourceAccount ?? this.sourceAccount,
+      ownershipType: ownershipType ?? this.ownershipType,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -2595,6 +2898,15 @@ class InvestmentsCompanion extends UpdateCompanion<Investment> {
     if (fundingDetails.present) {
       map['funding_details'] = Variable<String>(fundingDetails.value);
     }
+    if (fundSource.present) {
+      map['fund_source'] = Variable<String>(fundSource.value);
+    }
+    if (sourceAccount.present) {
+      map['source_account'] = Variable<String>(sourceAccount.value);
+    }
+    if (ownershipType.present) {
+      map['ownership_type'] = Variable<String>(ownershipType.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -2624,6 +2936,9 @@ class InvestmentsCompanion extends UpdateCompanion<Investment> {
           ..write('fundingSource: $fundingSource, ')
           ..write('fundingLiabilityId: $fundingLiabilityId, ')
           ..write('fundingDetails: $fundingDetails, ')
+          ..write('fundSource: $fundSource, ')
+          ..write('sourceAccount: $sourceAccount, ')
+          ..write('ownershipType: $ownershipType, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -4000,6 +4315,71 @@ class $TransactionsTable extends Transactions
   late final GeneratedColumn<String> fundingDetails = GeneratedColumn<String>(
       'funding_details', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _transactionUuidMeta =
+      const VerificationMeta('transactionUuid');
+  @override
+  late final GeneratedColumn<String> transactionUuid = GeneratedColumn<String>(
+      'transaction_uuid', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _operationUuidMeta =
+      const VerificationMeta('operationUuid');
+  @override
+  late final GeneratedColumn<String> operationUuid = GeneratedColumn<String>(
+      'operation_uuid', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _sourceRecordIdMeta =
+      const VerificationMeta('sourceRecordId');
+  @override
+  late final GeneratedColumn<String> sourceRecordId = GeneratedColumn<String>(
+      'source_record_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _fundSourceMeta =
+      const VerificationMeta('fundSource');
+  @override
+  late final GeneratedColumn<String> fundSource = GeneratedColumn<String>(
+      'fund_source', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _sourceAccountMeta =
+      const VerificationMeta('sourceAccount');
+  @override
+  late final GeneratedColumn<String> sourceAccount = GeneratedColumn<String>(
+      'source_account', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _ownershipTypeMeta =
+      const VerificationMeta('ownershipType');
+  @override
+  late final GeneratedColumn<String> ownershipType = GeneratedColumn<String>(
+      'ownership_type', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _liabilityTypeMeta =
+      const VerificationMeta('liabilityType');
+  @override
+  late final GeneratedColumn<String> liabilityType = GeneratedColumn<String>(
+      'liability_type', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _transactionCategoryMeta =
+      const VerificationMeta('transactionCategory');
+  @override
+  late final GeneratedColumn<String> transactionCategory =
+      GeneratedColumn<String>('transaction_category', aliasedName, true,
+          type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _sipIdMeta = const VerificationMeta('sipId');
+  @override
+  late final GeneratedColumn<String> sipId = GeneratedColumn<String>(
+      'sip_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _executionMonthMeta =
+      const VerificationMeta('executionMonth');
+  @override
+  late final GeneratedColumn<int> executionMonth = GeneratedColumn<int>(
+      'execution_month', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _executionYearMeta =
+      const VerificationMeta('executionYear');
+  @override
+  late final GeneratedColumn<int> executionYear = GeneratedColumn<int>(
+      'execution_year', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -4024,7 +4404,18 @@ class $TransactionsTable extends Transactions
         deletedBy,
         fundingSource,
         fundingLiabilityId,
-        fundingDetails
+        fundingDetails,
+        transactionUuid,
+        operationUuid,
+        sourceRecordId,
+        fundSource,
+        sourceAccount,
+        ownershipType,
+        liabilityType,
+        transactionCategory,
+        sipId,
+        executionMonth,
+        executionYear
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -4161,11 +4552,79 @@ class $TransactionsTable extends Transactions
           fundingDetails.isAcceptableOrUnknown(
               data['funding_details']!, _fundingDetailsMeta));
     }
+    if (data.containsKey('transaction_uuid')) {
+      context.handle(
+          _transactionUuidMeta,
+          transactionUuid.isAcceptableOrUnknown(
+              data['transaction_uuid']!, _transactionUuidMeta));
+    }
+    if (data.containsKey('operation_uuid')) {
+      context.handle(
+          _operationUuidMeta,
+          operationUuid.isAcceptableOrUnknown(
+              data['operation_uuid']!, _operationUuidMeta));
+    }
+    if (data.containsKey('source_record_id')) {
+      context.handle(
+          _sourceRecordIdMeta,
+          sourceRecordId.isAcceptableOrUnknown(
+              data['source_record_id']!, _sourceRecordIdMeta));
+    }
+    if (data.containsKey('fund_source')) {
+      context.handle(
+          _fundSourceMeta,
+          fundSource.isAcceptableOrUnknown(
+              data['fund_source']!, _fundSourceMeta));
+    }
+    if (data.containsKey('source_account')) {
+      context.handle(
+          _sourceAccountMeta,
+          sourceAccount.isAcceptableOrUnknown(
+              data['source_account']!, _sourceAccountMeta));
+    }
+    if (data.containsKey('ownership_type')) {
+      context.handle(
+          _ownershipTypeMeta,
+          ownershipType.isAcceptableOrUnknown(
+              data['ownership_type']!, _ownershipTypeMeta));
+    }
+    if (data.containsKey('liability_type')) {
+      context.handle(
+          _liabilityTypeMeta,
+          liabilityType.isAcceptableOrUnknown(
+              data['liability_type']!, _liabilityTypeMeta));
+    }
+    if (data.containsKey('transaction_category')) {
+      context.handle(
+          _transactionCategoryMeta,
+          transactionCategory.isAcceptableOrUnknown(
+              data['transaction_category']!, _transactionCategoryMeta));
+    }
+    if (data.containsKey('sip_id')) {
+      context.handle(
+          _sipIdMeta, sipId.isAcceptableOrUnknown(data['sip_id']!, _sipIdMeta));
+    }
+    if (data.containsKey('execution_month')) {
+      context.handle(
+          _executionMonthMeta,
+          executionMonth.isAcceptableOrUnknown(
+              data['execution_month']!, _executionMonthMeta));
+    }
+    if (data.containsKey('execution_year')) {
+      context.handle(
+          _executionYearMeta,
+          executionYear.isAcceptableOrUnknown(
+              data['execution_year']!, _executionYearMeta));
+    }
     return context;
   }
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+        {sipId, executionMonth, executionYear},
+      ];
   @override
   Transaction map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
@@ -4216,6 +4675,28 @@ class $TransactionsTable extends Transactions
           DriftSqlType.string, data['${effectivePrefix}funding_liability_id']),
       fundingDetails: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}funding_details']),
+      transactionUuid: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}transaction_uuid']),
+      operationUuid: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}operation_uuid']),
+      sourceRecordId: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}source_record_id']),
+      fundSource: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}fund_source']),
+      sourceAccount: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}source_account']),
+      ownershipType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}ownership_type']),
+      liabilityType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}liability_type']),
+      transactionCategory: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}transaction_category']),
+      sipId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}sip_id']),
+      executionMonth: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}execution_month']),
+      executionYear: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}execution_year']),
     );
   }
 
@@ -4249,6 +4730,17 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String? fundingSource;
   final String? fundingLiabilityId;
   final String? fundingDetails;
+  final String? transactionUuid;
+  final String? operationUuid;
+  final String? sourceRecordId;
+  final String? fundSource;
+  final String? sourceAccount;
+  final String? ownershipType;
+  final String? liabilityType;
+  final String? transactionCategory;
+  final String? sipId;
+  final int? executionMonth;
+  final int? executionYear;
   const Transaction(
       {required this.id,
       required this.type,
@@ -4272,7 +4764,18 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       this.deletedBy,
       this.fundingSource,
       this.fundingLiabilityId,
-      this.fundingDetails});
+      this.fundingDetails,
+      this.transactionUuid,
+      this.operationUuid,
+      this.sourceRecordId,
+      this.fundSource,
+      this.sourceAccount,
+      this.ownershipType,
+      this.liabilityType,
+      this.transactionCategory,
+      this.sipId,
+      this.executionMonth,
+      this.executionYear});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -4330,6 +4833,39 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     }
     if (!nullToAbsent || fundingDetails != null) {
       map['funding_details'] = Variable<String>(fundingDetails);
+    }
+    if (!nullToAbsent || transactionUuid != null) {
+      map['transaction_uuid'] = Variable<String>(transactionUuid);
+    }
+    if (!nullToAbsent || operationUuid != null) {
+      map['operation_uuid'] = Variable<String>(operationUuid);
+    }
+    if (!nullToAbsent || sourceRecordId != null) {
+      map['source_record_id'] = Variable<String>(sourceRecordId);
+    }
+    if (!nullToAbsent || fundSource != null) {
+      map['fund_source'] = Variable<String>(fundSource);
+    }
+    if (!nullToAbsent || sourceAccount != null) {
+      map['source_account'] = Variable<String>(sourceAccount);
+    }
+    if (!nullToAbsent || ownershipType != null) {
+      map['ownership_type'] = Variable<String>(ownershipType);
+    }
+    if (!nullToAbsent || liabilityType != null) {
+      map['liability_type'] = Variable<String>(liabilityType);
+    }
+    if (!nullToAbsent || transactionCategory != null) {
+      map['transaction_category'] = Variable<String>(transactionCategory);
+    }
+    if (!nullToAbsent || sipId != null) {
+      map['sip_id'] = Variable<String>(sipId);
+    }
+    if (!nullToAbsent || executionMonth != null) {
+      map['execution_month'] = Variable<int>(executionMonth);
+    }
+    if (!nullToAbsent || executionYear != null) {
+      map['execution_year'] = Variable<int>(executionYear);
     }
     return map;
   }
@@ -4389,6 +4925,38 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       fundingDetails: fundingDetails == null && nullToAbsent
           ? const Value.absent()
           : Value(fundingDetails),
+      transactionUuid: transactionUuid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(transactionUuid),
+      operationUuid: operationUuid == null && nullToAbsent
+          ? const Value.absent()
+          : Value(operationUuid),
+      sourceRecordId: sourceRecordId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceRecordId),
+      fundSource: fundSource == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fundSource),
+      sourceAccount: sourceAccount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceAccount),
+      ownershipType: ownershipType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownershipType),
+      liabilityType: liabilityType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(liabilityType),
+      transactionCategory: transactionCategory == null && nullToAbsent
+          ? const Value.absent()
+          : Value(transactionCategory),
+      sipId:
+          sipId == null && nullToAbsent ? const Value.absent() : Value(sipId),
+      executionMonth: executionMonth == null && nullToAbsent
+          ? const Value.absent()
+          : Value(executionMonth),
+      executionYear: executionYear == null && nullToAbsent
+          ? const Value.absent()
+          : Value(executionYear),
     );
   }
 
@@ -4421,6 +4989,18 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       fundingLiabilityId:
           serializer.fromJson<String?>(json['fundingLiabilityId']),
       fundingDetails: serializer.fromJson<String?>(json['fundingDetails']),
+      transactionUuid: serializer.fromJson<String?>(json['transactionUuid']),
+      operationUuid: serializer.fromJson<String?>(json['operationUuid']),
+      sourceRecordId: serializer.fromJson<String?>(json['sourceRecordId']),
+      fundSource: serializer.fromJson<String?>(json['fundSource']),
+      sourceAccount: serializer.fromJson<String?>(json['sourceAccount']),
+      ownershipType: serializer.fromJson<String?>(json['ownershipType']),
+      liabilityType: serializer.fromJson<String?>(json['liabilityType']),
+      transactionCategory:
+          serializer.fromJson<String?>(json['transactionCategory']),
+      sipId: serializer.fromJson<String?>(json['sipId']),
+      executionMonth: serializer.fromJson<int?>(json['executionMonth']),
+      executionYear: serializer.fromJson<int?>(json['executionYear']),
     );
   }
   @override
@@ -4450,6 +5030,17 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'fundingSource': serializer.toJson<String?>(fundingSource),
       'fundingLiabilityId': serializer.toJson<String?>(fundingLiabilityId),
       'fundingDetails': serializer.toJson<String?>(fundingDetails),
+      'transactionUuid': serializer.toJson<String?>(transactionUuid),
+      'operationUuid': serializer.toJson<String?>(operationUuid),
+      'sourceRecordId': serializer.toJson<String?>(sourceRecordId),
+      'fundSource': serializer.toJson<String?>(fundSource),
+      'sourceAccount': serializer.toJson<String?>(sourceAccount),
+      'ownershipType': serializer.toJson<String?>(ownershipType),
+      'liabilityType': serializer.toJson<String?>(liabilityType),
+      'transactionCategory': serializer.toJson<String?>(transactionCategory),
+      'sipId': serializer.toJson<String?>(sipId),
+      'executionMonth': serializer.toJson<int?>(executionMonth),
+      'executionYear': serializer.toJson<int?>(executionYear),
     };
   }
 
@@ -4476,7 +5067,18 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           Value<String?> deletedBy = const Value.absent(),
           Value<String?> fundingSource = const Value.absent(),
           Value<String?> fundingLiabilityId = const Value.absent(),
-          Value<String?> fundingDetails = const Value.absent()}) =>
+          Value<String?> fundingDetails = const Value.absent(),
+          Value<String?> transactionUuid = const Value.absent(),
+          Value<String?> operationUuid = const Value.absent(),
+          Value<String?> sourceRecordId = const Value.absent(),
+          Value<String?> fundSource = const Value.absent(),
+          Value<String?> sourceAccount = const Value.absent(),
+          Value<String?> ownershipType = const Value.absent(),
+          Value<String?> liabilityType = const Value.absent(),
+          Value<String?> transactionCategory = const Value.absent(),
+          Value<String?> sipId = const Value.absent(),
+          Value<int?> executionMonth = const Value.absent(),
+          Value<int?> executionYear = const Value.absent()}) =>
       Transaction(
         id: id ?? this.id,
         type: type ?? this.type,
@@ -4511,6 +5113,28 @@ class Transaction extends DataClass implements Insertable<Transaction> {
             : this.fundingLiabilityId,
         fundingDetails:
             fundingDetails.present ? fundingDetails.value : this.fundingDetails,
+        transactionUuid: transactionUuid.present
+            ? transactionUuid.value
+            : this.transactionUuid,
+        operationUuid:
+            operationUuid.present ? operationUuid.value : this.operationUuid,
+        sourceRecordId:
+            sourceRecordId.present ? sourceRecordId.value : this.sourceRecordId,
+        fundSource: fundSource.present ? fundSource.value : this.fundSource,
+        sourceAccount:
+            sourceAccount.present ? sourceAccount.value : this.sourceAccount,
+        ownershipType:
+            ownershipType.present ? ownershipType.value : this.ownershipType,
+        liabilityType:
+            liabilityType.present ? liabilityType.value : this.liabilityType,
+        transactionCategory: transactionCategory.present
+            ? transactionCategory.value
+            : this.transactionCategory,
+        sipId: sipId.present ? sipId.value : this.sipId,
+        executionMonth:
+            executionMonth.present ? executionMonth.value : this.executionMonth,
+        executionYear:
+            executionYear.present ? executionYear.value : this.executionYear,
       );
   Transaction copyWithCompanion(TransactionsCompanion data) {
     return Transaction(
@@ -4557,6 +5181,36 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       fundingDetails: data.fundingDetails.present
           ? data.fundingDetails.value
           : this.fundingDetails,
+      transactionUuid: data.transactionUuid.present
+          ? data.transactionUuid.value
+          : this.transactionUuid,
+      operationUuid: data.operationUuid.present
+          ? data.operationUuid.value
+          : this.operationUuid,
+      sourceRecordId: data.sourceRecordId.present
+          ? data.sourceRecordId.value
+          : this.sourceRecordId,
+      fundSource:
+          data.fundSource.present ? data.fundSource.value : this.fundSource,
+      sourceAccount: data.sourceAccount.present
+          ? data.sourceAccount.value
+          : this.sourceAccount,
+      ownershipType: data.ownershipType.present
+          ? data.ownershipType.value
+          : this.ownershipType,
+      liabilityType: data.liabilityType.present
+          ? data.liabilityType.value
+          : this.liabilityType,
+      transactionCategory: data.transactionCategory.present
+          ? data.transactionCategory.value
+          : this.transactionCategory,
+      sipId: data.sipId.present ? data.sipId.value : this.sipId,
+      executionMonth: data.executionMonth.present
+          ? data.executionMonth.value
+          : this.executionMonth,
+      executionYear: data.executionYear.present
+          ? data.executionYear.value
+          : this.executionYear,
     );
   }
 
@@ -4585,7 +5239,18 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('deletedBy: $deletedBy, ')
           ..write('fundingSource: $fundingSource, ')
           ..write('fundingLiabilityId: $fundingLiabilityId, ')
-          ..write('fundingDetails: $fundingDetails')
+          ..write('fundingDetails: $fundingDetails, ')
+          ..write('transactionUuid: $transactionUuid, ')
+          ..write('operationUuid: $operationUuid, ')
+          ..write('sourceRecordId: $sourceRecordId, ')
+          ..write('fundSource: $fundSource, ')
+          ..write('sourceAccount: $sourceAccount, ')
+          ..write('ownershipType: $ownershipType, ')
+          ..write('liabilityType: $liabilityType, ')
+          ..write('transactionCategory: $transactionCategory, ')
+          ..write('sipId: $sipId, ')
+          ..write('executionMonth: $executionMonth, ')
+          ..write('executionYear: $executionYear')
           ..write(')'))
         .toString();
   }
@@ -4614,7 +5279,18 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         deletedBy,
         fundingSource,
         fundingLiabilityId,
-        fundingDetails
+        fundingDetails,
+        transactionUuid,
+        operationUuid,
+        sourceRecordId,
+        fundSource,
+        sourceAccount,
+        ownershipType,
+        liabilityType,
+        transactionCategory,
+        sipId,
+        executionMonth,
+        executionYear
       ]);
   @override
   bool operator ==(Object other) =>
@@ -4642,7 +5318,18 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.deletedBy == this.deletedBy &&
           other.fundingSource == this.fundingSource &&
           other.fundingLiabilityId == this.fundingLiabilityId &&
-          other.fundingDetails == this.fundingDetails);
+          other.fundingDetails == this.fundingDetails &&
+          other.transactionUuid == this.transactionUuid &&
+          other.operationUuid == this.operationUuid &&
+          other.sourceRecordId == this.sourceRecordId &&
+          other.fundSource == this.fundSource &&
+          other.sourceAccount == this.sourceAccount &&
+          other.ownershipType == this.ownershipType &&
+          other.liabilityType == this.liabilityType &&
+          other.transactionCategory == this.transactionCategory &&
+          other.sipId == this.sipId &&
+          other.executionMonth == this.executionMonth &&
+          other.executionYear == this.executionYear);
 }
 
 class TransactionsCompanion extends UpdateCompanion<Transaction> {
@@ -4669,6 +5356,17 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String?> fundingSource;
   final Value<String?> fundingLiabilityId;
   final Value<String?> fundingDetails;
+  final Value<String?> transactionUuid;
+  final Value<String?> operationUuid;
+  final Value<String?> sourceRecordId;
+  final Value<String?> fundSource;
+  final Value<String?> sourceAccount;
+  final Value<String?> ownershipType;
+  final Value<String?> liabilityType;
+  final Value<String?> transactionCategory;
+  final Value<String?> sipId;
+  final Value<int?> executionMonth;
+  final Value<int?> executionYear;
   final Value<int> rowid;
   const TransactionsCompanion({
     this.id = const Value.absent(),
@@ -4694,6 +5392,17 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.fundingSource = const Value.absent(),
     this.fundingLiabilityId = const Value.absent(),
     this.fundingDetails = const Value.absent(),
+    this.transactionUuid = const Value.absent(),
+    this.operationUuid = const Value.absent(),
+    this.sourceRecordId = const Value.absent(),
+    this.fundSource = const Value.absent(),
+    this.sourceAccount = const Value.absent(),
+    this.ownershipType = const Value.absent(),
+    this.liabilityType = const Value.absent(),
+    this.transactionCategory = const Value.absent(),
+    this.sipId = const Value.absent(),
+    this.executionMonth = const Value.absent(),
+    this.executionYear = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   TransactionsCompanion.insert({
@@ -4720,6 +5429,17 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.fundingSource = const Value.absent(),
     this.fundingLiabilityId = const Value.absent(),
     this.fundingDetails = const Value.absent(),
+    this.transactionUuid = const Value.absent(),
+    this.operationUuid = const Value.absent(),
+    this.sourceRecordId = const Value.absent(),
+    this.fundSource = const Value.absent(),
+    this.sourceAccount = const Value.absent(),
+    this.ownershipType = const Value.absent(),
+    this.liabilityType = const Value.absent(),
+    this.transactionCategory = const Value.absent(),
+    this.sipId = const Value.absent(),
+    this.executionMonth = const Value.absent(),
+    this.executionYear = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         type = Value(type),
@@ -4751,6 +5471,17 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? fundingSource,
     Expression<String>? fundingLiabilityId,
     Expression<String>? fundingDetails,
+    Expression<String>? transactionUuid,
+    Expression<String>? operationUuid,
+    Expression<String>? sourceRecordId,
+    Expression<String>? fundSource,
+    Expression<String>? sourceAccount,
+    Expression<String>? ownershipType,
+    Expression<String>? liabilityType,
+    Expression<String>? transactionCategory,
+    Expression<String>? sipId,
+    Expression<int>? executionMonth,
+    Expression<int>? executionYear,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4779,6 +5510,18 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (fundingLiabilityId != null)
         'funding_liability_id': fundingLiabilityId,
       if (fundingDetails != null) 'funding_details': fundingDetails,
+      if (transactionUuid != null) 'transaction_uuid': transactionUuid,
+      if (operationUuid != null) 'operation_uuid': operationUuid,
+      if (sourceRecordId != null) 'source_record_id': sourceRecordId,
+      if (fundSource != null) 'fund_source': fundSource,
+      if (sourceAccount != null) 'source_account': sourceAccount,
+      if (ownershipType != null) 'ownership_type': ownershipType,
+      if (liabilityType != null) 'liability_type': liabilityType,
+      if (transactionCategory != null)
+        'transaction_category': transactionCategory,
+      if (sipId != null) 'sip_id': sipId,
+      if (executionMonth != null) 'execution_month': executionMonth,
+      if (executionYear != null) 'execution_year': executionYear,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4807,6 +5550,17 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       Value<String?>? fundingSource,
       Value<String?>? fundingLiabilityId,
       Value<String?>? fundingDetails,
+      Value<String?>? transactionUuid,
+      Value<String?>? operationUuid,
+      Value<String?>? sourceRecordId,
+      Value<String?>? fundSource,
+      Value<String?>? sourceAccount,
+      Value<String?>? ownershipType,
+      Value<String?>? liabilityType,
+      Value<String?>? transactionCategory,
+      Value<String?>? sipId,
+      Value<int?>? executionMonth,
+      Value<int?>? executionYear,
       Value<int>? rowid}) {
     return TransactionsCompanion(
       id: id ?? this.id,
@@ -4832,6 +5586,17 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       fundingSource: fundingSource ?? this.fundingSource,
       fundingLiabilityId: fundingLiabilityId ?? this.fundingLiabilityId,
       fundingDetails: fundingDetails ?? this.fundingDetails,
+      transactionUuid: transactionUuid ?? this.transactionUuid,
+      operationUuid: operationUuid ?? this.operationUuid,
+      sourceRecordId: sourceRecordId ?? this.sourceRecordId,
+      fundSource: fundSource ?? this.fundSource,
+      sourceAccount: sourceAccount ?? this.sourceAccount,
+      ownershipType: ownershipType ?? this.ownershipType,
+      liabilityType: liabilityType ?? this.liabilityType,
+      transactionCategory: transactionCategory ?? this.transactionCategory,
+      sipId: sipId ?? this.sipId,
+      executionMonth: executionMonth ?? this.executionMonth,
+      executionYear: executionYear ?? this.executionYear,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4909,6 +5674,39 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (fundingDetails.present) {
       map['funding_details'] = Variable<String>(fundingDetails.value);
     }
+    if (transactionUuid.present) {
+      map['transaction_uuid'] = Variable<String>(transactionUuid.value);
+    }
+    if (operationUuid.present) {
+      map['operation_uuid'] = Variable<String>(operationUuid.value);
+    }
+    if (sourceRecordId.present) {
+      map['source_record_id'] = Variable<String>(sourceRecordId.value);
+    }
+    if (fundSource.present) {
+      map['fund_source'] = Variable<String>(fundSource.value);
+    }
+    if (sourceAccount.present) {
+      map['source_account'] = Variable<String>(sourceAccount.value);
+    }
+    if (ownershipType.present) {
+      map['ownership_type'] = Variable<String>(ownershipType.value);
+    }
+    if (liabilityType.present) {
+      map['liability_type'] = Variable<String>(liabilityType.value);
+    }
+    if (transactionCategory.present) {
+      map['transaction_category'] = Variable<String>(transactionCategory.value);
+    }
+    if (sipId.present) {
+      map['sip_id'] = Variable<String>(sipId.value);
+    }
+    if (executionMonth.present) {
+      map['execution_month'] = Variable<int>(executionMonth.value);
+    }
+    if (executionYear.present) {
+      map['execution_year'] = Variable<int>(executionYear.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4941,6 +5739,17 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('fundingSource: $fundingSource, ')
           ..write('fundingLiabilityId: $fundingLiabilityId, ')
           ..write('fundingDetails: $fundingDetails, ')
+          ..write('transactionUuid: $transactionUuid, ')
+          ..write('operationUuid: $operationUuid, ')
+          ..write('sourceRecordId: $sourceRecordId, ')
+          ..write('fundSource: $fundSource, ')
+          ..write('sourceAccount: $sourceAccount, ')
+          ..write('ownershipType: $ownershipType, ')
+          ..write('liabilityType: $liabilityType, ')
+          ..write('transactionCategory: $transactionCategory, ')
+          ..write('sipId: $sipId, ')
+          ..write('executionMonth: $executionMonth, ')
+          ..write('executionYear: $executionYear, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -11667,6 +12476,18 @@ class $MtfPositionsTable extends MtfPositions
   late final GeneratedColumn<String> deletedBy = GeneratedColumn<String>(
       'deleted_by', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _ownershipTypeMeta =
+      const VerificationMeta('ownershipType');
+  @override
+  late final GeneratedColumn<String> ownershipType = GeneratedColumn<String>(
+      'ownership_type', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _liabilityTypeMeta =
+      const VerificationMeta('liabilityType');
+  @override
+  late final GeneratedColumn<String> liabilityType = GeneratedColumn<String>(
+      'liability_type', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -11691,7 +12512,9 @@ class $MtfPositionsTable extends MtfPositions
         deviceId,
         lastAccrualDate,
         deletedAt,
-        deletedBy
+        deletedBy,
+        ownershipType,
+        liabilityType
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -11848,6 +12671,18 @@ class $MtfPositionsTable extends MtfPositions
       context.handle(_deletedByMeta,
           deletedBy.isAcceptableOrUnknown(data['deleted_by']!, _deletedByMeta));
     }
+    if (data.containsKey('ownership_type')) {
+      context.handle(
+          _ownershipTypeMeta,
+          ownershipType.isAcceptableOrUnknown(
+              data['ownership_type']!, _ownershipTypeMeta));
+    }
+    if (data.containsKey('liability_type')) {
+      context.handle(
+          _liabilityTypeMeta,
+          liabilityType.isAcceptableOrUnknown(
+              data['liability_type']!, _liabilityTypeMeta));
+    }
     return context;
   }
 
@@ -11904,6 +12739,10 @@ class $MtfPositionsTable extends MtfPositions
           .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
       deletedBy: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}deleted_by']),
+      ownershipType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}ownership_type']),
+      liabilityType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}liability_type']),
     );
   }
 
@@ -11937,6 +12776,8 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
   final DateTime? lastAccrualDate;
   final DateTime? deletedAt;
   final String? deletedBy;
+  final String? ownershipType;
+  final String? liabilityType;
   const MtfPosition(
       {required this.id,
       required this.investmentId,
@@ -11960,7 +12801,9 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
       this.deviceId,
       this.lastAccrualDate,
       this.deletedAt,
-      this.deletedBy});
+      this.deletedBy,
+      this.ownershipType,
+      this.liabilityType});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -12002,6 +12845,12 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
     }
     if (!nullToAbsent || deletedBy != null) {
       map['deleted_by'] = Variable<String>(deletedBy);
+    }
+    if (!nullToAbsent || ownershipType != null) {
+      map['ownership_type'] = Variable<String>(ownershipType);
+    }
+    if (!nullToAbsent || liabilityType != null) {
+      map['liability_type'] = Variable<String>(liabilityType);
     }
     return map;
   }
@@ -12047,6 +12896,12 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
       deletedBy: deletedBy == null && nullToAbsent
           ? const Value.absent()
           : Value(deletedBy),
+      ownershipType: ownershipType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(ownershipType),
+      liabilityType: liabilityType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(liabilityType),
     );
   }
 
@@ -12078,6 +12933,8 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
       lastAccrualDate: serializer.fromJson<DateTime?>(json['lastAccrualDate']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
       deletedBy: serializer.fromJson<String?>(json['deletedBy']),
+      ownershipType: serializer.fromJson<String?>(json['ownershipType']),
+      liabilityType: serializer.fromJson<String?>(json['liabilityType']),
     );
   }
   @override
@@ -12107,6 +12964,8 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
       'lastAccrualDate': serializer.toJson<DateTime?>(lastAccrualDate),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
       'deletedBy': serializer.toJson<String?>(deletedBy),
+      'ownershipType': serializer.toJson<String?>(ownershipType),
+      'liabilityType': serializer.toJson<String?>(liabilityType),
     };
   }
 
@@ -12133,7 +12992,9 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
           Value<String?> deviceId = const Value.absent(),
           Value<DateTime?> lastAccrualDate = const Value.absent(),
           Value<DateTime?> deletedAt = const Value.absent(),
-          Value<String?> deletedBy = const Value.absent()}) =>
+          Value<String?> deletedBy = const Value.absent(),
+          Value<String?> ownershipType = const Value.absent(),
+          Value<String?> liabilityType = const Value.absent()}) =>
       MtfPosition(
         id: id ?? this.id,
         investmentId: investmentId ?? this.investmentId,
@@ -12163,6 +13024,10 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
             : this.lastAccrualDate,
         deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
         deletedBy: deletedBy.present ? deletedBy.value : this.deletedBy,
+        ownershipType:
+            ownershipType.present ? ownershipType.value : this.ownershipType,
+        liabilityType:
+            liabilityType.present ? liabilityType.value : this.liabilityType,
       );
   MtfPosition copyWithCompanion(MtfPositionsCompanion data) {
     return MtfPosition(
@@ -12212,6 +13077,12 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
           : this.lastAccrualDate,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
       deletedBy: data.deletedBy.present ? data.deletedBy.value : this.deletedBy,
+      ownershipType: data.ownershipType.present
+          ? data.ownershipType.value
+          : this.ownershipType,
+      liabilityType: data.liabilityType.present
+          ? data.liabilityType.value
+          : this.liabilityType,
     );
   }
 
@@ -12240,7 +13111,9 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
           ..write('deviceId: $deviceId, ')
           ..write('lastAccrualDate: $lastAccrualDate, ')
           ..write('deletedAt: $deletedAt, ')
-          ..write('deletedBy: $deletedBy')
+          ..write('deletedBy: $deletedBy, ')
+          ..write('ownershipType: $ownershipType, ')
+          ..write('liabilityType: $liabilityType')
           ..write(')'))
         .toString();
   }
@@ -12269,7 +13142,9 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
         deviceId,
         lastAccrualDate,
         deletedAt,
-        deletedBy
+        deletedBy,
+        ownershipType,
+        liabilityType
       ]);
   @override
   bool operator ==(Object other) =>
@@ -12297,7 +13172,9 @@ class MtfPosition extends DataClass implements Insertable<MtfPosition> {
           other.deviceId == this.deviceId &&
           other.lastAccrualDate == this.lastAccrualDate &&
           other.deletedAt == this.deletedAt &&
-          other.deletedBy == this.deletedBy);
+          other.deletedBy == this.deletedBy &&
+          other.ownershipType == this.ownershipType &&
+          other.liabilityType == this.liabilityType);
 }
 
 class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
@@ -12324,6 +13201,8 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
   final Value<DateTime?> lastAccrualDate;
   final Value<DateTime?> deletedAt;
   final Value<String?> deletedBy;
+  final Value<String?> ownershipType;
+  final Value<String?> liabilityType;
   final Value<int> rowid;
   const MtfPositionsCompanion({
     this.id = const Value.absent(),
@@ -12349,6 +13228,8 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
     this.lastAccrualDate = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.deletedBy = const Value.absent(),
+    this.ownershipType = const Value.absent(),
+    this.liabilityType = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   MtfPositionsCompanion.insert({
@@ -12375,6 +13256,8 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
     this.lastAccrualDate = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.deletedBy = const Value.absent(),
+    this.ownershipType = const Value.absent(),
+    this.liabilityType = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         investmentId = Value(investmentId),
@@ -12413,6 +13296,8 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
     Expression<DateTime>? lastAccrualDate,
     Expression<DateTime>? deletedAt,
     Expression<String>? deletedBy,
+    Expression<String>? ownershipType,
+    Expression<String>? liabilityType,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -12439,6 +13324,8 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
       if (lastAccrualDate != null) 'last_accrual_date': lastAccrualDate,
       if (deletedAt != null) 'deleted_at': deletedAt,
       if (deletedBy != null) 'deleted_by': deletedBy,
+      if (ownershipType != null) 'ownership_type': ownershipType,
+      if (liabilityType != null) 'liability_type': liabilityType,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -12467,6 +13354,8 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
       Value<DateTime?>? lastAccrualDate,
       Value<DateTime?>? deletedAt,
       Value<String?>? deletedBy,
+      Value<String?>? ownershipType,
+      Value<String?>? liabilityType,
       Value<int>? rowid}) {
     return MtfPositionsCompanion(
       id: id ?? this.id,
@@ -12492,6 +13381,8 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
       lastAccrualDate: lastAccrualDate ?? this.lastAccrualDate,
       deletedAt: deletedAt ?? this.deletedAt,
       deletedBy: deletedBy ?? this.deletedBy,
+      ownershipType: ownershipType ?? this.ownershipType,
+      liabilityType: liabilityType ?? this.liabilityType,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -12568,6 +13459,12 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
     if (deletedBy.present) {
       map['deleted_by'] = Variable<String>(deletedBy.value);
     }
+    if (ownershipType.present) {
+      map['ownership_type'] = Variable<String>(ownershipType.value);
+    }
+    if (liabilityType.present) {
+      map['liability_type'] = Variable<String>(liabilityType.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -12600,6 +13497,8 @@ class MtfPositionsCompanion extends UpdateCompanion<MtfPosition> {
           ..write('lastAccrualDate: $lastAccrualDate, ')
           ..write('deletedAt: $deletedAt, ')
           ..write('deletedBy: $deletedBy, ')
+          ..write('ownershipType: $ownershipType, ')
+          ..write('liabilityType: $liabilityType, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -12736,6 +13635,24 @@ class $SipsTable extends Sips with TableInfo<$SipsTable, Sip> {
   late final GeneratedColumn<String> deletedBy = GeneratedColumn<String>(
       'deleted_by', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _firstInstallmentDateMeta =
+      const VerificationMeta('firstInstallmentDate');
+  @override
+  late final GeneratedColumn<DateTime> firstInstallmentDate =
+      GeneratedColumn<DateTime>('first_installment_date', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _nextDueDateMeta =
+      const VerificationMeta('nextDueDate');
+  @override
+  late final GeneratedColumn<DateTime> nextDueDate = GeneratedColumn<DateTime>(
+      'next_due_date', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _lastCompletedInstallmentMeta =
+      const VerificationMeta('lastCompletedInstallment');
+  @override
+  late final GeneratedColumn<DateTime> lastCompletedInstallment =
+      GeneratedColumn<DateTime>('last_completed_installment', aliasedName, true,
+          type: DriftSqlType.dateTime, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -12756,7 +13673,10 @@ class $SipsTable extends Sips with TableInfo<$SipsTable, Sip> {
         lastSyncedAt,
         deviceId,
         deletedAt,
-        deletedBy
+        deletedBy,
+        firstInstallmentDate,
+        nextDueDate,
+        lastCompletedInstallment
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -12874,6 +13794,25 @@ class $SipsTable extends Sips with TableInfo<$SipsTable, Sip> {
       context.handle(_deletedByMeta,
           deletedBy.isAcceptableOrUnknown(data['deleted_by']!, _deletedByMeta));
     }
+    if (data.containsKey('first_installment_date')) {
+      context.handle(
+          _firstInstallmentDateMeta,
+          firstInstallmentDate.isAcceptableOrUnknown(
+              data['first_installment_date']!, _firstInstallmentDateMeta));
+    }
+    if (data.containsKey('next_due_date')) {
+      context.handle(
+          _nextDueDateMeta,
+          nextDueDate.isAcceptableOrUnknown(
+              data['next_due_date']!, _nextDueDateMeta));
+    }
+    if (data.containsKey('last_completed_installment')) {
+      context.handle(
+          _lastCompletedInstallmentMeta,
+          lastCompletedInstallment.isAcceptableOrUnknown(
+              data['last_completed_installment']!,
+              _lastCompletedInstallmentMeta));
+    }
     return context;
   }
 
@@ -12922,6 +13861,14 @@ class $SipsTable extends Sips with TableInfo<$SipsTable, Sip> {
           .read(DriftSqlType.dateTime, data['${effectivePrefix}deleted_at']),
       deletedBy: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}deleted_by']),
+      firstInstallmentDate: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}first_installment_date']),
+      nextDueDate: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}next_due_date']),
+      lastCompletedInstallment: attachedDatabase.typeMapping.read(
+          DriftSqlType.dateTime,
+          data['${effectivePrefix}last_completed_installment']),
     );
   }
 
@@ -12951,6 +13898,9 @@ class Sip extends DataClass implements Insertable<Sip> {
   final String? deviceId;
   final DateTime? deletedAt;
   final String? deletedBy;
+  final DateTime? firstInstallmentDate;
+  final DateTime? nextDueDate;
+  final DateTime? lastCompletedInstallment;
   const Sip(
       {required this.id,
       required this.investmentId,
@@ -12970,7 +13920,10 @@ class Sip extends DataClass implements Insertable<Sip> {
       this.lastSyncedAt,
       this.deviceId,
       this.deletedAt,
-      this.deletedBy});
+      this.deletedBy,
+      this.firstInstallmentDate,
+      this.nextDueDate,
+      this.lastCompletedInstallment});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -13005,6 +13958,16 @@ class Sip extends DataClass implements Insertable<Sip> {
     }
     if (!nullToAbsent || deletedBy != null) {
       map['deleted_by'] = Variable<String>(deletedBy);
+    }
+    if (!nullToAbsent || firstInstallmentDate != null) {
+      map['first_installment_date'] = Variable<DateTime>(firstInstallmentDate);
+    }
+    if (!nullToAbsent || nextDueDate != null) {
+      map['next_due_date'] = Variable<DateTime>(nextDueDate);
+    }
+    if (!nullToAbsent || lastCompletedInstallment != null) {
+      map['last_completed_installment'] =
+          Variable<DateTime>(lastCompletedInstallment);
     }
     return map;
   }
@@ -13042,6 +14005,15 @@ class Sip extends DataClass implements Insertable<Sip> {
       deletedBy: deletedBy == null && nullToAbsent
           ? const Value.absent()
           : Value(deletedBy),
+      firstInstallmentDate: firstInstallmentDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(firstInstallmentDate),
+      nextDueDate: nextDueDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nextDueDate),
+      lastCompletedInstallment: lastCompletedInstallment == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastCompletedInstallment),
     );
   }
 
@@ -13070,6 +14042,11 @@ class Sip extends DataClass implements Insertable<Sip> {
       deviceId: serializer.fromJson<String?>(json['deviceId']),
       deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
       deletedBy: serializer.fromJson<String?>(json['deletedBy']),
+      firstInstallmentDate:
+          serializer.fromJson<DateTime?>(json['firstInstallmentDate']),
+      nextDueDate: serializer.fromJson<DateTime?>(json['nextDueDate']),
+      lastCompletedInstallment:
+          serializer.fromJson<DateTime?>(json['lastCompletedInstallment']),
     );
   }
   @override
@@ -13096,6 +14073,11 @@ class Sip extends DataClass implements Insertable<Sip> {
       'deviceId': serializer.toJson<String?>(deviceId),
       'deletedAt': serializer.toJson<DateTime?>(deletedAt),
       'deletedBy': serializer.toJson<String?>(deletedBy),
+      'firstInstallmentDate':
+          serializer.toJson<DateTime?>(firstInstallmentDate),
+      'nextDueDate': serializer.toJson<DateTime?>(nextDueDate),
+      'lastCompletedInstallment':
+          serializer.toJson<DateTime?>(lastCompletedInstallment),
     };
   }
 
@@ -13118,7 +14100,10 @@ class Sip extends DataClass implements Insertable<Sip> {
           Value<DateTime?> lastSyncedAt = const Value.absent(),
           Value<String?> deviceId = const Value.absent(),
           Value<DateTime?> deletedAt = const Value.absent(),
-          Value<String?> deletedBy = const Value.absent()}) =>
+          Value<String?> deletedBy = const Value.absent(),
+          Value<DateTime?> firstInstallmentDate = const Value.absent(),
+          Value<DateTime?> nextDueDate = const Value.absent(),
+          Value<DateTime?> lastCompletedInstallment = const Value.absent()}) =>
       Sip(
         id: id ?? this.id,
         investmentId: investmentId ?? this.investmentId,
@@ -13143,6 +14128,13 @@ class Sip extends DataClass implements Insertable<Sip> {
         deviceId: deviceId.present ? deviceId.value : this.deviceId,
         deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
         deletedBy: deletedBy.present ? deletedBy.value : this.deletedBy,
+        firstInstallmentDate: firstInstallmentDate.present
+            ? firstInstallmentDate.value
+            : this.firstInstallmentDate,
+        nextDueDate: nextDueDate.present ? nextDueDate.value : this.nextDueDate,
+        lastCompletedInstallment: lastCompletedInstallment.present
+            ? lastCompletedInstallment.value
+            : this.lastCompletedInstallment,
       );
   Sip copyWithCompanion(SipsCompanion data) {
     return Sip(
@@ -13176,6 +14168,14 @@ class Sip extends DataClass implements Insertable<Sip> {
       deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
       deletedBy: data.deletedBy.present ? data.deletedBy.value : this.deletedBy,
+      firstInstallmentDate: data.firstInstallmentDate.present
+          ? data.firstInstallmentDate.value
+          : this.firstInstallmentDate,
+      nextDueDate:
+          data.nextDueDate.present ? data.nextDueDate.value : this.nextDueDate,
+      lastCompletedInstallment: data.lastCompletedInstallment.present
+          ? data.lastCompletedInstallment.value
+          : this.lastCompletedInstallment,
     );
   }
 
@@ -13201,32 +14201,39 @@ class Sip extends DataClass implements Insertable<Sip> {
           ..write('lastSyncedAt: $lastSyncedAt, ')
           ..write('deviceId: $deviceId, ')
           ..write('deletedAt: $deletedAt, ')
-          ..write('deletedBy: $deletedBy')
+          ..write('deletedBy: $deletedBy, ')
+          ..write('firstInstallmentDate: $firstInstallmentDate, ')
+          ..write('nextDueDate: $nextDueDate, ')
+          ..write('lastCompletedInstallment: $lastCompletedInstallment')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      investmentId,
-      amount,
-      frequency,
-      sipDate,
-      startDate,
-      endDate,
-      autoCreate,
-      isActive,
-      createdAt,
-      updatedAt,
-      syncStatus,
-      importMode,
-      completedInstallmentsOverride,
-      worthCreationDate,
-      lastSyncedAt,
-      deviceId,
-      deletedAt,
-      deletedBy);
+  int get hashCode => Object.hashAll([
+        id,
+        investmentId,
+        amount,
+        frequency,
+        sipDate,
+        startDate,
+        endDate,
+        autoCreate,
+        isActive,
+        createdAt,
+        updatedAt,
+        syncStatus,
+        importMode,
+        completedInstallmentsOverride,
+        worthCreationDate,
+        lastSyncedAt,
+        deviceId,
+        deletedAt,
+        deletedBy,
+        firstInstallmentDate,
+        nextDueDate,
+        lastCompletedInstallment
+      ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -13250,7 +14257,10 @@ class Sip extends DataClass implements Insertable<Sip> {
           other.lastSyncedAt == this.lastSyncedAt &&
           other.deviceId == this.deviceId &&
           other.deletedAt == this.deletedAt &&
-          other.deletedBy == this.deletedBy);
+          other.deletedBy == this.deletedBy &&
+          other.firstInstallmentDate == this.firstInstallmentDate &&
+          other.nextDueDate == this.nextDueDate &&
+          other.lastCompletedInstallment == this.lastCompletedInstallment);
 }
 
 class SipsCompanion extends UpdateCompanion<Sip> {
@@ -13273,6 +14283,9 @@ class SipsCompanion extends UpdateCompanion<Sip> {
   final Value<String?> deviceId;
   final Value<DateTime?> deletedAt;
   final Value<String?> deletedBy;
+  final Value<DateTime?> firstInstallmentDate;
+  final Value<DateTime?> nextDueDate;
+  final Value<DateTime?> lastCompletedInstallment;
   final Value<int> rowid;
   const SipsCompanion({
     this.id = const Value.absent(),
@@ -13294,6 +14307,9 @@ class SipsCompanion extends UpdateCompanion<Sip> {
     this.deviceId = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.deletedBy = const Value.absent(),
+    this.firstInstallmentDate = const Value.absent(),
+    this.nextDueDate = const Value.absent(),
+    this.lastCompletedInstallment = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   SipsCompanion.insert({
@@ -13316,6 +14332,9 @@ class SipsCompanion extends UpdateCompanion<Sip> {
     this.deviceId = const Value.absent(),
     this.deletedAt = const Value.absent(),
     this.deletedBy = const Value.absent(),
+    this.firstInstallmentDate = const Value.absent(),
+    this.nextDueDate = const Value.absent(),
+    this.lastCompletedInstallment = const Value.absent(),
     this.rowid = const Value.absent(),
   })  : id = Value(id),
         investmentId = Value(investmentId),
@@ -13345,6 +14364,9 @@ class SipsCompanion extends UpdateCompanion<Sip> {
     Expression<String>? deviceId,
     Expression<DateTime>? deletedAt,
     Expression<String>? deletedBy,
+    Expression<DateTime>? firstInstallmentDate,
+    Expression<DateTime>? nextDueDate,
+    Expression<DateTime>? lastCompletedInstallment,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -13368,6 +14390,11 @@ class SipsCompanion extends UpdateCompanion<Sip> {
       if (deviceId != null) 'device_id': deviceId,
       if (deletedAt != null) 'deleted_at': deletedAt,
       if (deletedBy != null) 'deleted_by': deletedBy,
+      if (firstInstallmentDate != null)
+        'first_installment_date': firstInstallmentDate,
+      if (nextDueDate != null) 'next_due_date': nextDueDate,
+      if (lastCompletedInstallment != null)
+        'last_completed_installment': lastCompletedInstallment,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -13392,6 +14419,9 @@ class SipsCompanion extends UpdateCompanion<Sip> {
       Value<String?>? deviceId,
       Value<DateTime?>? deletedAt,
       Value<String?>? deletedBy,
+      Value<DateTime?>? firstInstallmentDate,
+      Value<DateTime?>? nextDueDate,
+      Value<DateTime?>? lastCompletedInstallment,
       Value<int>? rowid}) {
     return SipsCompanion(
       id: id ?? this.id,
@@ -13414,6 +14444,10 @@ class SipsCompanion extends UpdateCompanion<Sip> {
       deviceId: deviceId ?? this.deviceId,
       deletedAt: deletedAt ?? this.deletedAt,
       deletedBy: deletedBy ?? this.deletedBy,
+      firstInstallmentDate: firstInstallmentDate ?? this.firstInstallmentDate,
+      nextDueDate: nextDueDate ?? this.nextDueDate,
+      lastCompletedInstallment:
+          lastCompletedInstallment ?? this.lastCompletedInstallment,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -13479,6 +14513,17 @@ class SipsCompanion extends UpdateCompanion<Sip> {
     if (deletedBy.present) {
       map['deleted_by'] = Variable<String>(deletedBy.value);
     }
+    if (firstInstallmentDate.present) {
+      map['first_installment_date'] =
+          Variable<DateTime>(firstInstallmentDate.value);
+    }
+    if (nextDueDate.present) {
+      map['next_due_date'] = Variable<DateTime>(nextDueDate.value);
+    }
+    if (lastCompletedInstallment.present) {
+      map['last_completed_installment'] =
+          Variable<DateTime>(lastCompletedInstallment.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -13508,6 +14553,9 @@ class SipsCompanion extends UpdateCompanion<Sip> {
           ..write('deviceId: $deviceId, ')
           ..write('deletedAt: $deletedAt, ')
           ..write('deletedBy: $deletedBy, ')
+          ..write('firstInstallmentDate: $firstInstallmentDate, ')
+          ..write('nextDueDate: $nextDueDate, ')
+          ..write('lastCompletedInstallment: $lastCompletedInstallment, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -17016,6 +18064,8 @@ typedef $$AccountsTableCreateCompanionBuilder = AccountsCompanion Function({
   Value<String?> fundingSource,
   Value<String?> fundingLiabilityId,
   Value<String?> fundingDetails,
+  Value<String?> ownershipType,
+  Value<String?> liabilityType,
   Value<int> rowid,
 });
 typedef $$AccountsTableUpdateCompanionBuilder = AccountsCompanion Function({
@@ -17034,6 +18084,8 @@ typedef $$AccountsTableUpdateCompanionBuilder = AccountsCompanion Function({
   Value<String?> fundingSource,
   Value<String?> fundingLiabilityId,
   Value<String?> fundingDetails,
+  Value<String?> ownershipType,
+  Value<String?> liabilityType,
   Value<int> rowid,
 });
 
@@ -17117,6 +18169,12 @@ class $$AccountsTableFilterComposer
       column: $table.fundingDetails,
       builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<String> get ownershipType => $composableBuilder(
+      column: $table.ownershipType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get liabilityType => $composableBuilder(
+      column: $table.liabilityType, builder: (column) => ColumnFilters(column));
+
   Expression<bool> accountBalanceCachesRefs(
       Expression<bool> Function($$AccountBalanceCachesTableFilterComposer f)
           f) {
@@ -17197,6 +18255,14 @@ class $$AccountsTableOrderingComposer
   ColumnOrderings<String> get fundingDetails => $composableBuilder(
       column: $table.fundingDetails,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get ownershipType => $composableBuilder(
+      column: $table.ownershipType,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get liabilityType => $composableBuilder(
+      column: $table.liabilityType,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$AccountsTableAnnotationComposer
@@ -17252,6 +18318,12 @@ class $$AccountsTableAnnotationComposer
 
   GeneratedColumn<String> get fundingDetails => $composableBuilder(
       column: $table.fundingDetails, builder: (column) => column);
+
+  GeneratedColumn<String> get ownershipType => $composableBuilder(
+      column: $table.ownershipType, builder: (column) => column);
+
+  GeneratedColumn<String> get liabilityType => $composableBuilder(
+      column: $table.liabilityType, builder: (column) => column);
 
   Expression<T> accountBalanceCachesRefs<T extends Object>(
       Expression<T> Function($$AccountBalanceCachesTableAnnotationComposer a)
@@ -17315,6 +18387,8 @@ class $$AccountsTableTableManager extends RootTableManager<
             Value<String?> fundingSource = const Value.absent(),
             Value<String?> fundingLiabilityId = const Value.absent(),
             Value<String?> fundingDetails = const Value.absent(),
+            Value<String?> ownershipType = const Value.absent(),
+            Value<String?> liabilityType = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               AccountsCompanion(
@@ -17333,6 +18407,8 @@ class $$AccountsTableTableManager extends RootTableManager<
             fundingSource: fundingSource,
             fundingLiabilityId: fundingLiabilityId,
             fundingDetails: fundingDetails,
+            ownershipType: ownershipType,
+            liabilityType: liabilityType,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -17351,6 +18427,8 @@ class $$AccountsTableTableManager extends RootTableManager<
             Value<String?> fundingSource = const Value.absent(),
             Value<String?> fundingLiabilityId = const Value.absent(),
             Value<String?> fundingDetails = const Value.absent(),
+            Value<String?> ownershipType = const Value.absent(),
+            Value<String?> liabilityType = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               AccountsCompanion.insert(
@@ -17369,6 +18447,8 @@ class $$AccountsTableTableManager extends RootTableManager<
             fundingSource: fundingSource,
             fundingLiabilityId: fundingLiabilityId,
             fundingDetails: fundingDetails,
+            ownershipType: ownershipType,
+            liabilityType: liabilityType,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -17436,6 +18516,8 @@ typedef $$PeopleTableCreateCompanionBuilder = PeopleCompanion Function({
   Value<String?> bankName,
   Value<String?> accountHolderName,
   Value<String?> photoPath,
+  Value<String?> ownershipType,
+  Value<String?> liabilityType,
   Value<int> rowid,
 });
 typedef $$PeopleTableUpdateCompanionBuilder = PeopleCompanion Function({
@@ -17459,6 +18541,8 @@ typedef $$PeopleTableUpdateCompanionBuilder = PeopleCompanion Function({
   Value<String?> bankName,
   Value<String?> accountHolderName,
   Value<String?> photoPath,
+  Value<String?> ownershipType,
+  Value<String?> liabilityType,
   Value<int> rowid,
 });
 
@@ -17555,6 +18639,12 @@ class $$PeopleTableFilterComposer
   ColumnFilters<String> get photoPath => $composableBuilder(
       column: $table.photoPath, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<String> get ownershipType => $composableBuilder(
+      column: $table.ownershipType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get liabilityType => $composableBuilder(
+      column: $table.liabilityType, builder: (column) => ColumnFilters(column));
+
   Expression<bool> personBalanceCachesRefs(
       Expression<bool> Function($$PersonBalanceCachesTableFilterComposer f) f) {
     final $$PersonBalanceCachesTableFilterComposer composer = $composerBuilder(
@@ -17647,6 +18737,14 @@ class $$PeopleTableOrderingComposer
 
   ColumnOrderings<String> get photoPath => $composableBuilder(
       column: $table.photoPath, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get ownershipType => $composableBuilder(
+      column: $table.ownershipType,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get liabilityType => $composableBuilder(
+      column: $table.liabilityType,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$PeopleTableAnnotationComposer
@@ -17718,6 +18816,12 @@ class $$PeopleTableAnnotationComposer
   GeneratedColumn<String> get photoPath =>
       $composableBuilder(column: $table.photoPath, builder: (column) => column);
 
+  GeneratedColumn<String> get ownershipType => $composableBuilder(
+      column: $table.ownershipType, builder: (column) => column);
+
+  GeneratedColumn<String> get liabilityType => $composableBuilder(
+      column: $table.liabilityType, builder: (column) => column);
+
   Expression<T> personBalanceCachesRefs<T extends Object>(
       Expression<T> Function($$PersonBalanceCachesTableAnnotationComposer a)
           f) {
@@ -17785,6 +18889,8 @@ class $$PeopleTableTableManager extends RootTableManager<
             Value<String?> bankName = const Value.absent(),
             Value<String?> accountHolderName = const Value.absent(),
             Value<String?> photoPath = const Value.absent(),
+            Value<String?> ownershipType = const Value.absent(),
+            Value<String?> liabilityType = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               PeopleCompanion(
@@ -17808,6 +18914,8 @@ class $$PeopleTableTableManager extends RootTableManager<
             bankName: bankName,
             accountHolderName: accountHolderName,
             photoPath: photoPath,
+            ownershipType: ownershipType,
+            liabilityType: liabilityType,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -17831,6 +18939,8 @@ class $$PeopleTableTableManager extends RootTableManager<
             Value<String?> bankName = const Value.absent(),
             Value<String?> accountHolderName = const Value.absent(),
             Value<String?> photoPath = const Value.absent(),
+            Value<String?> ownershipType = const Value.absent(),
+            Value<String?> liabilityType = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               PeopleCompanion.insert(
@@ -17854,6 +18964,8 @@ class $$PeopleTableTableManager extends RootTableManager<
             bankName: bankName,
             accountHolderName: accountHolderName,
             photoPath: photoPath,
+            ownershipType: ownershipType,
+            liabilityType: liabilityType,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -17922,6 +19034,9 @@ typedef $$InvestmentsTableCreateCompanionBuilder = InvestmentsCompanion
   Value<String?> fundingSource,
   Value<String?> fundingLiabilityId,
   Value<String?> fundingDetails,
+  Value<String?> fundSource,
+  Value<String?> sourceAccount,
+  Value<String?> ownershipType,
   Value<int> rowid,
 });
 typedef $$InvestmentsTableUpdateCompanionBuilder = InvestmentsCompanion
@@ -17946,6 +19061,9 @@ typedef $$InvestmentsTableUpdateCompanionBuilder = InvestmentsCompanion
   Value<String?> fundingSource,
   Value<String?> fundingLiabilityId,
   Value<String?> fundingDetails,
+  Value<String?> fundSource,
+  Value<String?> sourceAccount,
+  Value<String?> ownershipType,
   Value<int> rowid,
 });
 
@@ -18074,6 +19192,15 @@ class $$InvestmentsTableFilterComposer
   ColumnFilters<String> get fundingDetails => $composableBuilder(
       column: $table.fundingDetails,
       builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get fundSource => $composableBuilder(
+      column: $table.fundSource, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get sourceAccount => $composableBuilder(
+      column: $table.sourceAccount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get ownershipType => $composableBuilder(
+      column: $table.ownershipType, builder: (column) => ColumnFilters(column));
 
   Expression<bool> investmentBalanceCachesRefs(
       Expression<bool> Function($$InvestmentBalanceCachesTableFilterComposer f)
@@ -18216,6 +19343,17 @@ class $$InvestmentsTableOrderingComposer
   ColumnOrderings<String> get fundingDetails => $composableBuilder(
       column: $table.fundingDetails,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get fundSource => $composableBuilder(
+      column: $table.fundSource, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get sourceAccount => $composableBuilder(
+      column: $table.sourceAccount,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get ownershipType => $composableBuilder(
+      column: $table.ownershipType,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$InvestmentsTableAnnotationComposer
@@ -18286,6 +19424,15 @@ class $$InvestmentsTableAnnotationComposer
 
   GeneratedColumn<String> get fundingDetails => $composableBuilder(
       column: $table.fundingDetails, builder: (column) => column);
+
+  GeneratedColumn<String> get fundSource => $composableBuilder(
+      column: $table.fundSource, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceAccount => $composableBuilder(
+      column: $table.sourceAccount, builder: (column) => column);
+
+  GeneratedColumn<String> get ownershipType => $composableBuilder(
+      column: $table.ownershipType, builder: (column) => column);
 
   Expression<T> investmentBalanceCachesRefs<T extends Object>(
       Expression<T> Function($$InvestmentBalanceCachesTableAnnotationComposer a)
@@ -18399,6 +19546,9 @@ class $$InvestmentsTableTableManager extends RootTableManager<
             Value<String?> fundingSource = const Value.absent(),
             Value<String?> fundingLiabilityId = const Value.absent(),
             Value<String?> fundingDetails = const Value.absent(),
+            Value<String?> fundSource = const Value.absent(),
+            Value<String?> sourceAccount = const Value.absent(),
+            Value<String?> ownershipType = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               InvestmentsCompanion(
@@ -18422,6 +19572,9 @@ class $$InvestmentsTableTableManager extends RootTableManager<
             fundingSource: fundingSource,
             fundingLiabilityId: fundingLiabilityId,
             fundingDetails: fundingDetails,
+            fundSource: fundSource,
+            sourceAccount: sourceAccount,
+            ownershipType: ownershipType,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -18445,6 +19598,9 @@ class $$InvestmentsTableTableManager extends RootTableManager<
             Value<String?> fundingSource = const Value.absent(),
             Value<String?> fundingLiabilityId = const Value.absent(),
             Value<String?> fundingDetails = const Value.absent(),
+            Value<String?> fundSource = const Value.absent(),
+            Value<String?> sourceAccount = const Value.absent(),
+            Value<String?> ownershipType = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               InvestmentsCompanion.insert(
@@ -18468,6 +19624,9 @@ class $$InvestmentsTableTableManager extends RootTableManager<
             fundingSource: fundingSource,
             fundingLiabilityId: fundingLiabilityId,
             fundingDetails: fundingDetails,
+            fundSource: fundSource,
+            sourceAccount: sourceAccount,
+            ownershipType: ownershipType,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -19143,6 +20302,17 @@ typedef $$TransactionsTableCreateCompanionBuilder = TransactionsCompanion
   Value<String?> fundingSource,
   Value<String?> fundingLiabilityId,
   Value<String?> fundingDetails,
+  Value<String?> transactionUuid,
+  Value<String?> operationUuid,
+  Value<String?> sourceRecordId,
+  Value<String?> fundSource,
+  Value<String?> sourceAccount,
+  Value<String?> ownershipType,
+  Value<String?> liabilityType,
+  Value<String?> transactionCategory,
+  Value<String?> sipId,
+  Value<int?> executionMonth,
+  Value<int?> executionYear,
   Value<int> rowid,
 });
 typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
@@ -19170,6 +20340,17 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
   Value<String?> fundingSource,
   Value<String?> fundingLiabilityId,
   Value<String?> fundingDetails,
+  Value<String?> transactionUuid,
+  Value<String?> operationUuid,
+  Value<String?> sourceRecordId,
+  Value<String?> fundSource,
+  Value<String?> sourceAccount,
+  Value<String?> ownershipType,
+  Value<String?> liabilityType,
+  Value<String?> transactionCategory,
+  Value<String?> sipId,
+  Value<int?> executionMonth,
+  Value<int?> executionYear,
   Value<int> rowid,
 });
 
@@ -19315,6 +20496,43 @@ class $$TransactionsTableFilterComposer
   ColumnFilters<String> get fundingDetails => $composableBuilder(
       column: $table.fundingDetails,
       builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get transactionUuid => $composableBuilder(
+      column: $table.transactionUuid,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get operationUuid => $composableBuilder(
+      column: $table.operationUuid, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get sourceRecordId => $composableBuilder(
+      column: $table.sourceRecordId,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get fundSource => $composableBuilder(
+      column: $table.fundSource, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get sourceAccount => $composableBuilder(
+      column: $table.sourceAccount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get ownershipType => $composableBuilder(
+      column: $table.ownershipType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get liabilityType => $composableBuilder(
+      column: $table.liabilityType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get transactionCategory => $composableBuilder(
+      column: $table.transactionCategory,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get sipId => $composableBuilder(
+      column: $table.sipId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get executionMonth => $composableBuilder(
+      column: $table.executionMonth,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get executionYear => $composableBuilder(
+      column: $table.executionYear, builder: (column) => ColumnFilters(column));
 
   Expression<bool> accountBalanceCachesRefs(
       Expression<bool> Function($$AccountBalanceCachesTableFilterComposer f)
@@ -19469,6 +20687,48 @@ class $$TransactionsTableOrderingComposer
   ColumnOrderings<String> get fundingDetails => $composableBuilder(
       column: $table.fundingDetails,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get transactionUuid => $composableBuilder(
+      column: $table.transactionUuid,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get operationUuid => $composableBuilder(
+      column: $table.operationUuid,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get sourceRecordId => $composableBuilder(
+      column: $table.sourceRecordId,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get fundSource => $composableBuilder(
+      column: $table.fundSource, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get sourceAccount => $composableBuilder(
+      column: $table.sourceAccount,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get ownershipType => $composableBuilder(
+      column: $table.ownershipType,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get liabilityType => $composableBuilder(
+      column: $table.liabilityType,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get transactionCategory => $composableBuilder(
+      column: $table.transactionCategory,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get sipId => $composableBuilder(
+      column: $table.sipId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get executionMonth => $composableBuilder(
+      column: $table.executionMonth,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get executionYear => $composableBuilder(
+      column: $table.executionYear,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$TransactionsTableAnnotationComposer
@@ -19548,6 +20808,39 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<String> get fundingDetails => $composableBuilder(
       column: $table.fundingDetails, builder: (column) => column);
+
+  GeneratedColumn<String> get transactionUuid => $composableBuilder(
+      column: $table.transactionUuid, builder: (column) => column);
+
+  GeneratedColumn<String> get operationUuid => $composableBuilder(
+      column: $table.operationUuid, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceRecordId => $composableBuilder(
+      column: $table.sourceRecordId, builder: (column) => column);
+
+  GeneratedColumn<String> get fundSource => $composableBuilder(
+      column: $table.fundSource, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceAccount => $composableBuilder(
+      column: $table.sourceAccount, builder: (column) => column);
+
+  GeneratedColumn<String> get ownershipType => $composableBuilder(
+      column: $table.ownershipType, builder: (column) => column);
+
+  GeneratedColumn<String> get liabilityType => $composableBuilder(
+      column: $table.liabilityType, builder: (column) => column);
+
+  GeneratedColumn<String> get transactionCategory => $composableBuilder(
+      column: $table.transactionCategory, builder: (column) => column);
+
+  GeneratedColumn<String> get sipId =>
+      $composableBuilder(column: $table.sipId, builder: (column) => column);
+
+  GeneratedColumn<int> get executionMonth => $composableBuilder(
+      column: $table.executionMonth, builder: (column) => column);
+
+  GeneratedColumn<int> get executionYear => $composableBuilder(
+      column: $table.executionYear, builder: (column) => column);
 
   Expression<T> accountBalanceCachesRefs<T extends Object>(
       Expression<T> Function($$AccountBalanceCachesTableAnnotationComposer a)
@@ -19668,6 +20961,17 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String?> fundingSource = const Value.absent(),
             Value<String?> fundingLiabilityId = const Value.absent(),
             Value<String?> fundingDetails = const Value.absent(),
+            Value<String?> transactionUuid = const Value.absent(),
+            Value<String?> operationUuid = const Value.absent(),
+            Value<String?> sourceRecordId = const Value.absent(),
+            Value<String?> fundSource = const Value.absent(),
+            Value<String?> sourceAccount = const Value.absent(),
+            Value<String?> ownershipType = const Value.absent(),
+            Value<String?> liabilityType = const Value.absent(),
+            Value<String?> transactionCategory = const Value.absent(),
+            Value<String?> sipId = const Value.absent(),
+            Value<int?> executionMonth = const Value.absent(),
+            Value<int?> executionYear = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               TransactionsCompanion(
@@ -19694,6 +20998,17 @@ class $$TransactionsTableTableManager extends RootTableManager<
             fundingSource: fundingSource,
             fundingLiabilityId: fundingLiabilityId,
             fundingDetails: fundingDetails,
+            transactionUuid: transactionUuid,
+            operationUuid: operationUuid,
+            sourceRecordId: sourceRecordId,
+            fundSource: fundSource,
+            sourceAccount: sourceAccount,
+            ownershipType: ownershipType,
+            liabilityType: liabilityType,
+            transactionCategory: transactionCategory,
+            sipId: sipId,
+            executionMonth: executionMonth,
+            executionYear: executionYear,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -19720,6 +21035,17 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String?> fundingSource = const Value.absent(),
             Value<String?> fundingLiabilityId = const Value.absent(),
             Value<String?> fundingDetails = const Value.absent(),
+            Value<String?> transactionUuid = const Value.absent(),
+            Value<String?> operationUuid = const Value.absent(),
+            Value<String?> sourceRecordId = const Value.absent(),
+            Value<String?> fundSource = const Value.absent(),
+            Value<String?> sourceAccount = const Value.absent(),
+            Value<String?> ownershipType = const Value.absent(),
+            Value<String?> liabilityType = const Value.absent(),
+            Value<String?> transactionCategory = const Value.absent(),
+            Value<String?> sipId = const Value.absent(),
+            Value<int?> executionMonth = const Value.absent(),
+            Value<int?> executionYear = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               TransactionsCompanion.insert(
@@ -19746,6 +21072,17 @@ class $$TransactionsTableTableManager extends RootTableManager<
             fundingSource: fundingSource,
             fundingLiabilityId: fundingLiabilityId,
             fundingDetails: fundingDetails,
+            transactionUuid: transactionUuid,
+            operationUuid: operationUuid,
+            sourceRecordId: sourceRecordId,
+            fundSource: fundSource,
+            sourceAccount: sourceAccount,
+            ownershipType: ownershipType,
+            liabilityType: liabilityType,
+            transactionCategory: transactionCategory,
+            sipId: sipId,
+            executionMonth: executionMonth,
+            executionYear: executionYear,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -23566,6 +24903,8 @@ typedef $$MtfPositionsTableCreateCompanionBuilder = MtfPositionsCompanion
   Value<DateTime?> lastAccrualDate,
   Value<DateTime?> deletedAt,
   Value<String?> deletedBy,
+  Value<String?> ownershipType,
+  Value<String?> liabilityType,
   Value<int> rowid,
 });
 typedef $$MtfPositionsTableUpdateCompanionBuilder = MtfPositionsCompanion
@@ -23593,6 +24932,8 @@ typedef $$MtfPositionsTableUpdateCompanionBuilder = MtfPositionsCompanion
   Value<DateTime?> lastAccrualDate,
   Value<DateTime?> deletedAt,
   Value<String?> deletedBy,
+  Value<String?> ownershipType,
+  Value<String?> liabilityType,
   Value<int> rowid,
 });
 
@@ -23692,6 +25033,12 @@ class $$MtfPositionsTableFilterComposer
 
   ColumnFilters<String> get deletedBy => $composableBuilder(
       column: $table.deletedBy, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get ownershipType => $composableBuilder(
+      column: $table.ownershipType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get liabilityType => $composableBuilder(
+      column: $table.liabilityType, builder: (column) => ColumnFilters(column));
 
   $$InvestmentsTableFilterComposer get investmentId {
     final $$InvestmentsTableFilterComposer composer = $composerBuilder(
@@ -23797,6 +25144,14 @@ class $$MtfPositionsTableOrderingComposer
   ColumnOrderings<String> get deletedBy => $composableBuilder(
       column: $table.deletedBy, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get ownershipType => $composableBuilder(
+      column: $table.ownershipType,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get liabilityType => $composableBuilder(
+      column: $table.liabilityType,
+      builder: (column) => ColumnOrderings(column));
+
   $$InvestmentsTableOrderingComposer get investmentId {
     final $$InvestmentsTableOrderingComposer composer = $composerBuilder(
         composer: this,
@@ -23893,6 +25248,12 @@ class $$MtfPositionsTableAnnotationComposer
   GeneratedColumn<String> get deletedBy =>
       $composableBuilder(column: $table.deletedBy, builder: (column) => column);
 
+  GeneratedColumn<String> get ownershipType => $composableBuilder(
+      column: $table.ownershipType, builder: (column) => column);
+
+  GeneratedColumn<String> get liabilityType => $composableBuilder(
+      column: $table.liabilityType, builder: (column) => column);
+
   $$InvestmentsTableAnnotationComposer get investmentId {
     final $$InvestmentsTableAnnotationComposer composer = $composerBuilder(
         composer: this,
@@ -23960,6 +25321,8 @@ class $$MtfPositionsTableTableManager extends RootTableManager<
             Value<DateTime?> lastAccrualDate = const Value.absent(),
             Value<DateTime?> deletedAt = const Value.absent(),
             Value<String?> deletedBy = const Value.absent(),
+            Value<String?> ownershipType = const Value.absent(),
+            Value<String?> liabilityType = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               MtfPositionsCompanion(
@@ -23986,6 +25349,8 @@ class $$MtfPositionsTableTableManager extends RootTableManager<
             lastAccrualDate: lastAccrualDate,
             deletedAt: deletedAt,
             deletedBy: deletedBy,
+            ownershipType: ownershipType,
+            liabilityType: liabilityType,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -24012,6 +25377,8 @@ class $$MtfPositionsTableTableManager extends RootTableManager<
             Value<DateTime?> lastAccrualDate = const Value.absent(),
             Value<DateTime?> deletedAt = const Value.absent(),
             Value<String?> deletedBy = const Value.absent(),
+            Value<String?> ownershipType = const Value.absent(),
+            Value<String?> liabilityType = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               MtfPositionsCompanion.insert(
@@ -24038,6 +25405,8 @@ class $$MtfPositionsTableTableManager extends RootTableManager<
             lastAccrualDate: lastAccrualDate,
             deletedAt: deletedAt,
             deletedBy: deletedBy,
+            ownershipType: ownershipType,
+            liabilityType: liabilityType,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0
@@ -24116,6 +25485,9 @@ typedef $$SipsTableCreateCompanionBuilder = SipsCompanion Function({
   Value<String?> deviceId,
   Value<DateTime?> deletedAt,
   Value<String?> deletedBy,
+  Value<DateTime?> firstInstallmentDate,
+  Value<DateTime?> nextDueDate,
+  Value<DateTime?> lastCompletedInstallment,
   Value<int> rowid,
 });
 typedef $$SipsTableUpdateCompanionBuilder = SipsCompanion Function({
@@ -24138,6 +25510,9 @@ typedef $$SipsTableUpdateCompanionBuilder = SipsCompanion Function({
   Value<String?> deviceId,
   Value<DateTime?> deletedAt,
   Value<String?> deletedBy,
+  Value<DateTime?> firstInstallmentDate,
+  Value<DateTime?> nextDueDate,
+  Value<DateTime?> lastCompletedInstallment,
   Value<int> rowid,
 });
 
@@ -24223,6 +25598,17 @@ class $$SipsTableFilterComposer extends Composer<_$AppDatabase, $SipsTable> {
 
   ColumnFilters<String> get deletedBy => $composableBuilder(
       column: $table.deletedBy, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get firstInstallmentDate => $composableBuilder(
+      column: $table.firstInstallmentDate,
+      builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get nextDueDate => $composableBuilder(
+      column: $table.nextDueDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get lastCompletedInstallment => $composableBuilder(
+      column: $table.lastCompletedInstallment,
+      builder: (column) => ColumnFilters(column));
 
   $$InvestmentsTableFilterComposer get investmentId {
     final $$InvestmentsTableFilterComposer composer = $composerBuilder(
@@ -24310,6 +25696,17 @@ class $$SipsTableOrderingComposer extends Composer<_$AppDatabase, $SipsTable> {
   ColumnOrderings<String> get deletedBy => $composableBuilder(
       column: $table.deletedBy, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<DateTime> get firstInstallmentDate => $composableBuilder(
+      column: $table.firstInstallmentDate,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get nextDueDate => $composableBuilder(
+      column: $table.nextDueDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get lastCompletedInstallment => $composableBuilder(
+      column: $table.lastCompletedInstallment,
+      builder: (column) => ColumnOrderings(column));
+
   $$InvestmentsTableOrderingComposer get investmentId {
     final $$InvestmentsTableOrderingComposer composer = $composerBuilder(
         composer: this,
@@ -24395,6 +25792,15 @@ class $$SipsTableAnnotationComposer
   GeneratedColumn<String> get deletedBy =>
       $composableBuilder(column: $table.deletedBy, builder: (column) => column);
 
+  GeneratedColumn<DateTime> get firstInstallmentDate => $composableBuilder(
+      column: $table.firstInstallmentDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get nextDueDate => $composableBuilder(
+      column: $table.nextDueDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastCompletedInstallment => $composableBuilder(
+      column: $table.lastCompletedInstallment, builder: (column) => column);
+
   $$InvestmentsTableAnnotationComposer get investmentId {
     final $$InvestmentsTableAnnotationComposer composer = $composerBuilder(
         composer: this,
@@ -24458,6 +25864,9 @@ class $$SipsTableTableManager extends RootTableManager<
             Value<String?> deviceId = const Value.absent(),
             Value<DateTime?> deletedAt = const Value.absent(),
             Value<String?> deletedBy = const Value.absent(),
+            Value<DateTime?> firstInstallmentDate = const Value.absent(),
+            Value<DateTime?> nextDueDate = const Value.absent(),
+            Value<DateTime?> lastCompletedInstallment = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               SipsCompanion(
@@ -24480,6 +25889,9 @@ class $$SipsTableTableManager extends RootTableManager<
             deviceId: deviceId,
             deletedAt: deletedAt,
             deletedBy: deletedBy,
+            firstInstallmentDate: firstInstallmentDate,
+            nextDueDate: nextDueDate,
+            lastCompletedInstallment: lastCompletedInstallment,
             rowid: rowid,
           ),
           createCompanionCallback: ({
@@ -24502,6 +25914,9 @@ class $$SipsTableTableManager extends RootTableManager<
             Value<String?> deviceId = const Value.absent(),
             Value<DateTime?> deletedAt = const Value.absent(),
             Value<String?> deletedBy = const Value.absent(),
+            Value<DateTime?> firstInstallmentDate = const Value.absent(),
+            Value<DateTime?> nextDueDate = const Value.absent(),
+            Value<DateTime?> lastCompletedInstallment = const Value.absent(),
             Value<int> rowid = const Value.absent(),
           }) =>
               SipsCompanion.insert(
@@ -24524,6 +25939,9 @@ class $$SipsTableTableManager extends RootTableManager<
             deviceId: deviceId,
             deletedAt: deletedAt,
             deletedBy: deletedBy,
+            firstInstallmentDate: firstInstallmentDate,
+            nextDueDate: nextDueDate,
+            lastCompletedInstallment: lastCompletedInstallment,
             rowid: rowid,
           ),
           withReferenceMapper: (p0) => p0

@@ -124,7 +124,7 @@ class PdfExportService {
       }
     }
     for (final p in dbState.people) {
-      if (p.isArchived == 0) {
+      if (p.isArchived == 0 && (p.ownershipType == 'PERSONAL' || p.ownershipType == null)) {
         totalReceivables += dbState.getPersonReceivableBalance(p.id);
       }
     }
@@ -141,11 +141,10 @@ class PdfExportService {
         creditDues += LiabilityCalculationService.calculateCreditCard(acc, dbState.transactions, dbState.adjustments).finalBalance;
       }
     }
-    for (final p in dbState.people) {
-      if (p.isArchived == 0) {
-        final bal = LiabilityCalculationService.calculatePeerLiability(p, dbState.transactions, dbState.adjustments).finalBalance;
-        if (bal > 0) personDues += bal;
-      }
+    final peers = dbState.people.where((p) => p.isArchived == 0 && p.type != 'broker' && (p.ownershipType == 'BORROWED' || p.liabilityType == 'BORROWED_CAPITAL' || p.type == 'borrowing'));
+    for (final p in peers) {
+      final bal = LiabilityCalculationService.calculatePeerLiability(p, dbState.transactions, dbState.adjustments).finalBalance;
+      if (bal > 0) personDues += bal;
     }
     for (final m in dbState.mtfPositions) {
       if (m.isClosed == 0 && m.deletedAt == null) {
@@ -646,7 +645,8 @@ class PdfExportService {
                     return [a.name, 'Credit Card', format.format(val), '${pct.toStringAsFixed(1)}%'];
                   }),
                   ...dbState.people.where((p) {
-                    if (p.isArchived != 0) return false;
+                    if (p.isArchived != 0 || p.type == 'broker') return false;
+                    if (p.ownershipType != 'BORROWED' && p.liabilityType != 'BORROWED_CAPITAL' && p.type != 'borrowing') return false;
                     final val = LiabilityCalculationService.calculatePeerLiability(p, dbState.transactions, dbState.adjustments).finalBalance;
                     return val > 0;
                   }).map((p) {

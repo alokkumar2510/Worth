@@ -421,6 +421,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     _buildWealthBreakdownCard(data, format, currency),
                     const SizedBox(height: 24),
 
+                    // SECTION 2.5: OWNERSHIP & SOURCE BREAKDOWN
+                    _buildOwnershipFundingCard(data, currency),
+                    const SizedBox(height: 24),
+
                     // SECTION 3: THIS MONTH SUMMARY
                     _buildThisMonthSummary(data, format),
                     const SizedBox(height: 24),
@@ -685,6 +689,162 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildOwnershipFundingCard(WealthIntelligenceData data, String currency) {
+    final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
+    final personalAmt = data.ownershipAnalysisAllocation['Personal Capital'] ?? 0.0;
+    final debtAmt = data.ownershipAnalysisAllocation['Debt Capital'] ?? 0.0;
+    final totalAmt = personalAmt + debtAmt;
+    final personalPct = totalAmt > 0 ? (personalAmt / totalAmt) * 100 : 100.0;
+    final debtPct = totalAmt > 0 ? (debtAmt / totalAmt) * 100 : 0.0;
+
+    return GlassCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.pie_chart_rounded, size: 20, color: AppColors.glow),
+              const SizedBox(width: 8),
+              Text(
+                'Ownership & Capital Funding',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // OWNERSHIP ANALYSIS (SELF VS DEBT)
+          Text(
+            'OWNERSHIP ANALYSIS',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: AppColors.grey500,
+              letterSpacing: 1.0,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Personal Capital',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.grey400,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${format.format(personalAmt)} (${personalPct.toStringAsFixed(1)}%)',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF22C55E),
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'Debt Capital',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.grey400,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${format.format(debtAmt)} (${debtPct.toStringAsFixed(1)}%)',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFFEF4444),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: SizedBox(
+              height: 8,
+              child: LinearProgressIndicator(
+                value: totalAmt > 0 ? personalAmt / totalAmt : 1.0,
+                backgroundColor: const Color(0xFFEF4444),
+                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF22C55E)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            totalAmt > 0
+                ? 'Portfolio is ${personalPct.toStringAsFixed(0)}% funded by your own personal capital and ${debtPct.toStringAsFixed(0)}% is leveraged by debt/MTF.'
+                : 'No capital recorded to perform ownership analysis.',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontStyle: FontStyle.italic,
+              color: AppColors.grey500,
+            ),
+          ),
+          const SizedBox(height: 28),
+          const Divider(color: Colors.white10, height: 1),
+          const SizedBox(height: 24),
+
+          // ASSET SOURCE BREAKDOWN
+          Text(
+            'ASSET SOURCE BREAKDOWN',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: AppColors.grey500,
+              letterSpacing: 1.0,
+            ),
+          ),
+          const SizedBox(height: 16),
+          AllocationPieChart(
+            data: data.assetSourceAllocation,
+            currency: currency,
+          ),
+          
+          const SizedBox(height: 28),
+          const Divider(color: Colors.white10, height: 1),
+          const SizedBox(height: 24),
+
+          // LIABILITY BREAKDOWN
+          Text(
+            'LIABILITY BREAKDOWN',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: AppColors.grey500,
+              letterSpacing: 1.0,
+            ),
+          ),
+          const SizedBox(height: 16),
+          AllocationPieChart(
+            data: data.liabilityTypeAllocation,
+            currency: currency,
+          ),
+        ],
+      ),
     );
   }
 

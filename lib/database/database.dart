@@ -69,7 +69,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(QueryExecutor e) : super(e);
 
   @override
-  int get schemaVersion => 19; // Bumped for photoPath column in People
+  int get schemaVersion => 22; // Bumped for SIP engine duplicate prevention
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -241,6 +241,65 @@ class AppDatabase extends _$AppDatabase {
           if (from < 19) {
             await m.addColumn(people, people.photoPath);
           }
+          if (from < 20) {
+            await m.addColumn(sips, sips.firstInstallmentDate);
+            await m.addColumn(sips, sips.nextDueDate);
+            await m.addColumn(sips, sips.lastCompletedInstallment);
+
+            await m.addColumn(transactions, transactions.transactionUuid);
+            await m.addColumn(transactions, transactions.operationUuid);
+            await m.addColumn(transactions, transactions.sourceRecordId);
+          }
+          if (from < 21) {
+            // Accounts
+            await m.addColumn(accounts, accounts.ownershipType);
+            await m.addColumn(accounts, accounts.liabilityType);
+
+            // Investments
+            await m.addColumn(investments, investments.fundSource);
+            await m.addColumn(investments, investments.sourceAccount);
+            await m.addColumn(investments, investments.ownershipType);
+
+            // Transactions
+            await m.addColumn(transactions, transactions.fundSource);
+            await m.addColumn(transactions, transactions.sourceAccount);
+            await m.addColumn(transactions, transactions.ownershipType);
+            await m.addColumn(transactions, transactions.liabilityType);
+            await m.addColumn(transactions, transactions.transactionCategory);
+
+            // People
+            await m.addColumn(people, people.ownershipType);
+            await m.addColumn(people, people.liabilityType);
+
+            // MtfPositions
+            await m.addColumn(mtfPositions, mtfPositions.ownershipType);
+            await m.addColumn(mtfPositions, mtfPositions.liabilityType);
+
+            // Run backward-compatible data migration updates
+            await customStatement("UPDATE accounts SET ownership_type = 'PERSONAL', liability_type = 'CREDIT_CARD' WHERE type = 'credit';");
+            await customStatement("UPDATE accounts SET ownership_type = 'BORROWED' WHERE type != 'credit' AND funding_source = 'liability_borrowed';");
+            await customStatement("UPDATE accounts SET ownership_type = 'PERSONAL' WHERE type != 'credit' AND (funding_source IS NULL OR funding_source != 'liability_borrowed');");
+
+            await customStatement("UPDATE investments SET fund_source = 'BORROWED' WHERE funding_source = 'liability_borrowed';");
+            await customStatement("UPDATE investments SET fund_source = 'MTF' WHERE funding_source = 'mtf_position';");
+            await customStatement("UPDATE investments SET fund_source = 'PERSONAL' WHERE funding_source IS NULL OR (funding_source != 'liability_borrowed' AND funding_source != 'mtf_position');");
+
+            await customStatement("UPDATE transactions SET fund_source = 'BORROWED' WHERE funding_source = 'liability_borrowed';");
+            await customStatement("UPDATE transactions SET fund_source = 'MTF' WHERE funding_source = 'mtf_position';");
+            await customStatement("UPDATE transactions SET fund_source = 'PERSONAL' WHERE funding_source IS NULL OR (funding_source != 'liability_borrowed' AND funding_source != 'mtf_position');");
+            await customStatement("UPDATE transactions SET transaction_category = category;");
+
+            await customStatement("UPDATE people SET ownership_type = 'BORROWED', liability_type = 'BORROWED_CAPITAL' WHERE type = 'borrowing';");
+            await customStatement("UPDATE people SET ownership_type = 'PERSONAL' WHERE type = 'personal_loan';");
+
+            await customStatement("UPDATE mtf_positions SET ownership_type = 'MTF', liability_type = 'MTF';");
+          }
+          if (from < 22) {
+            await m.addColumn(transactions, transactions.sipId);
+            await m.addColumn(transactions, transactions.executionMonth);
+            await m.addColumn(transactions, transactions.executionYear);
+            await customStatement('CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_sip_month_year ON transactions(sip_id, execution_month, execution_year);');
+          }
         },
       );
 
@@ -255,19 +314,22 @@ class AppDatabase extends _$AppDatabase {
     ''');
 
     // Create SQLite Views for derived financial positions
+    await customStatement('DROP VIEW IF EXISTS assets_view;');
     await customStatement('''
-      CREATE VIEW IF NOT EXISTS assets_view AS
+      CREATE VIEW assets_view AS
       SELECT 
         (SELECT COALESCE(SUM(cash_balance), 0) FROM account_balance_caches JOIN accounts ON accounts.id = account_balance_caches.account_id WHERE accounts.type != 'credit' AND accounts.is_archived = 0) +
-        (SELECT COALESCE(SUM(receivable_balance), 0) FROM person_balance_caches JOIN people ON people.id = person_balance_caches.person_id WHERE people.is_archived = 0) +
+        (SELECT COALESCE(SUM(receivable_balance), 0) FROM person_balance_caches JOIN people ON people.id = person_balance_caches.person_id WHERE people.is_archived = 0 AND (people.ownership_type = 'PERSONAL' OR people.ownership_type IS NULL)) +
         (SELECT COALESCE(SUM(invested_capital), 0) FROM investment_balance_caches JOIN investments ON investments.id = investment_balance_caches.investment_id WHERE investments.is_archived = 0) AS total_assets;
     ''');
 
+    await customStatement('DROP VIEW IF EXISTS liabilities_view;');
     await customStatement('''
-      CREATE VIEW IF NOT EXISTS liabilities_view AS
+      CREATE VIEW liabilities_view AS
       SELECT 
-        (SELECT COALESCE(SUM(liability_balance), 0) FROM person_balance_caches JOIN people ON people.id = person_balance_caches.person_id WHERE people.is_archived = 0) +
-        (SELECT COALESCE(SUM(liability_balance), 0) FROM account_balance_caches JOIN accounts ON accounts.id = account_balance_caches.account_id WHERE accounts.type = 'credit' AND accounts.is_archived = 0) AS total_liabilities;
+        (SELECT COALESCE(SUM(liability_balance), 0) FROM person_balance_caches JOIN people ON people.id = person_balance_caches.person_id WHERE people.is_archived = 0 AND people.ownership_type = 'BORROWED') +
+        (SELECT COALESCE(SUM(liability_balance), 0) FROM account_balance_caches JOIN accounts ON accounts.id = account_balance_caches.account_id WHERE accounts.type = 'credit' AND accounts.is_archived = 0) +
+        (SELECT COALESCE(SUM(borrowed_capital), 0) FROM mtf_positions WHERE is_closed = 0 AND deleted_at IS NULL) AS total_liabilities;
     ''');
 
     await customStatement('''

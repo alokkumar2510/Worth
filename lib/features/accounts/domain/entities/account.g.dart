@@ -16,6 +16,8 @@ _$AccountImpl _$$AccountImplFromJson(Map<String, dynamic> json) =>
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       syncStatus: json['syncStatus'] as String? ?? 'pending',
+      ownershipType: json['ownershipType'] as String?,
+      liabilityType: json['liabilityType'] as String?,
     );
 
 Map<String, dynamic> _$$AccountImplToJson(_$AccountImpl instance) =>
@@ -28,4 +30,6 @@ Map<String, dynamic> _$$AccountImplToJson(_$AccountImpl instance) =>
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),
       'syncStatus': instance.syncStatus,
+      'ownershipType': instance.ownershipType,
+      'liabilityType': instance.liabilityType,
     };

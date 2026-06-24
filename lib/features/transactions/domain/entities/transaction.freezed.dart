@@ -37,6 +37,20 @@ mixin _$Transaction {
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
   String get syncStatus => throw _privateConstructorUsedError;
+  String? get fundingSource => throw _privateConstructorUsedError;
+  String? get fundingLiabilityId => throw _privateConstructorUsedError;
+  String? get fundingDetails => throw _privateConstructorUsedError;
+  String? get transactionUuid => throw _privateConstructorUsedError;
+  String? get operationUuid => throw _privateConstructorUsedError;
+  String? get sourceRecordId => throw _privateConstructorUsedError;
+  String? get fundSource => throw _privateConstructorUsedError;
+  String? get sourceAccount => throw _privateConstructorUsedError;
+  String? get ownershipType => throw _privateConstructorUsedError;
+  String? get liabilityType => throw _privateConstructorUsedError;
+  String? get transactionCategory => throw _privateConstructorUsedError;
+  String? get sipId => throw _privateConstructorUsedError;
+  int? get executionMonth => throw _privateConstructorUsedError;
+  int? get executionYear => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
@@ -66,7 +80,21 @@ abstract class $TransactionCopyWith<$Res> {
       DateTime transactionDate,
       DateTime createdAt,
       DateTime updatedAt,
-      String syncStatus});
+      String syncStatus,
+      String? fundingSource,
+      String? fundingLiabilityId,
+      String? fundingDetails,
+      String? transactionUuid,
+      String? operationUuid,
+      String? sourceRecordId,
+      String? fundSource,
+      String? sourceAccount,
+      String? ownershipType,
+      String? liabilityType,
+      String? transactionCategory,
+      String? sipId,
+      int? executionMonth,
+      int? executionYear});
 }
 
 /// @nodoc
@@ -98,6 +126,20 @@ class _$TransactionCopyWithImpl<$Res, $Val extends Transaction>
     Object? createdAt = null,
     Object? updatedAt = null,
     Object? syncStatus = null,
+    Object? fundingSource = freezed,
+    Object? fundingLiabilityId = freezed,
+    Object? fundingDetails = freezed,
+    Object? transactionUuid = freezed,
+    Object? operationUuid = freezed,
+    Object? sourceRecordId = freezed,
+    Object? fundSource = freezed,
+    Object? sourceAccount = freezed,
+    Object? ownershipType = freezed,
+    Object? liabilityType = freezed,
+    Object? transactionCategory = freezed,
+    Object? sipId = freezed,
+    Object? executionMonth = freezed,
+    Object? executionYear = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -164,6 +206,62 @@ class _$TransactionCopyWithImpl<$Res, $Val extends Transaction>
           ? _value.syncStatus
           : syncStatus // ignore: cast_nullable_to_non_nullable
               as String,
+      fundingSource: freezed == fundingSource
+          ? _value.fundingSource
+          : fundingSource // ignore: cast_nullable_to_non_nullable
+              as String?,
+      fundingLiabilityId: freezed == fundingLiabilityId
+          ? _value.fundingLiabilityId
+          : fundingLiabilityId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      fundingDetails: freezed == fundingDetails
+          ? _value.fundingDetails
+          : fundingDetails // ignore: cast_nullable_to_non_nullable
+              as String?,
+      transactionUuid: freezed == transactionUuid
+          ? _value.transactionUuid
+          : transactionUuid // ignore: cast_nullable_to_non_nullable
+              as String?,
+      operationUuid: freezed == operationUuid
+          ? _value.operationUuid
+          : operationUuid // ignore: cast_nullable_to_non_nullable
+              as String?,
+      sourceRecordId: freezed == sourceRecordId
+          ? _value.sourceRecordId
+          : sourceRecordId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      fundSource: freezed == fundSource
+          ? _value.fundSource
+          : fundSource // ignore: cast_nullable_to_non_nullable
+              as String?,
+      sourceAccount: freezed == sourceAccount
+          ? _value.sourceAccount
+          : sourceAccount // ignore: cast_nullable_to_non_nullable
+              as String?,
+      ownershipType: freezed == ownershipType
+          ? _value.ownershipType
+          : ownershipType // ignore: cast_nullable_to_non_nullable
+              as String?,
+      liabilityType: freezed == liabilityType
+          ? _value.liabilityType
+          : liabilityType // ignore: cast_nullable_to_non_nullable
+              as String?,
+      transactionCategory: freezed == transactionCategory
+          ? _value.transactionCategory
+          : transactionCategory // ignore: cast_nullable_to_non_nullable
+              as String?,
+      sipId: freezed == sipId
+          ? _value.sipId
+          : sipId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      executionMonth: freezed == executionMonth
+          ? _value.executionMonth
+          : executionMonth // ignore: cast_nullable_to_non_nullable
+              as int?,
+      executionYear: freezed == executionYear
+          ? _value.executionYear
+          : executionYear // ignore: cast_nullable_to_non_nullable
+              as int?,
     ) as $Val);
   }
 }
@@ -192,7 +290,21 @@ abstract class _$$TransactionImplCopyWith<$Res>
       DateTime transactionDate,
       DateTime createdAt,
       DateTime updatedAt,
-      String syncStatus});
+      String syncStatus,
+      String? fundingSource,
+      String? fundingLiabilityId,
+      String? fundingDetails,
+      String? transactionUuid,
+      String? operationUuid,
+      String? sourceRecordId,
+      String? fundSource,
+      String? sourceAccount,
+      String? ownershipType,
+      String? liabilityType,
+      String? transactionCategory,
+      String? sipId,
+      int? executionMonth,
+      int? executionYear});
 }
 
 /// @nodoc
@@ -222,6 +334,20 @@ class __$$TransactionImplCopyWithImpl<$Res>
     Object? createdAt = null,
     Object? updatedAt = null,
     Object? syncStatus = null,
+    Object? fundingSource = freezed,
+    Object? fundingLiabilityId = freezed,
+    Object? fundingDetails = freezed,
+    Object? transactionUuid = freezed,
+    Object? operationUuid = freezed,
+    Object? sourceRecordId = freezed,
+    Object? fundSource = freezed,
+    Object? sourceAccount = freezed,
+    Object? ownershipType = freezed,
+    Object? liabilityType = freezed,
+    Object? transactionCategory = freezed,
+    Object? sipId = freezed,
+    Object? executionMonth = freezed,
+    Object? executionYear = freezed,
   }) {
     return _then(_$TransactionImpl(
       id: null == id
@@ -288,6 +414,62 @@ class __$$TransactionImplCopyWithImpl<$Res>
           ? _value.syncStatus
           : syncStatus // ignore: cast_nullable_to_non_nullable
               as String,
+      fundingSource: freezed == fundingSource
+          ? _value.fundingSource
+          : fundingSource // ignore: cast_nullable_to_non_nullable
+              as String?,
+      fundingLiabilityId: freezed == fundingLiabilityId
+          ? _value.fundingLiabilityId
+          : fundingLiabilityId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      fundingDetails: freezed == fundingDetails
+          ? _value.fundingDetails
+          : fundingDetails // ignore: cast_nullable_to_non_nullable
+              as String?,
+      transactionUuid: freezed == transactionUuid
+          ? _value.transactionUuid
+          : transactionUuid // ignore: cast_nullable_to_non_nullable
+              as String?,
+      operationUuid: freezed == operationUuid
+          ? _value.operationUuid
+          : operationUuid // ignore: cast_nullable_to_non_nullable
+              as String?,
+      sourceRecordId: freezed == sourceRecordId
+          ? _value.sourceRecordId
+          : sourceRecordId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      fundSource: freezed == fundSource
+          ? _value.fundSource
+          : fundSource // ignore: cast_nullable_to_non_nullable
+              as String?,
+      sourceAccount: freezed == sourceAccount
+          ? _value.sourceAccount
+          : sourceAccount // ignore: cast_nullable_to_non_nullable
+              as String?,
+      ownershipType: freezed == ownershipType
+          ? _value.ownershipType
+          : ownershipType // ignore: cast_nullable_to_non_nullable
+              as String?,
+      liabilityType: freezed == liabilityType
+          ? _value.liabilityType
+          : liabilityType // ignore: cast_nullable_to_non_nullable
+              as String?,
+      transactionCategory: freezed == transactionCategory
+          ? _value.transactionCategory
+          : transactionCategory // ignore: cast_nullable_to_non_nullable
+              as String?,
+      sipId: freezed == sipId
+          ? _value.sipId
+          : sipId // ignore: cast_nullable_to_non_nullable
+              as String?,
+      executionMonth: freezed == executionMonth
+          ? _value.executionMonth
+          : executionMonth // ignore: cast_nullable_to_non_nullable
+              as int?,
+      executionYear: freezed == executionYear
+          ? _value.executionYear
+          : executionYear // ignore: cast_nullable_to_non_nullable
+              as int?,
     ));
   }
 }
@@ -311,7 +493,21 @@ class _$TransactionImpl implements _Transaction {
       required this.transactionDate,
       required this.createdAt,
       required this.updatedAt,
-      this.syncStatus = 'pending'});
+      this.syncStatus = 'pending',
+      this.fundingSource,
+      this.fundingLiabilityId,
+      this.fundingDetails,
+      this.transactionUuid,
+      this.operationUuid,
+      this.sourceRecordId,
+      this.fundSource,
+      this.sourceAccount,
+      this.ownershipType,
+      this.liabilityType,
+      this.transactionCategory,
+      this.sipId,
+      this.executionMonth,
+      this.executionYear});
 
   factory _$TransactionImpl.fromJson(Map<String, dynamic> json) =>
       _$$TransactionImplFromJson(json);
@@ -350,10 +546,38 @@ class _$TransactionImpl implements _Transaction {
   @override
   @JsonKey()
   final String syncStatus;
+  @override
+  final String? fundingSource;
+  @override
+  final String? fundingLiabilityId;
+  @override
+  final String? fundingDetails;
+  @override
+  final String? transactionUuid;
+  @override
+  final String? operationUuid;
+  @override
+  final String? sourceRecordId;
+  @override
+  final String? fundSource;
+  @override
+  final String? sourceAccount;
+  @override
+  final String? ownershipType;
+  @override
+  final String? liabilityType;
+  @override
+  final String? transactionCategory;
+  @override
+  final String? sipId;
+  @override
+  final int? executionMonth;
+  @override
+  final int? executionYear;
 
   @override
   String toString() {
-    return 'Transaction(id: $id, type: $type, amount: $amount, category: $category, fromAccountId: $fromAccountId, toAccountId: $toAccountId, personId: $personId, investmentId: $investmentId, voidedTransactionId: $voidedTransactionId, notes: $notes, pricePerUnit: $pricePerUnit, units: $units, transactionDate: $transactionDate, createdAt: $createdAt, updatedAt: $updatedAt, syncStatus: $syncStatus)';
+    return 'Transaction(id: $id, type: $type, amount: $amount, category: $category, fromAccountId: $fromAccountId, toAccountId: $toAccountId, personId: $personId, investmentId: $investmentId, voidedTransactionId: $voidedTransactionId, notes: $notes, pricePerUnit: $pricePerUnit, units: $units, transactionDate: $transactionDate, createdAt: $createdAt, updatedAt: $updatedAt, syncStatus: $syncStatus, fundingSource: $fundingSource, fundingLiabilityId: $fundingLiabilityId, fundingDetails: $fundingDetails, transactionUuid: $transactionUuid, operationUuid: $operationUuid, sourceRecordId: $sourceRecordId, fundSource: $fundSource, sourceAccount: $sourceAccount, ownershipType: $ownershipType, liabilityType: $liabilityType, transactionCategory: $transactionCategory, sipId: $sipId, executionMonth: $executionMonth, executionYear: $executionYear)';
   }
 
   @override
@@ -387,29 +611,71 @@ class _$TransactionImpl implements _Transaction {
             (identical(other.updatedAt, updatedAt) ||
                 other.updatedAt == updatedAt) &&
             (identical(other.syncStatus, syncStatus) ||
-                other.syncStatus == syncStatus));
+                other.syncStatus == syncStatus) &&
+            (identical(other.fundingSource, fundingSource) ||
+                other.fundingSource == fundingSource) &&
+            (identical(other.fundingLiabilityId, fundingLiabilityId) ||
+                other.fundingLiabilityId == fundingLiabilityId) &&
+            (identical(other.fundingDetails, fundingDetails) ||
+                other.fundingDetails == fundingDetails) &&
+            (identical(other.transactionUuid, transactionUuid) ||
+                other.transactionUuid == transactionUuid) &&
+            (identical(other.operationUuid, operationUuid) ||
+                other.operationUuid == operationUuid) &&
+            (identical(other.sourceRecordId, sourceRecordId) ||
+                other.sourceRecordId == sourceRecordId) &&
+            (identical(other.fundSource, fundSource) ||
+                other.fundSource == fundSource) &&
+            (identical(other.sourceAccount, sourceAccount) ||
+                other.sourceAccount == sourceAccount) &&
+            (identical(other.ownershipType, ownershipType) ||
+                other.ownershipType == ownershipType) &&
+            (identical(other.liabilityType, liabilityType) ||
+                other.liabilityType == liabilityType) &&
+            (identical(other.transactionCategory, transactionCategory) ||
+                other.transactionCategory == transactionCategory) &&
+            (identical(other.sipId, sipId) || other.sipId == sipId) &&
+            (identical(other.executionMonth, executionMonth) ||
+                other.executionMonth == executionMonth) &&
+            (identical(other.executionYear, executionYear) ||
+                other.executionYear == executionYear));
   }
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      type,
-      amount,
-      category,
-      fromAccountId,
-      toAccountId,
-      personId,
-      investmentId,
-      voidedTransactionId,
-      notes,
-      pricePerUnit,
-      units,
-      transactionDate,
-      createdAt,
-      updatedAt,
-      syncStatus);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        id,
+        type,
+        amount,
+        category,
+        fromAccountId,
+        toAccountId,
+        personId,
+        investmentId,
+        voidedTransactionId,
+        notes,
+        pricePerUnit,
+        units,
+        transactionDate,
+        createdAt,
+        updatedAt,
+        syncStatus,
+        fundingSource,
+        fundingLiabilityId,
+        fundingDetails,
+        transactionUuid,
+        operationUuid,
+        sourceRecordId,
+        fundSource,
+        sourceAccount,
+        ownershipType,
+        liabilityType,
+        transactionCategory,
+        sipId,
+        executionMonth,
+        executionYear
+      ]);
 
   @JsonKey(ignore: true)
   @override
@@ -442,7 +708,21 @@ abstract class _Transaction implements Transaction {
       required final DateTime transactionDate,
       required final DateTime createdAt,
       required final DateTime updatedAt,
-      final String syncStatus}) = _$TransactionImpl;
+      final String syncStatus,
+      final String? fundingSource,
+      final String? fundingLiabilityId,
+      final String? fundingDetails,
+      final String? transactionUuid,
+      final String? operationUuid,
+      final String? sourceRecordId,
+      final String? fundSource,
+      final String? sourceAccount,
+      final String? ownershipType,
+      final String? liabilityType,
+      final String? transactionCategory,
+      final String? sipId,
+      final int? executionMonth,
+      final int? executionYear}) = _$TransactionImpl;
 
   factory _Transaction.fromJson(Map<String, dynamic> json) =
       _$TransactionImpl.fromJson;
@@ -479,6 +759,34 @@ abstract class _Transaction implements Transaction {
   DateTime get updatedAt;
   @override
   String get syncStatus;
+  @override
+  String? get fundingSource;
+  @override
+  String? get fundingLiabilityId;
+  @override
+  String? get fundingDetails;
+  @override
+  String? get transactionUuid;
+  @override
+  String? get operationUuid;
+  @override
+  String? get sourceRecordId;
+  @override
+  String? get fundSource;
+  @override
+  String? get sourceAccount;
+  @override
+  String? get ownershipType;
+  @override
+  String? get liabilityType;
+  @override
+  String? get transactionCategory;
+  @override
+  String? get sipId;
+  @override
+  int? get executionMonth;
+  @override
+  int? get executionYear;
   @override
   @JsonKey(ignore: true)
   _$$TransactionImplCopyWith<_$TransactionImpl> get copyWith =>

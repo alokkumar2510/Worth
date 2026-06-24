@@ -1,6 +1,28 @@
 import 'package:intl/intl.dart';
 
 class SipCalculator {
+  /// Calculates the next due date based on the current date, frequency, and target SIP day.
+  /// Generates dates cycle-by-cycle (next week, next month, next quarter).
+  static DateTime calculateNextDueDate(DateTime fromDate, String frequency, int sipDate) {
+    final cleanDate = DateTime(fromDate.year, fromDate.month, fromDate.day);
+    if (frequency == 'weekly') {
+      final currentWeekday = cleanDate.weekday;
+      final daysToAdd = 7 - currentWeekday + sipDate;
+      return cleanDate.add(Duration(days: daysToAdd));
+    } else if (frequency == 'monthly') {
+      final nextMonthDate = DateTime(cleanDate.year, cleanDate.month + 1, 1);
+      final daysInMonth = DateTime(nextMonthDate.year, nextMonthDate.month + 1, 0).day;
+      final targetDay = sipDate > daysInMonth ? daysInMonth : sipDate;
+      return DateTime(nextMonthDate.year, nextMonthDate.month, targetDay);
+    } else if (frequency == 'quarterly') {
+      final nextQuarterDate = DateTime(cleanDate.year, cleanDate.month + 3, 1);
+      final daysInMonth = DateTime(nextQuarterDate.year, nextQuarterDate.month + 1, 0).day;
+      final targetDay = sipDate > daysInMonth ? daysInMonth : sipDate;
+      return DateTime(nextQuarterDate.year, nextQuarterDate.month, targetDay);
+    }
+    return cleanDate;
+  }
+
   /// Calculate all scheduled dates of a SIP between [startLimit] and [endLimit].
   static List<DateTime> calculateScheduledDates({
     required DateTime startDate,
@@ -12,45 +34,22 @@ class SipCalculator {
   }) {
     final List<DateTime> dates = [];
     final actualStart = DateTime(startDate.year, startDate.month, startDate.day);
-    DateTime current = DateTime(startLimit.year, startLimit.month, startLimit.day);
-    if (current.isBefore(actualStart)) {
-      current = actualStart;
-    }
-
+    
+    DateTime current = actualStart;
+    
     final DateTime actualEndLimit = endDate != null && endDate.isBefore(endLimit)
         ? DateTime(endDate.year, endDate.month, endDate.day)
         : DateTime(endLimit.year, endLimit.month, endLimit.day);
 
+    final startLimitClean = DateTime(startLimit.year, startLimit.month, startLimit.day);
+
     int loops = 0;
-    while ((current.isBefore(actualEndLimit) || current.isAtSameMomentAs(actualEndLimit)) && loops < 2000) {
+    while ((current.isBefore(actualEndLimit) || current.isAtSameMomentAs(actualEndLimit)) && loops < 1000) {
       loops++;
-      bool matches = false;
-
-      if (frequency == 'weekly') {
-        if (current.weekday == sipDate) {
-          matches = true;
-        }
-      } else if (frequency == 'monthly') {
-        final daysInMonth = DateTime(current.year, current.month + 1, 0).day;
-        final targetDay = sipDate > daysInMonth ? daysInMonth : sipDate;
-        if (current.day == targetDay) {
-          matches = true;
-        }
-      } else if (frequency == 'quarterly') {
-        final monthDiff = (current.year - actualStart.year) * 12 + (current.month - actualStart.month);
-        if (monthDiff % 3 == 0) {
-          final daysInMonth = DateTime(current.year, current.month + 1, 0).day;
-          final targetDay = sipDate > daysInMonth ? daysInMonth : sipDate;
-          if (current.day == targetDay) {
-            matches = true;
-          }
-        }
-      }
-
-      if (matches) {
+      if (current.isAfter(startLimitClean) || current.isAtSameMomentAs(startLimitClean)) {
         dates.add(current);
       }
-      current = current.add(const Duration(days: 1));
+      current = calculateNextDueDate(current, frequency, sipDate);
     }
     return dates;
   }

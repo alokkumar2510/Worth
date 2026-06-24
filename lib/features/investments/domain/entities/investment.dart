@@ -19,6 +19,9 @@ class Investment with _$Investment {
     required DateTime createdAt,
     required DateTime updatedAt,
     @Default('pending') String syncStatus,
+    String? fundSource,
+    String? sourceAccount,
+    String? ownershipType,
   }) = _Investment;
 
   factory Investment.fromJson(Map<String, dynamic> json) => _$InvestmentFromJson(json);

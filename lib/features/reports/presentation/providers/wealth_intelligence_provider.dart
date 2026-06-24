@@ -39,6 +39,9 @@ class WealthIntelligenceData {
   final Map<String, double> assetAllocation;
   final Map<String, double> liabilityAllocation;
   final Map<String, double> investmentAllocation;
+  final Map<String, double> assetSourceAllocation;
+  final Map<String, double> liabilityTypeAllocation;
+  final Map<String, double> ownershipAnalysisAllocation;
 
   // This Month Stats
   final double newAssetsAdded;
@@ -83,6 +86,9 @@ class WealthIntelligenceData {
     required this.assetAllocation,
     required this.liabilityAllocation,
     required this.investmentAllocation,
+    required this.assetSourceAllocation,
+    required this.liabilityTypeAllocation,
+    required this.ownershipAnalysisAllocation,
     required this.newAssetsAdded,
     required this.liabilitiesReduced,
     required this.receivablesRecovered,
@@ -126,6 +132,9 @@ final wealthIntelligenceProvider = Provider<WealthIntelligenceData>((ref) {
       assetAllocation: const {},
       liabilityAllocation: const {},
       investmentAllocation: const {},
+      assetSourceAllocation: const {},
+      liabilityTypeAllocation: const {},
+      ownershipAnalysisAllocation: const {},
       newAssetsAdded: 0.0,
       liabilitiesReduced: 0.0,
       receivablesRecovered: 0.0,
@@ -208,7 +217,7 @@ final wealthIntelligenceProvider = Provider<WealthIntelligenceData>((ref) {
   final double totalAssets = dbState.totalAssets;
   final double totalLiabilities = dbState.totalLiabilities;
   final double totalReceivables = dbState.people
-      .where((p) => p.isArchived == 0)
+      .where((p) => p.isArchived == 0 && (p.ownershipType == 'PERSONAL' || p.ownershipType == null))
       .fold(0.0, (sum, p) => sum + dbState.getPersonReceivableBalance(p.id));
   final double totalInvestedCapital = dbState.totalInvestedCapital;
   final double totalExpectedIncome = dbState.totalExpectedIncome;
@@ -228,7 +237,7 @@ final wealthIntelligenceProvider = Provider<WealthIntelligenceData>((ref) {
     }
   }
   for (final p in dbState.people) {
-    if (p.isArchived == 0) {
+    if (p.isArchived == 0 && (p.ownershipType == 'PERSONAL' || p.ownershipType == null)) {
       final bal = dbState.getPersonReceivableBalance(p.id);
       if (bal > 0) assetAllocation[p.name] = bal;
     }
@@ -236,16 +245,15 @@ final wealthIntelligenceProvider = Provider<WealthIntelligenceData>((ref) {
 
   final Map<String, double> liabilityAllocation = {};
   for (final acc in dbState.accounts) {
-    if (acc.isArchived == 0 && acc.type == 'credit') {
+    if (acc.isArchived == 0 && (acc.type == 'credit' || acc.liabilityType == 'CREDIT_CARD')) {
       final bal = LiabilityCalculationService.calculateCreditCard(acc, dbState.transactions, dbState.adjustments).finalBalance;
       if (bal > 0) liabilityAllocation[acc.name] = bal;
     }
   }
-  for (final p in dbState.people) {
-    if (p.isArchived == 0) {
-      final bal = LiabilityCalculationService.calculatePeerLiability(p, dbState.transactions, dbState.adjustments).finalBalance;
-      if (bal > 0) liabilityAllocation[p.name] = bal;
-    }
+  final peers = dbState.people.where((p) => p.isArchived == 0 && p.type != 'broker' && (p.ownershipType == 'BORROWED' || p.liabilityType == 'BORROWED_CAPITAL' || p.type == 'borrowing'));
+  for (final p in peers) {
+    final bal = LiabilityCalculationService.calculatePeerLiability(p, dbState.transactions, dbState.adjustments).finalBalance;
+    if (bal > 0) liabilityAllocation[p.name] = bal;
   }
   for (final m in dbState.mtfPositions) {
     if (m.isClosed == 0 && m.deletedAt == null) {
@@ -563,6 +571,23 @@ final wealthIntelligenceProvider = Provider<WealthIntelligenceData>((ref) {
     };
   }).toList();
 
+  final Map<String, double> assetSourceAllocation = {
+    'Personal': dbState.personalBankBalance + dbState.personalReceivables + dbState.personalInvestments,
+    'Borrowed': dbState.borrowedCashBalance + dbState.borrowedInvestments,
+    'MTF': dbState.mtfInvestments,
+  };
+
+  final Map<String, double> liabilityTypeAllocation = {
+    'Borrowed': dbState.borrowedCapitalLiability,
+    'MTF': dbState.mtfLiability,
+    'Credit Card': dbState.creditCardLiability,
+  };
+
+  final Map<String, double> ownershipAnalysisAllocation = {
+    'Personal Capital': dbState.selfFundedAssets,
+    'Debt Capital': dbState.debtFundedAssets,
+  };
+
   return WealthIntelligenceData(
     currentNetWorth: currentNetWorth,
     monthlyChange: monthlyChange,
@@ -579,6 +604,9 @@ final wealthIntelligenceProvider = Provider<WealthIntelligenceData>((ref) {
     assetAllocation: assetAllocation,
     liabilityAllocation: liabilityAllocation,
     investmentAllocation: investmentAllocation,
+    assetSourceAllocation: assetSourceAllocation,
+    liabilityTypeAllocation: liabilityTypeAllocation,
+    ownershipAnalysisAllocation: ownershipAnalysisAllocation,
     newAssetsAdded: newAssetsAdded,
     liabilitiesReduced: liabilitiesReduced,
     receivablesRecovered: receivablesRecovered,

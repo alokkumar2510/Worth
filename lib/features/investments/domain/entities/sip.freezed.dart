@@ -39,6 +39,9 @@ mixin _$Sip {
       throw _privateConstructorUsedError; // paid | manual | today
   int get completedInstallmentsOverride => throw _privateConstructorUsedError;
   DateTime? get worthCreationDate => throw _privateConstructorUsedError;
+  DateTime? get firstInstallmentDate => throw _privateConstructorUsedError;
+  DateTime? get nextDueDate => throw _privateConstructorUsedError;
+  DateTime? get lastCompletedInstallment => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
@@ -65,7 +68,10 @@ abstract class $SipCopyWith<$Res> {
       String syncStatus,
       String importMode,
       int completedInstallmentsOverride,
-      DateTime? worthCreationDate});
+      DateTime? worthCreationDate,
+      DateTime? firstInstallmentDate,
+      DateTime? nextDueDate,
+      DateTime? lastCompletedInstallment});
 }
 
 /// @nodoc
@@ -95,6 +101,9 @@ class _$SipCopyWithImpl<$Res, $Val extends Sip> implements $SipCopyWith<$Res> {
     Object? importMode = null,
     Object? completedInstallmentsOverride = null,
     Object? worthCreationDate = freezed,
+    Object? firstInstallmentDate = freezed,
+    Object? nextDueDate = freezed,
+    Object? lastCompletedInstallment = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -157,6 +166,18 @@ class _$SipCopyWithImpl<$Res, $Val extends Sip> implements $SipCopyWith<$Res> {
           ? _value.worthCreationDate
           : worthCreationDate // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      firstInstallmentDate: freezed == firstInstallmentDate
+          ? _value.firstInstallmentDate
+          : firstInstallmentDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      nextDueDate: freezed == nextDueDate
+          ? _value.nextDueDate
+          : nextDueDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      lastCompletedInstallment: freezed == lastCompletedInstallment
+          ? _value.lastCompletedInstallment
+          : lastCompletedInstallment // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ) as $Val);
   }
 }
@@ -182,7 +203,10 @@ abstract class _$$SipImplCopyWith<$Res> implements $SipCopyWith<$Res> {
       String syncStatus,
       String importMode,
       int completedInstallmentsOverride,
-      DateTime? worthCreationDate});
+      DateTime? worthCreationDate,
+      DateTime? firstInstallmentDate,
+      DateTime? nextDueDate,
+      DateTime? lastCompletedInstallment});
 }
 
 /// @nodoc
@@ -209,6 +233,9 @@ class __$$SipImplCopyWithImpl<$Res> extends _$SipCopyWithImpl<$Res, _$SipImpl>
     Object? importMode = null,
     Object? completedInstallmentsOverride = null,
     Object? worthCreationDate = freezed,
+    Object? firstInstallmentDate = freezed,
+    Object? nextDueDate = freezed,
+    Object? lastCompletedInstallment = freezed,
   }) {
     return _then(_$SipImpl(
       id: null == id
@@ -271,6 +298,18 @@ class __$$SipImplCopyWithImpl<$Res> extends _$SipCopyWithImpl<$Res, _$SipImpl>
           ? _value.worthCreationDate
           : worthCreationDate // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      firstInstallmentDate: freezed == firstInstallmentDate
+          ? _value.firstInstallmentDate
+          : firstInstallmentDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      nextDueDate: freezed == nextDueDate
+          ? _value.nextDueDate
+          : nextDueDate // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
+      lastCompletedInstallment: freezed == lastCompletedInstallment
+          ? _value.lastCompletedInstallment
+          : lastCompletedInstallment // ignore: cast_nullable_to_non_nullable
+              as DateTime?,
     ));
   }
 }
@@ -293,7 +332,10 @@ class _$SipImpl implements _Sip {
       this.syncStatus = 'pending',
       this.importMode = 'paid',
       this.completedInstallmentsOverride = 0,
-      this.worthCreationDate});
+      this.worthCreationDate,
+      this.firstInstallmentDate,
+      this.nextDueDate,
+      this.lastCompletedInstallment});
 
   factory _$SipImpl.fromJson(Map<String, dynamic> json) =>
       _$$SipImplFromJson(json);
@@ -336,10 +378,16 @@ class _$SipImpl implements _Sip {
   final int completedInstallmentsOverride;
   @override
   final DateTime? worthCreationDate;
+  @override
+  final DateTime? firstInstallmentDate;
+  @override
+  final DateTime? nextDueDate;
+  @override
+  final DateTime? lastCompletedInstallment;
 
   @override
   String toString() {
-    return 'Sip(id: $id, investmentId: $investmentId, amount: $amount, frequency: $frequency, sipDate: $sipDate, startDate: $startDate, endDate: $endDate, autoCreate: $autoCreate, isActive: $isActive, createdAt: $createdAt, updatedAt: $updatedAt, syncStatus: $syncStatus, importMode: $importMode, completedInstallmentsOverride: $completedInstallmentsOverride, worthCreationDate: $worthCreationDate)';
+    return 'Sip(id: $id, investmentId: $investmentId, amount: $amount, frequency: $frequency, sipDate: $sipDate, startDate: $startDate, endDate: $endDate, autoCreate: $autoCreate, isActive: $isActive, createdAt: $createdAt, updatedAt: $updatedAt, syncStatus: $syncStatus, importMode: $importMode, completedInstallmentsOverride: $completedInstallmentsOverride, worthCreationDate: $worthCreationDate, firstInstallmentDate: $firstInstallmentDate, nextDueDate: $nextDueDate, lastCompletedInstallment: $lastCompletedInstallment)';
   }
 
   @override
@@ -374,7 +422,14 @@ class _$SipImpl implements _Sip {
                 other.completedInstallmentsOverride ==
                     completedInstallmentsOverride) &&
             (identical(other.worthCreationDate, worthCreationDate) ||
-                other.worthCreationDate == worthCreationDate));
+                other.worthCreationDate == worthCreationDate) &&
+            (identical(other.firstInstallmentDate, firstInstallmentDate) ||
+                other.firstInstallmentDate == firstInstallmentDate) &&
+            (identical(other.nextDueDate, nextDueDate) ||
+                other.nextDueDate == nextDueDate) &&
+            (identical(
+                    other.lastCompletedInstallment, lastCompletedInstallment) ||
+                other.lastCompletedInstallment == lastCompletedInstallment));
   }
 
   @JsonKey(ignore: true)
@@ -395,7 +450,10 @@ class _$SipImpl implements _Sip {
       syncStatus,
       importMode,
       completedInstallmentsOverride,
-      worthCreationDate);
+      worthCreationDate,
+      firstInstallmentDate,
+      nextDueDate,
+      lastCompletedInstallment);
 
   @JsonKey(ignore: true)
   @override
@@ -427,7 +485,10 @@ abstract class _Sip implements Sip {
       final String syncStatus,
       final String importMode,
       final int completedInstallmentsOverride,
-      final DateTime? worthCreationDate}) = _$SipImpl;
+      final DateTime? worthCreationDate,
+      final DateTime? firstInstallmentDate,
+      final DateTime? nextDueDate,
+      final DateTime? lastCompletedInstallment}) = _$SipImpl;
 
   factory _Sip.fromJson(Map<String, dynamic> json) = _$SipImpl.fromJson;
 
@@ -461,6 +522,12 @@ abstract class _Sip implements Sip {
   int get completedInstallmentsOverride;
   @override
   DateTime? get worthCreationDate;
+  @override
+  DateTime? get firstInstallmentDate;
+  @override
+  DateTime? get nextDueDate;
+  @override
+  DateTime? get lastCompletedInstallment;
   @override
   @JsonKey(ignore: true)
   _$$SipImplCopyWith<_$SipImpl> get copyWith =>

@@ -16,6 +16,7 @@ import 'network_monitor.dart';
 import 'conflict_resolver.dart';
 import 'cloudinary_service.dart';
 import '../../features/auth/providers/auth_providers.dart';
+import 'notification_service.dart' show kChannelSystem;
 
 class SyncService {
   final Ref _ref;
@@ -31,6 +32,7 @@ class SyncService {
 
   StreamSubscription? _connectivitySubscription;
   StreamSubscription? _authSubscription;
+  Timer? _syncTimer;
   bool _isSyncing = false;
   bool _isProcessingQueue = false;
 
@@ -70,6 +72,11 @@ class SyncService {
         }
       });
 
+      // 3. Periodic sync every 15 minutes
+      _syncTimer = Timer.periodic(const Duration(minutes: 15), (_) {
+        forceSync();
+      });
+
       // Run initial check
       _runInitialSync();
     } catch (e) {
@@ -80,6 +87,7 @@ class SyncService {
   void dispose() {
     _connectivitySubscription?.cancel();
     _authSubscription?.cancel();
+    _syncTimer?.cancel();
   }
 
   Future<void> _runAuthSync(User user) async {
@@ -126,6 +134,23 @@ class SyncService {
     await pullRemoteChanges();
   }
 
+  TableInfo? _getTableForEntityType(String entityType) {
+    switch (entityType) {
+      case 'account': return _db.accounts;
+      case 'person': return _db.people;
+      case 'investment': return _db.investments;
+      case 'investment_lot': return _db.investmentLots;
+      case 'transaction': return _db.transactions;
+      case 'expected_income': return _db.expectedIncomes;
+      case 'goal': return _db.goals;
+      case 'snapshot': return _db.snapshots;
+      case 'adjustment': return _db.adjustments;
+      case 'mtf_position': return _db.mtfPositions;
+      case 'sip': return _db.sips;
+      case 'setting': return _db.settings;
+      default: return null;
+    }
+  }
 
   /// Queues a mutation to be synchronized with Firebase.
   Future<void> queueOperation({
@@ -134,10 +159,27 @@ class SyncService {
     required String operation, // 'upsert' | 'delete'
   }) async {
     final now = DateTime.now().toUtc();
+
+    String? payloadJson;
+    if (operation != 'delete') {
+      try {
+        final table = _getTableForEntityType(entityType);
+        if (table != null) {
+          final row = await _getLocalRow(table, entityId);
+          if (row != null && row is DataClass) {
+            payloadJson = jsonEncode(row.toJson());
+          }
+        }
+      } catch (e) {
+        print('[SyncService] Failed to serialize payload for queue: $e');
+      }
+    }
+
     final queueItem = SyncQueuesCompanion(
       entityType: Value(entityType),
       entityId: Value(entityId),
       operation: Value(operation),
+      payload: Value(payloadJson),
       status: const Value('pending'),
       createdAt: Value(now),
       updatedAt: Value(now),
@@ -428,6 +470,20 @@ class SyncService {
             'syncStatus': 'synced',
             'deviceId': row.deviceId,
             'lastSyncedAt': FieldValue.serverTimestamp(),
+            'fundingSource': row.fundingSource,
+            'fundingLiabilityId': row.fundingLiabilityId,
+            'fundingDetails': row.fundingDetails,
+            'transactionUuid': row.transactionUuid,
+            'operationUuid': row.operationUuid,
+            'sourceRecordId': row.sourceRecordId,
+            'fundSource': row.fundSource,
+            'sourceAccount': row.sourceAccount,
+            'ownershipType': row.ownershipType,
+            'liabilityType': row.liabilityType,
+            'transactionCategory': row.transactionCategory,
+            'sipId': row.sipId,
+            'executionMonth': row.executionMonth,
+            'executionYear': row.executionYear,
           });
           await (_db.update(_db.transactions)..where((tbl) => tbl.id.equals(row.id)))
               .write(TransactionsCompanion(
@@ -598,6 +654,9 @@ class SyncService {
             'syncStatus': 'synced',
             'deviceId': row.deviceId,
             'lastSyncedAt': FieldValue.serverTimestamp(),
+            'firstInstallmentDate': row.firstInstallmentDate != null ? Timestamp.fromDate(row.firstInstallmentDate!) : null,
+            'nextDueDate': row.nextDueDate != null ? Timestamp.fromDate(row.nextDueDate!) : null,
+            'lastCompletedInstallment': row.lastCompletedInstallment != null ? Timestamp.fromDate(row.lastCompletedInstallment!) : null,
           });
           await (_db.update(_db.sips)..where((tbl) => tbl.id.equals(row.id)))
               .write(SipsCompanion(
@@ -878,6 +937,20 @@ class SyncService {
       syncStatus: 'synced',
       lastSyncedAt: _parseNullableDateTime(data['lastSyncedAt']),
       deviceId: data['deviceId'] as String?,
+      fundingSource: data['fundingSource'] as String?,
+      fundingLiabilityId: data['fundingLiabilityId'] as String?,
+      fundingDetails: data['fundingDetails'] as String?,
+      transactionUuid: data['transactionUuid'] as String?,
+      operationUuid: data['operationUuid'] as String?,
+      sourceRecordId: data['sourceRecordId'] as String?,
+      fundSource: data['fundSource'] as String?,
+      sourceAccount: data['sourceAccount'] as String?,
+      ownershipType: data['ownershipType'] as String?,
+      liabilityType: data['liabilityType'] as String?,
+      transactionCategory: data['transactionCategory'] as String?,
+      sipId: data['sipId'] as String?,
+      executionMonth: data['executionMonth'] as int?,
+      executionYear: data['executionYear'] as int?,
     );
   }
 
@@ -994,6 +1067,9 @@ class SyncService {
       syncStatus: 'synced',
       lastSyncedAt: _parseNullableDateTime(data['lastSyncedAt']),
       deviceId: data['deviceId'] as String?,
+      firstInstallmentDate: _parseNullableDateTime(data['firstInstallmentDate']),
+      nextDueDate: _parseNullableDateTime(data['nextDueDate']),
+      lastCompletedInstallment: _parseNullableDateTime(data['lastCompletedInstallment']),
     );
   }
 
@@ -1179,6 +1255,17 @@ class SyncService {
     if (user != null) {
       await _uploadBackupToStorage(user.uid);
     }
+
+    try {
+      await _ref.read(realNotificationServiceProvider).scheduleSystemNotification(
+        id: 8001,
+        title: 'Sync Complete',
+        body: 'Cloud sync completed successfully.',
+        scheduledDateTime: DateTime.now().add(const Duration(seconds: 5)),
+        type: 'sync',
+        channelId: kChannelSystem,
+      );
+    } catch (_) {}
   }
 
   Future<void> forceBackupNow() async {
@@ -1299,11 +1386,17 @@ class SyncService {
         'pricePerUnit': row.pricePerUnit,
         'units': row.units,
         'transactionDate': Timestamp.fromDate(row.transactionDate),
-        'createdAt': Timestamp.fromDate(row.createdAt),
+          'createdAt': Timestamp.fromDate(row.createdAt),
         'updatedAt': Timestamp.fromDate(row.updatedAt),
         'syncStatus': 'synced',
         'deviceId': row.deviceId,
         'lastSyncedAt': FieldValue.serverTimestamp(),
+        'fundingSource': row.fundingSource,
+        'fundingLiabilityId': row.fundingLiabilityId,
+        'fundingDetails': row.fundingDetails,
+        'transactionUuid': row.transactionUuid,
+        'operationUuid': row.operationUuid,
+        'sourceRecordId': row.sourceRecordId,
       });
       await (_db.update(_db.transactions)..where((tbl) => tbl.id.equals(row.id)))
           .write(TransactionsCompanion(
@@ -1454,11 +1547,17 @@ class SyncService {
         'endDate': row.endDate != null ? Timestamp.fromDate(row.endDate!) : null,
         'autoCreate': row.autoCreate,
         'isActive': row.isActive,
+        'importMode': row.importMode,
+        'completedInstallmentsOverride': row.completedInstallmentsOverride,
+        'worthCreationDate': row.worthCreationDate != null ? Timestamp.fromDate(row.worthCreationDate!) : null,
         'createdAt': Timestamp.fromDate(row.createdAt),
         'updatedAt': Timestamp.fromDate(row.updatedAt),
         'syncStatus': 'synced',
         'deviceId': row.deviceId,
         'lastSyncedAt': FieldValue.serverTimestamp(),
+        'firstInstallmentDate': row.firstInstallmentDate != null ? Timestamp.fromDate(row.firstInstallmentDate!) : null,
+        'nextDueDate': row.nextDueDate != null ? Timestamp.fromDate(row.nextDueDate!) : null,
+        'lastCompletedInstallment': row.lastCompletedInstallment != null ? Timestamp.fromDate(row.lastCompletedInstallment!) : null,
       });
       await (_db.update(_db.sips)..where((tbl) => tbl.id.equals(row.id)))
           .write(SipsCompanion(

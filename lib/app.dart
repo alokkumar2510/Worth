@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/routes/router.dart';
@@ -9,6 +8,7 @@ import 'core/widgets/app_lock_guard.dart';
 import 'core/services/update_service.dart';
 import 'core/widgets/update_prompt_sheet.dart';
 import 'core/services/notification_service.dart';
+import 'core/services/background_notification_worker.dart';
 import 'database/seeder.dart';
 import 'core/widgets/error_boundary.dart';
 
@@ -48,24 +48,19 @@ class WorthApp extends ConsumerStatefulWidget {
 }
 
 class _WorthAppState extends ConsumerState<WorthApp> with WidgetsBindingObserver {
-  StreamSubscription<AppNotification>? _notificationSubscription;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _subscribeToNotifications();
-    
-    // Eagerly initialize the milestone celebration controller to monitor and queue achievements
+    // Eagerly initialize the milestone celebration controller
     ref.read(milestoneCelebrationControllerProvider);
-    
     _initServices();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _notificationSubscription?.cancel();
     super.dispose();
   }
 
@@ -78,13 +73,20 @@ class _WorthAppState extends ConsumerState<WorthApp> with WidgetsBindingObserver
 
   Future<void> _initServices() async {
     try {
-      final db = ref.read(realDatabaseProvider);
-      await seedDatabaseIfEmpty(db);
+      final database = ref.read(realDatabaseProvider);
+      await seedDatabaseIfEmpty(database);
 
-      // Request notifications permission on startup
+      // Request notification permission (Android 13+)
       await ref.read(realNotificationServiceProvider).requestPermissions();
 
-      // Start background reminder scheduler
+      // Wire navigator key for notification deep-links
+      NotificationService.navigatorKey = rootNavigatorKey;
+
+      // Register WorkManager periodic tasks for background notifications.
+      // ExistingWorkPolicy.keep means this is idempotent — safe to call every launch.
+      await WorkManagerService.initialize();
+
+      // Start foreground reminder scheduler (scheduled zonedSchedule via flutter_local_notifications)
       ref.read(realReminderSchedulerProvider).start();
 
       // Start background Sync Engine
@@ -97,75 +99,6 @@ class _WorthAppState extends ConsumerState<WorthApp> with WidgetsBindingObserver
     }
   }
 
-  void _subscribeToNotifications() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _notificationSubscription = ref
-          .read(realNotificationServiceProvider)
-          .notificationStream
-          .listen((notification) {
-        scaffoldMessengerKey.currentState?.clearSnackBars();
-        scaffoldMessengerKey.currentState?.showSnackBar(
-          SnackBar(
-            backgroundColor: const Color(0xFF1E1E2C),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(
-                color: notification.type == 'goal'
-                    ? const Color(0xFF4CAF50)
-                    : notification.type == 'liability'
-                        ? const Color(0xFFF44336)
-                        : notification.type == 'receivable'
-                            ? const Color(0xFF2196F3)
-                            : const Color(0xFFFF9800),
-                width: 1,
-              ),
-            ),
-            content: Row(
-              children: [
-                Icon(
-                  notification.type == 'goal'
-                      ? Icons.emoji_events
-                      : notification.type == 'liability'
-                          ? Icons.payment
-                          : notification.type == 'receivable'
-                              ? Icons.handshake
-                              : Icons.monetization_on,
-                  color: Colors.white70,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        notification.title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        notification.body,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            duration: const Duration(seconds: 5),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      });
-    });
-  }
 
   @override
   Widget build(BuildContext context) {

@@ -70,6 +70,11 @@ class TransactionValidator {
         if (!companion.investmentId.present || companion.investmentId.value == null) {
           throw const FormatException('Investment buy transaction requires an investment instrument (investmentId).');
         }
+        if (companion.fundingSource.present && companion.fundingSource.value == 'liability_borrowed') {
+          if (!companion.fundingLiabilityId.present || companion.fundingLiabilityId.value == null || companion.fundingLiabilityId.value!.isEmpty) {
+            throw const FormatException('For investments funded by borrowed money, a funding liability ID must be specified.');
+          }
+        }
         break;
 
       case 'investment_sell':

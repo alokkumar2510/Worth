@@ -26,6 +26,9 @@ class InvestmentService {
     String? fundingSource,
     String? fundingLiabilityId,
     String? fundingDetails,
+    String? sipId,
+    int? executionMonth,
+    int? executionYear,
   }) async {
     if (_isMock) {
       await _ref.read(mockDatabaseProvider.notifier).buyInvestment(
@@ -38,14 +41,39 @@ class InvestmentService {
         fundingSource: fundingSource,
         fundingLiabilityId: fundingLiabilityId,
         fundingDetails: fundingDetails,
+        sipId: sipId,
+        executionMonth: executionMonth,
+        executionYear: executionYear,
       );
     } else {
+      if (sipId != null && executionMonth != null && executionYear != null) {
+        final existing = await (_db.select(_db.transactions)
+          ..where((tbl) => tbl.sipId.equals(sipId) & 
+                           tbl.executionMonth.equals(executionMonth) & 
+                           tbl.executionYear.equals(executionYear))).get();
+        if (existing.isNotEmpty) {
+          print('[InvestmentService] Transaction already exists for SIP: $sipId in $executionMonth/$executionYear. Skipping duplicate creation.');
+          return;
+        }
+      }
+
       final totalAmount = units * pricePerUnit;
+
+      // Resolve CC accounts
+      var fromAcc = fromAccountId;
+      if ((fromAcc == null || fromAcc.isEmpty) &&
+          fundingSource == 'liability_borrowed' &&
+          fundingLiabilityId != null &&
+          fundingLiabilityId.startsWith('acc_')) {
+        fromAcc = fundingLiabilityId;
+      }
+
+      final buyTxId = _uuid.v4();
       final companion = TransactionsCompanion(
-        id: Value(_uuid.v4()),
+        id: Value(buyTxId),
         type: const Value('investment_buy'),
         amount: Value(totalAmount),
-        fromAccountId: fromAccountId != null && fromAccountId.isNotEmpty ? Value(fromAccountId) : const Value(null),
+        fromAccountId: fromAcc != null && fromAcc.isNotEmpty ? Value(fromAcc) : const Value(null),
         investmentId: Value(investmentId),
         pricePerUnit: Value(pricePerUnit),
         units: Value(units),
@@ -56,15 +84,48 @@ class InvestmentService {
         fundingSource: Value(fundingSource),
         fundingLiabilityId: Value(fundingLiabilityId),
         fundingDetails: Value(fundingDetails),
+        transactionUuid: Value(buyTxId),
+        operationUuid: Value(buyTxId),
+        sourceRecordId: Value(investmentId),
+        sipId: Value(sipId),
+        executionMonth: Value(executionMonth),
+        executionYear: Value(executionYear),
       );
       await _ref.read(realTransactionServiceProvider).createTransaction(companion);
-      final txId = companion.id.value;
-      _ref.read(syncServiceProvider).queueOperation(entityType: 'transaction', entityId: txId, operation: 'upsert');
+      _ref.read(syncServiceProvider).queueOperation(entityType: 'transaction', entityId: buyTxId, operation: 'upsert');
       
       final lots = await _db.select(_db.investmentLots).get();
-      final newLot = lots.firstWhereOrNull((l) => l.buyTransactionId == txId);
+      final newLot = lots.firstWhereOrNull((l) => l.buyTransactionId == buyTxId);
       if (newLot != null) {
         _ref.read(syncServiceProvider).queueOperation(entityType: 'investment_lot', entityId: newLot.id, operation: 'upsert');
+      }
+
+      // If peer lender (person_), automatically create a borrow_money transaction
+      if (fundingSource == 'liability_borrowed' &&
+          fundingLiabilityId != null &&
+          fundingLiabilityId.startsWith('person_')) {
+        
+        final borrowTxId = '${buyTxId}_borrow';
+        final existingBorrow = await (_db.select(_db.transactions)
+          ..where((tbl) => tbl.id.equals(borrowTxId))).getSingleOrNull();
+
+        if (existingBorrow == null) {
+          final borrowCompanion = TransactionsCompanion(
+            id: Value(borrowTxId),
+            type: const Value('borrow_money'),
+            amount: Value(totalAmount),
+            personId: Value(fundingLiabilityId),
+            notes: Value('Borrowed to buy investment: $investmentId (Linked: $buyTxId)'),
+            transactionDate: Value(date),
+            createdAt: Value(DateTime.now().toUtc()),
+            updatedAt: Value(DateTime.now().toUtc()),
+            transactionUuid: Value(borrowTxId),
+            operationUuid: Value(buyTxId),
+            sourceRecordId: Value(fundingLiabilityId),
+          );
+          await _ref.read(realTransactionServiceProvider).createTransaction(borrowCompanion);
+          _ref.read(syncServiceProvider).queueOperation(entityType: 'transaction', entityId: borrowTxId, operation: 'upsert');
+        }
       }
     }
   }

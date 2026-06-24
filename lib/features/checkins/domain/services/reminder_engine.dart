@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import '../../../../database/database.dart' as db;
 import '../../../../core/services/notification_service.dart';
+import '../../../../core/services/notification_service.dart' show kChannelReminders;
 
 class ReminderEngine {
   final db.AppDatabase _db;
@@ -83,10 +84,13 @@ class ReminderEngine {
         body = 'Before ending your day, make sure all transactions are recorded.';
       }
 
-      _notificationService.showNotification(
+      _notificationService.scheduleSystemNotification(
+        id: 1500 + slotKey.hashCode.abs() % 99,
         title: title,
         body: body,
+        scheduledDateTime: DateTime.now().add(const Duration(minutes: 20)),
         type: 'check_in',
+        channelId: kChannelReminders,
       );
 
       // Save triggered state to database settings

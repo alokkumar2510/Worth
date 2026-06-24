@@ -76,7 +76,7 @@ class FinancialCalculatorService {
         _db.personBalanceCaches,
         _db.personBalanceCaches.personId.equalsExp(_db.people.id),
       ),
-    ])..where(_db.people.isArchived.equals(0));
+    ])..where(_db.people.isArchived.equals(0) & (_db.people.ownershipType.equals('PERSONAL') | _db.people.ownershipType.isNull()));
 
     final rows = await query.get();
     double total = 0.0;

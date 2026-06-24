@@ -52,12 +52,15 @@ import '../../features/settings/presentation/screens/archive_center_screen.dart'
 import '../../features/history/presentation/screens/portfolio_history_archive_screen.dart';
 import '../../features/recovery/presentation/screens/recovery_allocation_report_screen.dart';
 import '../../features/settings/presentation/screens/financial_calculation_inspector_screen.dart';
+import '../../features/settings/presentation/screens/funding_relationship_inspector_screen.dart';
 import '../../features/recovery/presentation/screens/debt_recovery_dashboard_screen.dart';
 import '../../features/recovery/presentation/screens/upi_settings_screen.dart';
 import '../../features/calendar/presentation/screens/calendar_screen.dart';
 import '../../features/education_loan/presentation/screens/education_loan_hub.dart';
 import '../../features/education_loan/presentation/screens/loan_setup_screen.dart';
 import '../../features/education_loan/domain/entities/education_loan.dart';
+import '../../features/settings/presentation/screens/sync_center_screen.dart';
+import '../../features/settings/presentation/screens/backup_restore_screen.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey =
     GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -666,6 +669,22 @@ final routerProvider = Provider<GoRouter>((ref) {
                     ),
                   ),
                   GoRoute(
+                    path: 'sync_center',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) => buildPremiumTransitionPage(
+                      state: state,
+                      child: const SyncCenterScreen(),
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'backup_restore',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) => buildPremiumTransitionPage(
+                      state: state,
+                      child: const BackupRestoreScreen(),
+                    ),
+                  ),
+                  GoRoute(
                     path: 'founder',
                     parentNavigatorKey: _rootNavigatorKey,
                     pageBuilder: (context, state) => buildPremiumTransitionPage(
@@ -785,6 +804,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                     pageBuilder: (context, state) => buildPremiumTransitionPage(
                       state: state,
                       child: const FinancialCalculationInspectorScreen(),
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'funding_relationship_inspector',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    pageBuilder: (context, state) => buildPremiumTransitionPage(
+                      state: state,
+                      child: const FundingRelationshipInspectorScreen(),
                     ),
                   ),
                   // Education Loan Center

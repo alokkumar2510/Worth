@@ -169,6 +169,7 @@ final realTransactionProcessorProvider = Provider<TransactionProcessor>((ref) {
     ref.watch(realBalanceCacheServiceProvider),
     ref.watch(realFifoLotServiceProvider),
     ref.watch(realSearchIndexServiceProvider),
+    ref.watch(syncServiceProvider),
   );
 });
 
@@ -236,6 +237,11 @@ final realReminderSchedulerProvider = Provider<ReminderScheduler>((ref) {
     },
     onCheckIn: () async {
       await ref.read(checkInReminderEngineProvider).checkAndTrigger();
+      try {
+        await ref.read(realBackupServiceProvider).checkAndRunBackup();
+      } catch (e) {
+        print('[ReminderScheduler] Daily auto backup check failed: $e');
+      }
     },
   );
 });
@@ -279,9 +285,11 @@ final realImportServiceProvider = Provider<ImportService>((ref) {
 
 final realBackupServiceProvider = Provider<BackupService>((ref) {
   return BackupService(
+    ref.watch(realDatabaseProvider),
     ref.watch(realExportServiceProvider),
     ref.watch(realImportServiceProvider),
     ref.watch(realEncryptionServiceProvider),
+    ref.watch(realNotificationServiceProvider),
   );
 });
 

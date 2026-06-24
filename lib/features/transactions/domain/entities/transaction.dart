@@ -22,6 +22,20 @@ class Transaction with _$Transaction {
     required DateTime createdAt,
     required DateTime updatedAt,
     @Default('pending') String syncStatus,
+    String? fundingSource,
+    String? fundingLiabilityId,
+    String? fundingDetails,
+    String? transactionUuid,
+    String? operationUuid,
+    String? sourceRecordId,
+    String? fundSource,
+    String? sourceAccount,
+    String? ownershipType,
+    String? liabilityType,
+    String? transactionCategory,
+    String? sipId,
+    int? executionMonth,
+    int? executionYear,
   }) = _Transaction;
 
   factory Transaction.fromJson(Map<String, dynamic> json) => _$TransactionFromJson(json);

@@ -29,6 +29,8 @@ mixin _$Account {
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
   String get syncStatus => throw _privateConstructorUsedError;
+  String? get ownershipType => throw _privateConstructorUsedError;
+  String? get liabilityType => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
@@ -48,7 +50,9 @@ abstract class $AccountCopyWith<$Res> {
       int isArchived,
       DateTime createdAt,
       DateTime updatedAt,
-      String syncStatus});
+      String syncStatus,
+      String? ownershipType,
+      String? liabilityType});
 }
 
 /// @nodoc
@@ -72,6 +76,8 @@ class _$AccountCopyWithImpl<$Res, $Val extends Account>
     Object? createdAt = null,
     Object? updatedAt = null,
     Object? syncStatus = null,
+    Object? ownershipType = freezed,
+    Object? liabilityType = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -106,6 +112,14 @@ class _$AccountCopyWithImpl<$Res, $Val extends Account>
           ? _value.syncStatus
           : syncStatus // ignore: cast_nullable_to_non_nullable
               as String,
+      ownershipType: freezed == ownershipType
+          ? _value.ownershipType
+          : ownershipType // ignore: cast_nullable_to_non_nullable
+              as String?,
+      liabilityType: freezed == liabilityType
+          ? _value.liabilityType
+          : liabilityType // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -125,7 +139,9 @@ abstract class _$$AccountImplCopyWith<$Res> implements $AccountCopyWith<$Res> {
       int isArchived,
       DateTime createdAt,
       DateTime updatedAt,
-      String syncStatus});
+      String syncStatus,
+      String? ownershipType,
+      String? liabilityType});
 }
 
 /// @nodoc
@@ -147,6 +163,8 @@ class __$$AccountImplCopyWithImpl<$Res>
     Object? createdAt = null,
     Object? updatedAt = null,
     Object? syncStatus = null,
+    Object? ownershipType = freezed,
+    Object? liabilityType = freezed,
   }) {
     return _then(_$AccountImpl(
       id: null == id
@@ -181,6 +199,14 @@ class __$$AccountImplCopyWithImpl<$Res>
           ? _value.syncStatus
           : syncStatus // ignore: cast_nullable_to_non_nullable
               as String,
+      ownershipType: freezed == ownershipType
+          ? _value.ownershipType
+          : ownershipType // ignore: cast_nullable_to_non_nullable
+              as String?,
+      liabilityType: freezed == liabilityType
+          ? _value.liabilityType
+          : liabilityType // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -196,7 +222,9 @@ class _$AccountImpl implements _Account {
       required this.isArchived,
       required this.createdAt,
       required this.updatedAt,
-      this.syncStatus = 'pending'});
+      this.syncStatus = 'pending',
+      this.ownershipType,
+      this.liabilityType});
 
   factory _$AccountImpl.fromJson(Map<String, dynamic> json) =>
       _$$AccountImplFromJson(json);
@@ -219,10 +247,14 @@ class _$AccountImpl implements _Account {
   @override
   @JsonKey()
   final String syncStatus;
+  @override
+  final String? ownershipType;
+  @override
+  final String? liabilityType;
 
   @override
   String toString() {
-    return 'Account(id: $id, name: $name, type: $type, notes: $notes, isArchived: $isArchived, createdAt: $createdAt, updatedAt: $updatedAt, syncStatus: $syncStatus)';
+    return 'Account(id: $id, name: $name, type: $type, notes: $notes, isArchived: $isArchived, createdAt: $createdAt, updatedAt: $updatedAt, syncStatus: $syncStatus, ownershipType: $ownershipType, liabilityType: $liabilityType)';
   }
 
   @override
@@ -241,13 +273,27 @@ class _$AccountImpl implements _Account {
             (identical(other.updatedAt, updatedAt) ||
                 other.updatedAt == updatedAt) &&
             (identical(other.syncStatus, syncStatus) ||
-                other.syncStatus == syncStatus));
+                other.syncStatus == syncStatus) &&
+            (identical(other.ownershipType, ownershipType) ||
+                other.ownershipType == ownershipType) &&
+            (identical(other.liabilityType, liabilityType) ||
+                other.liabilityType == liabilityType));
   }
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hash(runtimeType, id, name, type, notes,
-      isArchived, createdAt, updatedAt, syncStatus);
+  int get hashCode => Object.hash(
+      runtimeType,
+      id,
+      name,
+      type,
+      notes,
+      isArchived,
+      createdAt,
+      updatedAt,
+      syncStatus,
+      ownershipType,
+      liabilityType);
 
   @JsonKey(ignore: true)
   @override
@@ -272,7 +318,9 @@ abstract class _Account implements Account {
       required final int isArchived,
       required final DateTime createdAt,
       required final DateTime updatedAt,
-      final String syncStatus}) = _$AccountImpl;
+      final String syncStatus,
+      final String? ownershipType,
+      final String? liabilityType}) = _$AccountImpl;
 
   factory _Account.fromJson(Map<String, dynamic> json) = _$AccountImpl.fromJson;
 
@@ -292,6 +340,10 @@ abstract class _Account implements Account {
   DateTime get updatedAt;
   @override
   String get syncStatus;
+  @override
+  String? get ownershipType;
+  @override
+  String? get liabilityType;
   @override
   @JsonKey(ignore: true)
   _$$AccountImplCopyWith<_$AccountImpl> get copyWith =>

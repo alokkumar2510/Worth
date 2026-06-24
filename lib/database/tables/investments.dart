@@ -21,6 +21,9 @@ class Investments extends Table {
   TextColumn get fundingSource => text().nullable()();
   TextColumn get fundingLiabilityId => text().nullable()();
   TextColumn get fundingDetails => text().nullable()();
+  TextColumn get fundSource => text().nullable()();
+  TextColumn get sourceAccount => text().nullable()();
+  TextColumn get ownershipType => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

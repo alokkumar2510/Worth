@@ -873,24 +873,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildFundingDebtAnalysisCard(dynamic data, String currency) {
-    final double totalAssets = (data.assets as num?)?.toDouble() ?? 0.0;
-    final double debtFunded = (data.debtFundedAssets as num?)?.toDouble() ?? 0.0;
-    final double selfFunded = (data.selfFundedAssets as num?)?.toDouble() ?? 0.0;
-    final double debtPct = totalAssets > 0 ? (debtFunded / totalAssets) * 100 : 0.0;
-    final double selfPct = totalAssets > 0 ? (selfFunded / totalAssets) * 100 : 0.0;
-    
-    final breakdown = data.fundingSourceBreakdown as Map<String, double>;
-    
-    final sourceNames = {
-      'existing_cash': 'Existing Cash',
-      'salary_income': 'Salary Income',
-      'business_income': 'Business Income',
-      'receivable_collected': 'Receivables Collected',
-      'liability_borrowed': 'Liability / Borrowed',
-      'mixed_sources': 'Mixed Sources',
-    };
-    
     final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
+    final double personalBank = (data.personalBankBalance as num?)?.toDouble() ?? 0.0;
+    final double borrowedCash = (data.borrowedCashBalance as num?)?.toDouble() ?? 0.0;
+    final double receivables = (data.personalReceivables as num?)?.toDouble() ?? 0.0;
+    final double personalInv = (data.personalInvestments as num?)?.toDouble() ?? 0.0;
+    final double borrowedInv = (data.borrowedInvestments as num?)?.toDouble() ?? 0.0;
+    final double mtfInv = (data.mtfInvestments as num?)?.toDouble() ?? 0.0;
+    final double totalAssets = (data.assets as num?)?.toDouble() ?? 0.0;
+
+    final double borrowedCapitalLiability = (data.borrowedCapitalLiability as num?)?.toDouble() ?? 0.0;
+    final double mtfLiability = (data.mtfLiability as num?)?.toDouble() ?? 0.0;
+    final double creditCardLiability = (data.creditCardLiability as num?)?.toDouble() ?? 0.0;
+    final double totalLiabilities = (data.liabilities as num?)?.toDouble() ?? 0.0;
+
+    final double netWorth = (data.netWorth as num?)?.toDouble() ?? 0.0;
 
     return GlassCard(
       child: Column(
@@ -898,10 +895,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.pie_chart_outline_rounded, size: 20, color: AppColors.glow),
+              const Icon(Icons.account_balance_outlined, size: 20, color: AppColors.glow),
               const SizedBox(width: 8),
               Text(
-                'Funding & Debt Analysis',
+                'Ownership-Based Balance Sheet',
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -910,77 +907,80 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          // Debt-Funded vs Self-Funded details
+          const SizedBox(height: 20),
+          
+          // ASSETS SECTION
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'SELF-FUNDED ASSETS',
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.grey500,
-                      letterSpacing: 1.0,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${format.format(selfFunded)} (${selfPct.toStringAsFixed(1)}%)',
-                    style: GoogleFonts.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF00E676),
-                    ),
-                  ),
-                ],
+              Container(
+                width: 3,
+                height: 12,
+                color: AppColors.darkSuccess,
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'DEBT-FUNDED ASSETS',
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.grey500,
-                      letterSpacing: 1.0,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${format.format(debtFunded)} (${debtPct.toStringAsFixed(1)}%)',
-                    style: GoogleFonts.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.darkDanger,
-                    ),
-                  ),
-                ],
+              const SizedBox(width: 6),
+              Text(
+                'ASSETS',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkSuccess,
+                  letterSpacing: 1.0,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          // Progress Bar for Ratio
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: SizedBox(
-              height: 8,
-              child: LinearProgressIndicator(
-                value: totalAssets > 0 ? selfFunded / totalAssets : 1.0,
-                backgroundColor: AppColors.darkDanger,
-                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF00E676)),
-              ),
-            ),
+          const SizedBox(height: 8),
+          _buildBreakdownRow('Personal Cash (Bank/Wallet)', personalBank, currency),
+          _buildBreakdownRow('Borrowed Cash', borrowedCash, currency),
+          _buildBreakdownRow('Receivables (Personal)', receivables, currency),
+          _buildBreakdownRow('Personal Investments', personalInv, currency),
+          _buildBreakdownRow('Borrowed Investments', borrowedInv, currency),
+          _buildBreakdownRow('MTF Investments', mtfInv, currency),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 4.0),
+            child: Divider(color: Colors.white10, height: 1),
           ),
-          const SizedBox(height: 16),
+          _buildBreakdownRow('Total Assets', totalAssets, currency, isBold: true, color: AppColors.darkSuccess),
+          
+          const SizedBox(height: 24),
+
+          // LIABILITIES SECTION
+          Row(
+            children: [
+              Container(
+                width: 3,
+                height: 12,
+                color: AppColors.darkDanger,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'LIABILITIES',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.darkDanger,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _buildBreakdownRow('Borrowed Capital Liability', borrowedCapitalLiability, currency),
+          _buildBreakdownRow('MTF Liability', mtfLiability, currency),
+          _buildBreakdownRow('Credit Card Liability', creditCardLiability, currency),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 4.0),
+            child: Divider(color: Colors.white10, height: 1),
+          ),
+          _buildBreakdownRow('Total Liabilities', totalLiabilities, currency, isBold: true, color: AppColors.darkDanger),
+
+          const SizedBox(height: 24),
           const Divider(color: Colors.white10, height: 1),
           const SizedBox(height: 16),
+
+          // NET WORTH CALCULATION
           Text(
-            'FUNDING SOURCES BREAKDOWN',
+            'NET WORTH EQUATION',
             style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.bold,
@@ -989,71 +989,79 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          ...breakdown.entries
-              .where((entry) => entry.value > 0)
-              .map((entry) {
-            final name = sourceNames[entry.key] ?? entry.key;
-            final val = entry.value;
-            final pct = totalAssets > 0 ? (val / totalAssets) * 100 : 0.0;
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        name,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Colors.white70,
-                          fontWeight: FontWeight.w500,
-                        ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.03),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.white.withOpacity(0.05)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Net Worth = Assets - Liabilities',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: AppColors.grey400,
+                        fontWeight: FontWeight.w500,
                       ),
-                      Text(
-                        '${format.format(val)} (${pct.toStringAsFixed(1)}%)',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(2),
-                    child: LinearProgressIndicator(
-                      value: totalAssets > 0 ? val / totalAssets : 0.0,
-                      backgroundColor: Colors.white.withOpacity(0.06),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        entry.key == 'liability_borrowed'
-                            ? AppColors.darkDanger
-                            : entry.key == 'mixed_sources'
-                                ? AppColors.darkWarning
-                                : AppColors.darkPrimary,
-                      ),
-                      minHeight: 3,
                     ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-          if (breakdown.values.every((v) => v == 0))
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12.0),
-              child: Center(
-                child: Text(
-                  'No assets recorded to analyze',
+                    Text(
+                      format.format(netWorth),
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        color: netWorth >= 0 ? AppColors.darkSuccess : AppColors.darkDanger,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '${format.format(totalAssets)} - ${format.format(totalLiabilities)} = ${format.format(netWorth)}',
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: AppColors.grey500,
+                    color: Colors.white70,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
                   ),
                 ),
-              ),
+              ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBreakdownRow(String label, double amount, String currency, {bool isBold = false, Color? color}) {
+    final format = NumberFormat.currency(symbol: currency, decimalDigits: 0);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: isBold ? 13 : 12,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+              color: isBold ? Colors.white : AppColors.grey400,
+            ),
+          ),
+          Text(
+            format.format(amount),
+            style: GoogleFonts.inter(
+              fontSize: isBold ? 13 : 12,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+              color: color ?? (isBold ? Colors.white : Colors.white70),
+            ),
+          ),
         ],
       ),
     );
@@ -1933,19 +1941,29 @@ class _NaturalLanguageQueryDialogState extends ConsumerState<NaturalLanguageQuer
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return AlertDialog(
-      backgroundColor: AppColors.layer1,
+      backgroundColor: isDark ? AppColors.layer1 : AppColors.lightCard,
       elevation: 24,
-      shadowColor: Colors.black54,
+      shadowColor: isDark ? Colors.black54 : Colors.black12,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(32),
-        side: const BorderSide(color: AppColors.glassBorder, width: 1),
+        side: BorderSide(color: isDark ? AppColors.glassBorder : AppColors.lightBorder, width: 1),
       ),
       title: Row(
-        children: const [
-          Icon(Icons.auto_awesome, color: Colors.amber),
-          SizedBox(width: 8),
-          Text('Personal AI Query', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+        children: [
+          const Icon(Icons.auto_awesome, color: Colors.amber),
+          const SizedBox(width: 8),
+          Text(
+            'Personal AI Query',
+            style: TextStyle(
+              color: isDark ? Colors.white : AppColors.lightText,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
         ],
       ),
       content: SizedBox(
@@ -1957,7 +1975,7 @@ class _NaturalLanguageQueryDialogState extends ConsumerState<NaturalLanguageQuer
             // Text query field
             TextField(
               controller: _queryController,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: isDark ? Colors.white : AppColors.lightText),
               decoration: InputDecoration(
                 hintText: 'Ask your personal database...',
                 hintStyle: const TextStyle(color: AppColors.grey500, fontSize: 14),
@@ -1969,10 +1987,16 @@ class _NaturalLanguageQueryDialogState extends ConsumerState<NaturalLanguageQuer
                     }
                   },
                 ),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: AppColors.glassBorder)),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: const BorderSide(color: AppColors.darkPrimary)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide(color: isDark ? AppColors.glassBorder : AppColors.lightBorder),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: const BorderSide(color: AppColors.darkPrimary),
+                ),
                 filled: true,
-                fillColor: AppColors.layer2,
+                fillColor: isDark ? AppColors.layer2 : AppColors.lightBackground,
               ),
               onSubmitted: (val) {
                 if (val.trim().isNotEmpty) _runQuery(val.trim());
@@ -1987,9 +2011,9 @@ class _NaturalLanguageQueryDialogState extends ConsumerState<NaturalLanguageQuer
                 spacing: 6,
                 runSpacing: 6,
                 children: _suggestedQueries.map((query) => ActionChip(
-                  label: Text(query, style: const TextStyle(fontSize: 11, color: Colors.white)),
-                  backgroundColor: AppColors.layer2,
-                  side: const BorderSide(color: AppColors.glassBorder),
+                  label: Text(query, style: TextStyle(fontSize: 11, color: isDark ? Colors.white : AppColors.lightText)),
+                  backgroundColor: isDark ? AppColors.layer2 : AppColors.lightBackground,
+                  side: BorderSide(color: isDark ? AppColors.glassBorder : AppColors.lightBorder),
                   onPressed: () => _runQuery(query),
                 )).toList(),
               ),
@@ -2007,13 +2031,13 @@ class _NaturalLanguageQueryDialogState extends ConsumerState<NaturalLanguageQuer
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.3),
+                  color: isDark ? Colors.black.withOpacity(0.3) : AppColors.lightBackground,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppColors.glassBorder),
+                  border: Border.all(color: isDark ? AppColors.glassBorder : AppColors.lightBorder),
                 ),
                 child: Text(
                   _response,
-                  style: GoogleFonts.inter(color: Colors.white, fontSize: 14, height: 1.5),
+                  style: GoogleFonts.inter(color: isDark ? Colors.white : AppColors.lightText, fontSize: 14, height: 1.5),
                 ),
               ),
             ],

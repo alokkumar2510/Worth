@@ -32,11 +32,14 @@ class _WorthBackgroundState extends State<WorthBackground> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Stack(
       children: [
-        // Deep space black base
+        // Base background color
         Positioned.fill(
-          child: Container(color: AppColors.darkBackground),
+          child: Container(color: isDark ? AppColors.darkBackground : AppColors.lightBackground),
         ),
 
         // Dynamic background elements with RepaintBoundary (isolated animation layer)
@@ -57,8 +60,9 @@ class _WorthBackgroundState extends State<WorthBackground> with SingleTickerProv
                       child: CustomPaint(
                         painter: MeshGradientPainter(
                           progress: _controller.value,
-                          primaryColor: AppColors.darkPrimary,
-                          glowColor: AppColors.glow,
+                          primaryColor: isDark ? AppColors.darkPrimary : AppColors.lightPrimary,
+                          glowColor: isDark ? AppColors.glow : AppColors.lightSecondary,
+                          isDark: isDark,
                         ),
                       ),
                     ),
@@ -66,7 +70,7 @@ class _WorthBackgroundState extends State<WorthBackground> with SingleTickerProv
                     // Floating Star Particles (Tactile depth)
                     Positioned.fill(
                       child: CustomPaint(
-                        painter: ParticlesPainter(particles: _particles),
+                        painter: ParticlesPainter(particles: _particles, isDark: isDark),
                       ),
                     ),
                   ],
@@ -81,7 +85,7 @@ class _WorthBackgroundState extends State<WorthBackground> with SingleTickerProv
           child: IgnorePointer(
             child: RepaintBoundary(
               child: CustomPaint(
-                painter: FrostNoisePainter(),
+                painter: FrostNoisePainter(isDark: isDark),
               ),
             ),
           ),
@@ -142,13 +146,14 @@ class Particle {
 
 class ParticlesPainter extends CustomPainter {
   final List<Particle> particles;
-  ParticlesPainter({required this.particles});
+  final bool isDark;
+  ParticlesPainter({required this.particles, required this.isDark});
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..style = PaintingStyle.fill;
     for (var p in particles) {
-      paint.color = Colors.white.withOpacity(p.opacity);
+      paint.color = (isDark ? Colors.white : Colors.black).withOpacity(p.opacity * (isDark ? 1.0 : 0.35));
       canvas.drawCircle(
         Offset(p.x * size.width, p.y * size.height),
         p.size,
@@ -165,11 +170,13 @@ class MeshGradientPainter extends CustomPainter {
   final double progress;
   final Color primaryColor;
   final Color glowColor;
+  final bool isDark;
 
   MeshGradientPainter({
     required this.progress,
     required this.primaryColor,
     required this.glowColor,
+    required this.isDark,
   });
 
   @override
@@ -184,7 +191,7 @@ class MeshGradientPainter extends CustomPainter {
     final paint1 = Paint()
       ..shader = RadialGradient(
         colors: [
-          primaryColor.withOpacity(0.18),
+          primaryColor.withOpacity(isDark ? 0.18 : 0.04),
           primaryColor.withOpacity(0.0),
         ],
       ).createShader(Rect.fromCircle(center: Offset(blob1x, blob1y), radius: blob1Radius));
@@ -198,7 +205,7 @@ class MeshGradientPainter extends CustomPainter {
     final paint2 = Paint()
       ..shader = RadialGradient(
         colors: [
-          glowColor.withOpacity(0.12),
+          glowColor.withOpacity(isDark ? 0.12 : 0.025),
           glowColor.withOpacity(0.0),
         ],
       ).createShader(Rect.fromCircle(center: Offset(blob2x, blob2y), radius: blob2Radius));
@@ -212,7 +219,7 @@ class MeshGradientPainter extends CustomPainter {
     final paint3 = Paint()
       ..shader = RadialGradient(
         colors: [
-          primaryColor.withOpacity(0.14),
+          primaryColor.withOpacity(isDark ? 0.14 : 0.03),
           primaryColor.withOpacity(0.0),
         ],
       ).createShader(Rect.fromCircle(center: Offset(blob3x, blob3y), radius: blob3Radius));
@@ -224,10 +231,13 @@ class MeshGradientPainter extends CustomPainter {
 }
 
 class FrostNoisePainter extends CustomPainter {
+  final bool isDark;
+  FrostNoisePainter({required this.isDark});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.015)
+      ..color = (isDark ? Colors.white : Colors.black).withOpacity(isDark ? 0.015 : 0.005)
       ..strokeWidth = 1.0;
 
     final List<Offset> points = [];

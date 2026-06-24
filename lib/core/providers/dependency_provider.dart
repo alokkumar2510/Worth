@@ -105,7 +105,16 @@ final netWorthProvider = StreamProvider<NetWorthData>((ref) {
     final dbState = ref.watch(mockDatabaseProvider);
     return Stream.value(
       NetWorthData(
+        personalBankBalance: dbState.personalBankBalance,
+        borrowedCashBalance: dbState.borrowedCashBalance,
+        personalReceivables: dbState.personalReceivables,
+        personalInvestments: dbState.personalInvestments,
+        borrowedInvestments: dbState.borrowedInvestments,
+        mtfInvestments: dbState.mtfInvestments,
         assets: dbState.totalAssets,
+        borrowedCapitalLiability: dbState.borrowedCapitalLiability,
+        mtfLiability: dbState.mtfLiability,
+        creditCardLiability: dbState.creditCardLiability,
         liabilities: dbState.totalLiabilities,
         netWorth: dbState.netWorth,
         investedCapital: dbState.totalInvestedCapital,
@@ -347,6 +356,9 @@ final activeSipsProvider = StreamProvider<List<domain.Sip>>((ref) {
       importMode: s.importMode,
       completedInstallmentsOverride: s.completedInstallmentsOverride,
       worthCreationDate: s.worthCreationDate,
+      firstInstallmentDate: s.firstInstallmentDate,
+      nextDueDate: s.nextDueDate,
+      lastCompletedInstallment: s.lastCompletedInstallment,
     )).toList();
     return Stream.value(list);
   } else {
@@ -367,6 +379,9 @@ final activeSipsProvider = StreamProvider<List<domain.Sip>>((ref) {
       importMode: entity.importMode,
       completedInstallmentsOverride: entity.completedInstallmentsOverride,
       worthCreationDate: entity.worthCreationDate,
+      firstInstallmentDate: entity.firstInstallmentDate,
+      nextDueDate: entity.nextDueDate,
+      lastCompletedInstallment: entity.lastCompletedInstallment,
     )).toList());
   }
 });

@@ -34,6 +34,9 @@ mixin _$Investment {
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
   String get syncStatus => throw _privateConstructorUsedError;
+  String? get fundSource => throw _privateConstructorUsedError;
+  String? get sourceAccount => throw _privateConstructorUsedError;
+  String? get ownershipType => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
@@ -60,7 +63,10 @@ abstract class $InvestmentCopyWith<$Res> {
       String? purchaseTime,
       DateTime createdAt,
       DateTime updatedAt,
-      String syncStatus});
+      String syncStatus,
+      String? fundSource,
+      String? sourceAccount,
+      String? ownershipType});
 }
 
 /// @nodoc
@@ -89,6 +95,9 @@ class _$InvestmentCopyWithImpl<$Res, $Val extends Investment>
     Object? createdAt = null,
     Object? updatedAt = null,
     Object? syncStatus = null,
+    Object? fundSource = freezed,
+    Object? sourceAccount = freezed,
+    Object? ownershipType = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -143,6 +152,18 @@ class _$InvestmentCopyWithImpl<$Res, $Val extends Investment>
           ? _value.syncStatus
           : syncStatus // ignore: cast_nullable_to_non_nullable
               as String,
+      fundSource: freezed == fundSource
+          ? _value.fundSource
+          : fundSource // ignore: cast_nullable_to_non_nullable
+              as String?,
+      sourceAccount: freezed == sourceAccount
+          ? _value.sourceAccount
+          : sourceAccount // ignore: cast_nullable_to_non_nullable
+              as String?,
+      ownershipType: freezed == ownershipType
+          ? _value.ownershipType
+          : ownershipType // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -168,7 +189,10 @@ abstract class _$$InvestmentImplCopyWith<$Res>
       String? purchaseTime,
       DateTime createdAt,
       DateTime updatedAt,
-      String syncStatus});
+      String syncStatus,
+      String? fundSource,
+      String? sourceAccount,
+      String? ownershipType});
 }
 
 /// @nodoc
@@ -195,6 +219,9 @@ class __$$InvestmentImplCopyWithImpl<$Res>
     Object? createdAt = null,
     Object? updatedAt = null,
     Object? syncStatus = null,
+    Object? fundSource = freezed,
+    Object? sourceAccount = freezed,
+    Object? ownershipType = freezed,
   }) {
     return _then(_$InvestmentImpl(
       id: null == id
@@ -249,6 +276,18 @@ class __$$InvestmentImplCopyWithImpl<$Res>
           ? _value.syncStatus
           : syncStatus // ignore: cast_nullable_to_non_nullable
               as String,
+      fundSource: freezed == fundSource
+          ? _value.fundSource
+          : fundSource // ignore: cast_nullable_to_non_nullable
+              as String?,
+      sourceAccount: freezed == sourceAccount
+          ? _value.sourceAccount
+          : sourceAccount // ignore: cast_nullable_to_non_nullable
+              as String?,
+      ownershipType: freezed == ownershipType
+          ? _value.ownershipType
+          : ownershipType // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -269,7 +308,10 @@ class _$InvestmentImpl implements _Investment {
       this.purchaseTime,
       required this.createdAt,
       required this.updatedAt,
-      this.syncStatus = 'pending'});
+      this.syncStatus = 'pending',
+      this.fundSource,
+      this.sourceAccount,
+      this.ownershipType});
 
   factory _$InvestmentImpl.fromJson(Map<String, dynamic> json) =>
       _$$InvestmentImplFromJson(json);
@@ -302,10 +344,16 @@ class _$InvestmentImpl implements _Investment {
   @override
   @JsonKey()
   final String syncStatus;
+  @override
+  final String? fundSource;
+  @override
+  final String? sourceAccount;
+  @override
+  final String? ownershipType;
 
   @override
   String toString() {
-    return 'Investment(id: $id, name: $name, type: $type, symbol: $symbol, marketValue: $marketValue, marketValueUpdatedAt: $marketValueUpdatedAt, isArchived: $isArchived, notes: $notes, purchaseDate: $purchaseDate, purchaseTime: $purchaseTime, createdAt: $createdAt, updatedAt: $updatedAt, syncStatus: $syncStatus)';
+    return 'Investment(id: $id, name: $name, type: $type, symbol: $symbol, marketValue: $marketValue, marketValueUpdatedAt: $marketValueUpdatedAt, isArchived: $isArchived, notes: $notes, purchaseDate: $purchaseDate, purchaseTime: $purchaseTime, createdAt: $createdAt, updatedAt: $updatedAt, syncStatus: $syncStatus, fundSource: $fundSource, sourceAccount: $sourceAccount, ownershipType: $ownershipType)';
   }
 
   @override
@@ -333,7 +381,13 @@ class _$InvestmentImpl implements _Investment {
             (identical(other.updatedAt, updatedAt) ||
                 other.updatedAt == updatedAt) &&
             (identical(other.syncStatus, syncStatus) ||
-                other.syncStatus == syncStatus));
+                other.syncStatus == syncStatus) &&
+            (identical(other.fundSource, fundSource) ||
+                other.fundSource == fundSource) &&
+            (identical(other.sourceAccount, sourceAccount) ||
+                other.sourceAccount == sourceAccount) &&
+            (identical(other.ownershipType, ownershipType) ||
+                other.ownershipType == ownershipType));
   }
 
   @JsonKey(ignore: true)
@@ -352,7 +406,10 @@ class _$InvestmentImpl implements _Investment {
       purchaseTime,
       createdAt,
       updatedAt,
-      syncStatus);
+      syncStatus,
+      fundSource,
+      sourceAccount,
+      ownershipType);
 
   @JsonKey(ignore: true)
   @override
@@ -382,7 +439,10 @@ abstract class _Investment implements Investment {
       final String? purchaseTime,
       required final DateTime createdAt,
       required final DateTime updatedAt,
-      final String syncStatus}) = _$InvestmentImpl;
+      final String syncStatus,
+      final String? fundSource,
+      final String? sourceAccount,
+      final String? ownershipType}) = _$InvestmentImpl;
 
   factory _Investment.fromJson(Map<String, dynamic> json) =
       _$InvestmentImpl.fromJson;
@@ -413,6 +473,12 @@ abstract class _Investment implements Investment {
   DateTime get updatedAt;
   @override
   String get syncStatus;
+  @override
+  String? get fundSource;
+  @override
+  String? get sourceAccount;
+  @override
+  String? get ownershipType;
   @override
   @JsonKey(ignore: true)
   _$$InvestmentImplCopyWith<_$InvestmentImpl> get copyWith =>

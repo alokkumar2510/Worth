@@ -22,6 +22,9 @@ class Sips extends Table {
   TextColumn get deviceId => text().nullable()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
   TextColumn get deletedBy => text().nullable()();
+  DateTimeColumn get firstInstallmentDate => dateTime().nullable()();
+  DateTimeColumn get nextDueDate => dateTime().nullable()();
+  DateTimeColumn get lastCompletedInstallment => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

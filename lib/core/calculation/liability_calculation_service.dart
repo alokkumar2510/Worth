@@ -265,63 +265,76 @@ class LiabilityCalculationService {
 
     return null;
   }
-
-  // Sum of all active liability balances in the system
-  static double calculateTotalLiabilities(MockDatabaseState state, [DateTime? today]) {
-    final targetToday = today ?? DateTime.now();
+  static double calculateCreditCardLiability(MockDatabaseState state) {
     double total = 0.0;
-
-    // 1. Active Credit Cards
-    final ccCards = state.accounts.where((a) => a.isArchived == 0 && a.type == 'credit');
+    final ccCards = state.accounts.where((a) => a.isArchived == 0 && (a.type == 'credit' || a.liabilityType == 'CREDIT_CARD'));
     for (final cc in ccCards) {
       total += calculateCreditCard(cc, state.transactions, state.adjustments).finalBalance;
     }
+    return total;
+  }
 
-    // 2. Active Peer Liabilities (outstanding amount > 0)
-    final peers = state.people.where((p) => p.isArchived == 0 && p.type != 'broker');
+  static double calculateBorrowedCapitalLiability(MockDatabaseState state) {
+    double total = 0.0;
+    final peers = state.people.where((p) => p.isArchived == 0 && p.type != 'broker' && (p.ownershipType == 'BORROWED' || p.liabilityType == 'BORROWED_CAPITAL' || p.type == 'borrowing'));
     for (final p in peers) {
       final bal = calculatePeerLiability(p, state.transactions, state.adjustments).finalBalance;
       if (bal > 0) {
         total += bal;
       }
     }
+    return total;
+  }
 
-    // 3. Active MTF Positions
+  static double calculateMtfLiability(MockDatabaseState state, [DateTime? today]) {
+    final targetToday = today ?? DateTime.now();
+    double total = 0.0;
     final mtfs = state.mtfPositions.where((m) => m.isClosed == 0 && m.deletedAt == null);
     for (final mtf in mtfs) {
       total += calculateMtfPosition(mtf, state.transactions, targetToday).finalBalance;
     }
-
     return total;
+  }
+
+  // Sum of all active liability balances in the system
+  static double calculateTotalLiabilities(MockDatabaseState state, [DateTime? today]) {
+    final targetToday = today ?? DateTime.now();
+    return calculateCreditCardLiability(state) +
+        calculateBorrowedCapitalLiability(state) +
+        calculateMtfLiability(state, targetToday);
   }
 
   // Centralized Net Worth = Total Assets - Total Liabilities
   static double calculateNetWorth(MockDatabaseState state, [DateTime? today]) {
     final targetToday = today ?? DateTime.now();
 
-    // Assets sum: Cash & Bank accounts + receivables + investment principal
-    double assetsSum = 0.0;
-    
-    // Account cash balances (accounts != credit)
-    for (final acc in state.accounts.where((a) => a.isArchived == 0 && a.type != 'credit')) {
-      assetsSum += state.getAccountCashBalance(acc.id);
-    }
+    final double personalBank = state.accounts
+        .where((a) => a.isArchived == 0 && a.type != 'credit' && (a.ownershipType == 'PERSONAL' || a.ownershipType == null))
+        .fold(0.0, (sum, a) => sum + state.getAccountCashBalance(a.id));
 
-    // Receivables (people where receivable balance > 0)
-    for (final p in state.people.where((p) => p.isArchived == 0)) {
-      final rec = state.getPersonReceivableBalance(p.id);
-      if (rec > 0) {
-        assetsSum += rec;
-      }
-    }
+    final double borrowedCash = state.accounts
+        .where((a) => a.isArchived == 0 && a.type != 'credit' && a.ownershipType == 'BORROWED')
+        .fold(0.0, (sum, a) => sum + state.getAccountCashBalance(a.id));
 
-    // Investment invested capital (principal)
-    for (final inv in state.investments.where((i) => i.isArchived == 0)) {
-      assetsSum += state.getInvestmentInvestedCapital(inv.id);
-    }
+    final double receivables = state.people
+        .where((p) => p.isArchived == 0 && (p.ownershipType == 'PERSONAL' || p.ownershipType == null))
+        .fold(0.0, (sum, p) => sum + state.getPersonReceivableBalance(p.id));
 
+    final double personalInv = state.investments
+        .where((i) => i.isArchived == 0 && (i.fundSource == 'PERSONAL' || i.fundSource == null))
+        .fold(0.0, (sum, i) => sum + state.getInvestmentInvestedCapital(i.id));
+
+    final double borrowedInv = state.investments
+        .where((i) => i.isArchived == 0 && i.fundSource == 'BORROWED')
+        .fold(0.0, (sum, i) => sum + state.getInvestmentInvestedCapital(i.id));
+
+    final double mtfInv = state.investments
+        .where((i) => i.isArchived == 0 && i.fundSource == 'MTF')
+        .fold(0.0, (sum, i) => sum + state.getInvestmentInvestedCapital(i.id));
+
+    final double totalAssets = personalBank + borrowedCash + receivables + personalInv + borrowedInv + mtfInv;
     final double totalLiabilities = calculateTotalLiabilities(state, targetToday);
 
-    return assetsSum - totalLiabilities;
+    return totalAssets - totalLiabilities;
   }
 }

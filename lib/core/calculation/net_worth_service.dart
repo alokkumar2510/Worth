@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import 'package:collection/collection.dart';
 import '../../database/database.dart';
 import 'liability_calculation_service.dart';
+import '../providers/mock_database.dart';
 
 class NetWorthService {
   final AppDatabase _db;
@@ -63,116 +64,106 @@ class NetWorthService {
 
   // Computes the current Net Worth, Assets, and Liabilities from caches
   Future<NetWorthData> calculateNetWorth() async {
-    // 1. Fetch account balances and join with accounts to check the type
-    final accountBalances = await (_db.select(_db.accountBalanceCaches).join([
-      innerJoin(_db.accounts, _db.accounts.id.equalsExp(_db.accountBalanceCaches.accountId)),
-    ])).get();
+    final rawAccounts = await _db.select(_db.accounts).get();
+    final rawPeople = await _db.select(_db.people).get();
+    final rawTransactions = await _db.select(_db.transactions).get();
+    final rawAdjustments = await _db.select(_db.adjustments).get();
+    final rawMtf = await _db.select(_db.mtfPositions).get();
+    final rawInvestments = await _db.select(_db.investments).get();
+    final rawLots = await _db.select(_db.investmentLots).get();
 
-    double cashAssets = 0.0;
-    double creditLiabilities = 0.0;
-    double debtFundedAssets = 0.0;
+    final state = MockDatabaseState(
+      accounts: rawAccounts.where((x) => x.deletedAt == null).toList(),
+      people: rawPeople.where((x) => x.deletedAt == null).toList(),
+      transactions: rawTransactions.where((x) => x.deletedAt == null).toList(),
+      adjustments: rawAdjustments.toList(),
+      mtfPositions: rawMtf.where((x) => x.deletedAt == null).toList(),
+      investments: rawInvestments.where((x) => x.deletedAt == null).toList(),
+      investmentLots: rawLots.toList(),
+    );
 
-    final Map<String, double> breakdown = {
-      'existing_cash': 0.0,
-      'salary_income': 0.0,
-      'business_income': 0.0,
-      'receivable_collected': 0.0,
-      'liability_borrowed': 0.0,
-      'mixed_sources': 0.0,
-    };
+    final double personalBank = state.accounts
+        .where((a) => a.isArchived == 0 && a.type != 'credit' && (a.ownershipType == 'PERSONAL' || a.ownershipType == null))
+        .fold(0.0, (sum, a) => sum + state.getAccountCashBalance(a.id));
 
-    for (final row in accountBalances) {
-      final cache = row.readTable(_db.accountBalanceCaches);
-      final account = row.readTable(_db.accounts);
+    final double borrowedCash = state.accounts
+        .where((a) => a.isArchived == 0 && a.type != 'credit' && a.ownershipType == 'BORROWED')
+        .fold(0.0, (sum, a) => sum + state.getAccountCashBalance(a.id));
 
-      if (account.type == 'credit') {
-        creditLiabilities += cache.liabilityBalance;
-      } else {
-        final bal = cache.cashBalance;
-        cashAssets += bal;
-        final source = account.fundingSource ?? 'existing_cash';
-        breakdown[source] = (breakdown[source] ?? 0.0) + bal;
-        debtFundedAssets += _getDebtPortion(source, account.fundingDetails, bal);
-      }
-    }
+    final double personalReceivables = state.people
+        .where((p) => p.isArchived == 0 && (p.ownershipType == 'PERSONAL' || p.ownershipType == null))
+        .fold(0.0, (sum, p) => sum + state.getPersonReceivableBalance(p.id));
 
-    // 2. Fetch person balances (outstanding receivables and liabilities)
-    final personBalances = await _db.select(_db.personBalanceCaches).get();
-    double receivables = 0.0;
-    double personLiabilities = 0.0;
-    final lendTxs = await (_db.select(_db.transactions)..where((tbl) => tbl.type.equals('lend_money'))).get();
+    final double personalInv = state.investments
+        .where((i) => i.isArchived == 0 && (i.fundSource == 'PERSONAL' || i.fundSource == null))
+        .fold(0.0, (sum, i) => sum + state.getInvestmentInvestedCapital(i.id));
 
-    for (final cache in personBalances) {
-      receivables += cache.receivableBalance;
-      personLiabilities += cache.liabilityBalance;
+    final double borrowedInv = state.investments
+        .where((i) => i.isArchived == 0 && i.fundSource == 'BORROWED')
+        .fold(0.0, (sum, i) => sum + state.getInvestmentInvestedCapital(i.id));
 
-      final bal = cache.receivableBalance;
-      if (bal > 0) {
-        final tx = lendTxs.firstWhereOrNull((t) => t.personId == cache.personId);
-        final source = tx?.fundingSource ?? 'existing_cash';
-        breakdown[source] = (breakdown[source] ?? 0.0) + bal;
-        debtFundedAssets += _getDebtPortion(source, tx?.fundingDetails, bal);
-      }
-    }
+    final double mtfInv = state.investments
+        .where((i) => i.isArchived == 0 && i.fundSource == 'MTF')
+        .fold(0.0, (sum, i) => sum + state.getInvestmentInvestedCapital(i.id));
 
-    // 3. Fetch investment balances (invested capital)
-    final investmentBalances = await _db.select(_db.investmentBalanceCaches).get();
-    final investments = await (_db.select(_db.investments)..where((tbl) => tbl.isArchived.equals(0))).get();
-    double investedCapital = 0.0;
+    final double totalAssets = personalBank + borrowedCash + personalReceivables + personalInv + borrowedInv + mtfInv;
 
-    for (final cache in investmentBalances) {
-      final bal = cache.investedCapital;
-      investedCapital += bal;
-
-      final inv = investments.firstWhereOrNull((i) => i.id == cache.investmentId);
-      final source = inv?.fundingSource ?? 'existing_cash';
-      breakdown[source] = (breakdown[source] ?? 0.0) + bal;
-      debtFundedAssets += _getDebtPortion(source, inv?.fundingDetails, bal);
-    }
-
-    // Fetch active MTF positions
-    final activeMtfs = await (_db.select(_db.mtfPositions)
-          ..where((tbl) => tbl.isClosed.equals(0) & tbl.deletedAt.isNull()))
-        .get();
-    
-    // Fetch transactions to compute interest / repayments if any
-    final rawTxs = await _db.select(_db.transactions).get();
-    
-    double mtfLiabilities = 0.0;
-    for (final pos in activeMtfs) {
-      mtfLiabilities += LiabilityCalculationService.calculateMtfPosition(pos, rawTxs, DateTime.now()).finalBalance;
-    }
-
-    final double totalAssets = cashAssets + receivables + investedCapital;
-    final double totalLiabilities = personLiabilities + creditLiabilities + mtfLiabilities;
+    final double borrowedCapitalLiability = LiabilityCalculationService.calculateBorrowedCapitalLiability(state);
+    final double mtfLiability = LiabilityCalculationService.calculateMtfLiability(state);
+    final double creditCardLiability = LiabilityCalculationService.calculateCreditCardLiability(state);
+    final double totalLiabilities = borrowedCapitalLiability + mtfLiability + creditCardLiability;
     final double netWorth = totalAssets - totalLiabilities;
 
+    final double debtFunded = borrowedCash + borrowedInv + mtfInv;
+    final double selfFunded = personalBank + personalReceivables + personalInv;
+
+    final Map<String, double> breakdown = {
+      'PERSONAL': selfFunded,
+      'BORROWED': borrowedCash + borrowedInv,
+      'MTF': mtfInv,
+    };
+
     return NetWorthData(
+      personalBankBalance: personalBank,
+      borrowedCashBalance: borrowedCash,
+      personalReceivables: personalReceivables,
+      personalInvestments: personalInv,
+      borrowedInvestments: borrowedInv,
+      mtfInvestments: mtfInv,
       assets: totalAssets,
+      borrowedCapitalLiability: borrowedCapitalLiability,
+      mtfLiability: mtfLiability,
+      creditCardLiability: creditCardLiability,
       liabilities: totalLiabilities,
       netWorth: netWorth,
-      investedCapital: investedCapital,
-      debtFundedAssets: debtFundedAssets,
-      selfFundedAssets: totalAssets - debtFundedAssets,
+      investedCapital: personalInv + borrowedInv + mtfInv,
+      debtFundedAssets: debtFunded,
+      selfFundedAssets: selfFunded,
       fundingSourceBreakdown: breakdown,
     );
   }
 
   // Reactive stream of Net Worth changes by watching the cache tables
   Stream<NetWorthData> watchNetWorth() {
-    // We watch all three cache tables. Whenever any updates, we recalculate.
     final accountStream = _db.select(_db.accountBalanceCaches).watch();
-    final personStream = _db.select(_db.personBalanceCaches).watch();
-    final investmentStream = _db.select(_db.investmentBalanceCaches).watch();
-
-    // Combine streams to trigger calculation
     return accountStream.asyncMap((_) async => calculateNetWorth());
   }
 }
 
 class NetWorthData {
+  final double personalBankBalance;
+  final double borrowedCashBalance;
+  final double personalReceivables;
+  final double personalInvestments;
+  final double borrowedInvestments;
+  final double mtfInvestments;
   final double assets;
+
+  final double borrowedCapitalLiability;
+  final double mtfLiability;
+  final double creditCardLiability;
   final double liabilities;
+
   final double netWorth;
   final double investedCapital;
   final double debtFundedAssets;
@@ -180,7 +171,16 @@ class NetWorthData {
   final Map<String, double> fundingSourceBreakdown;
 
   NetWorthData({
+    required this.personalBankBalance,
+    required this.borrowedCashBalance,
+    required this.personalReceivables,
+    required this.personalInvestments,
+    required this.borrowedInvestments,
+    required this.mtfInvestments,
     required this.assets,
+    required this.borrowedCapitalLiability,
+    required this.mtfLiability,
+    required this.creditCardLiability,
     required this.liabilities,
     required this.netWorth,
     required this.investedCapital,

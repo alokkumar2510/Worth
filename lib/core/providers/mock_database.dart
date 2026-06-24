@@ -25,6 +25,7 @@ import '../../features/investments/domain/entities/sip.dart' as domain;
 import '../utils/sip_calculator.dart';
 import '../calculation/liability_calculation_service.dart';
 import '../../features/calendar/domain/entities/calendar_event.dart';
+import '../services/notification_service.dart' show kChannelReminders;
 
 
 class MockDatabaseState {
@@ -388,116 +389,122 @@ class MockDatabaseState {
     return value - capital;
   }
 
-  double get totalAssets {
-    // 1. Account Cash Balances (non-credit type)
-    double cash = 0.0;
-    for (final acc in accounts) {
-      if (acc.isArchived == 0 && acc.type != 'credit') {
-        cash += getAccountCashBalance(acc.id);
-      }
-    }
-
-    // 2. Receivables from people
-    double receivables = 0.0;
-    for (final p in people) {
-      if (p.isArchived == 0) {
-        receivables += getPersonReceivableBalance(p.id);
-      }
-    }
-
-    // 3. Invested Capital across all investments
-    double invested = 0.0;
-    for (final inv in investments) {
-      if (inv.isArchived == 0) {
-        invested += getInvestmentInvestedCapital(inv.id);
-      }
-    }
-
-    return cash + receivables + invested;
-  }
-
-  double get totalLiabilities {
-    return LiabilityCalculationService.calculateTotalLiabilities(this);
-  }
-
-  double get netWorth {
-    return LiabilityCalculationService.calculateNetWorth(this);
-  }
-
-  double get debtFundedAssets {
+  double get personalBankBalance {
     double total = 0.0;
-    
-    // 1. Accounts
     for (final acc in accounts) {
-      if (acc.isArchived == 0 && acc.type != 'credit') {
-        final bal = getAccountCashBalance(acc.id);
-        total += _getDebtPortion(acc.fundingSource, acc.fundingDetails, bal);
+      if (acc.isArchived == 0 && acc.type != 'credit' && (acc.ownershipType == 'PERSONAL' || acc.ownershipType == null)) {
+        total += getAccountCashBalance(acc.id);
       }
     }
-    
-    // 2. Receivables
-    for (final p in people) {
-      if (p.isArchived == 0) {
-        final bal = getPersonReceivableBalance(p.id);
-        final tx = transactions.firstWhereOrNull((t) => t.type == 'lend_money' && t.personId == p.id);
-        total += _getDebtPortion(tx?.fundingSource, tx?.fundingDetails, bal);
-      }
-    }
-    
-    // 3. Investments
-    for (final inv in investments) {
-      if (inv.isArchived == 0) {
-        final bal = getInvestmentInvestedCapital(inv.id);
-        total += _getDebtPortion(inv.fundingSource, inv.fundingDetails, bal);
-      }
-    }
-    
     return total;
   }
 
+  double get borrowedCashBalance {
+    double total = 0.0;
+    for (final acc in accounts) {
+      if (acc.isArchived == 0 && acc.type != 'credit' && acc.ownershipType == 'BORROWED') {
+        total += getAccountCashBalance(acc.id);
+      }
+    }
+    return total;
+  }
+
+  double get personalReceivables {
+    double total = 0.0;
+    for (final p in people) {
+      if (p.isArchived == 0 && (p.ownershipType == 'PERSONAL' || p.ownershipType == null)) {
+        total += getPersonReceivableBalance(p.id);
+      }
+    }
+    return total;
+  }
+
+  double get personalInvestments {
+    double total = 0.0;
+    for (final inv in investments) {
+      if (inv.isArchived == 0 && (inv.fundSource == 'PERSONAL' || inv.fundSource == null)) {
+        total += getInvestmentInvestedCapital(inv.id);
+      }
+    }
+    return total;
+  }
+
+  double get borrowedInvestments {
+    double total = 0.0;
+    for (final inv in investments) {
+      if (inv.isArchived == 0 && inv.fundSource == 'BORROWED') {
+        total += getInvestmentInvestedCapital(inv.id);
+      }
+    }
+    return total;
+  }
+
+  double get mtfInvestments {
+    double total = 0.0;
+    for (final inv in investments) {
+      if (inv.isArchived == 0 && inv.fundSource == 'MTF') {
+        total += getInvestmentInvestedCapital(inv.id);
+      }
+    }
+    return total;
+  }
+
+  double get totalAssets {
+    return personalBankBalance + borrowedCashBalance + personalReceivables + personalInvestments + borrowedInvestments + mtfInvestments;
+  }
+
+  double get borrowedCapitalLiability {
+    double total = 0.0;
+    final peers = people.where((p) => p.isArchived == 0 && p.type != 'broker' && (p.ownershipType == 'BORROWED' || p.liabilityType == 'BORROWED_CAPITAL' || p.type == 'borrowing'));
+    for (final p in peers) {
+      final bal = getPersonLiabilityBalance(p.id);
+      if (bal > 0) {
+        total += bal;
+      }
+    }
+    return total;
+  }
+
+  double get mtfLiability {
+    double total = 0.0;
+    final mtfs = mtfPositions.where((m) => m.isClosed == 0 && m.deletedAt == null);
+    for (final mtf in mtfs) {
+      total += LiabilityCalculationService.calculateMtfPosition(mtf, transactions, DateTime.now()).finalBalance;
+    }
+    return total;
+  }
+
+  double get creditCardLiability {
+    double total = 0.0;
+    final ccCards = accounts.where((a) => a.isArchived == 0 && (a.type == 'credit' || a.liabilityType == 'CREDIT_CARD'));
+    for (final cc in ccCards) {
+      total += getAccountLiabilityBalance(cc.id);
+    }
+    return total;
+  }
+
+  double get totalLiabilities {
+    return borrowedCapitalLiability + mtfLiability + creditCardLiability;
+  }
+
+  double get netWorth {
+    return totalAssets - totalLiabilities;
+  }
+
+  double get debtFundedAssets {
+    return borrowedCashBalance + borrowedInvestments + mtfInvestments;
+  }
+
   double get selfFundedAssets {
-    return totalAssets - debtFundedAssets;
+    return personalBankBalance + personalReceivables + personalInvestments;
   }
 
   Map<String, double> get fundingSourceBreakdown {
-    final Map<String, double> breakdown = {
-      'existing_cash': 0.0,
-      'salary_income': 0.0,
-      'business_income': 0.0,
-      'receivable_collected': 0.0,
-      'liability_borrowed': 0.0,
-      'mixed_sources': 0.0,
+    return {
+      'PERSONAL': selfFundedAssets,
+      'BORROWED': borrowedCashBalance + borrowedInvestments,
+      'MTF': mtfInvestments,
     };
-    
-    // 1. Accounts
-    for (final acc in accounts) {
-      if (acc.isArchived == 0 && acc.type != 'credit') {
-        final bal = getAccountCashBalance(acc.id);
-        final source = acc.fundingSource ?? 'existing_cash';
-        breakdown[source] = (breakdown[source] ?? 0.0) + bal;
-      }
-    }
-    
-    // 2. Receivables
-    for (final p in people) {
-      if (p.isArchived == 0) {
-        final bal = getPersonReceivableBalance(p.id);
-        final tx = transactions.firstWhereOrNull((t) => t.type == 'lend_money' && t.personId == p.id);
-        final source = tx?.fundingSource ?? 'existing_cash';
-        breakdown[source] = (breakdown[source] ?? 0.0) + bal;
-      }
-    }
-    
-    // 3. Investments
-    for (final inv in investments) {
-      if (inv.isArchived == 0) {
-        final bal = getInvestmentInvestedCapital(inv.id);
-        final source = inv.fundingSource ?? 'existing_cash';
-        breakdown[source] = (breakdown[source] ?? 0.0) + bal;
-      }
-    }
-    
-    return breakdown;
   }
 
   double _getDebtPortion(String? fundingSource, String? fundingDetails, double assetValue) {
@@ -2351,10 +2358,32 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     String? fundingSource,
     String? fundingLiabilityId,
     String? fundingDetails,
+    String? sipId,
+    int? executionMonth,
+    int? executionYear,
   }) async {
-    final resolvedFromAccountId = (fromAccountId == 'acc_primary_bank_uuid')
+    if (sipId != null && executionMonth != null && executionYear != null) {
+      final alreadyExists = state.transactions.any((t) =>
+          t.sipId == sipId &&
+          t.executionMonth == executionMonth &&
+          t.executionYear == executionYear);
+      if (alreadyExists) {
+        print('[MockDatabase] Transaction already exists for SIP: $sipId in $executionMonth/$executionYear. Skipping duplicate.');
+        return;
+      }
+    }
+
+    var resolvedFromAccountId = (fromAccountId == 'acc_primary_bank_uuid')
         ? await _getOrCreateDefaultAccountId()
         : fromAccountId;
+
+    if ((resolvedFromAccountId == null || resolvedFromAccountId.isEmpty) &&
+        fundingSource == 'liability_borrowed' &&
+        fundingLiabilityId != null &&
+        fundingLiabilityId.startsWith('acc_')) {
+      resolvedFromAccountId = fundingLiabilityId;
+    }
+
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
       await _ref.read(realInvestmentServiceProvider).buyInvestment(
@@ -2367,11 +2396,17 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         fundingSource: fundingSource,
         fundingLiabilityId: fundingLiabilityId,
         fundingDetails: fundingDetails,
+        sipId: sipId,
+        executionMonth: executionMonth,
+        executionYear: executionYear,
       );
       await loadStateFromDatabase();
     } else {
       final amount = units * pricePerUnit;
+      final buyTxId = _uuid.v4();
+      
       final tx = _createTransactionInternal(
+        id: buyTxId,
         type: 'investment_buy',
         amount: amount,
         fromAccountId: resolvedFromAccountId,
@@ -2381,6 +2416,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         fundingSource: fundingSource,
         fundingLiabilityId: fundingLiabilityId,
         fundingDetails: fundingDetails,
+        transactionUuid: buyTxId,
+        operationUuid: buyTxId,
+        sourceRecordId: investmentId,
+        sipId: sipId,
+        executionMonth: executionMonth,
+        executionYear: executionYear,
       );
 
       final lotId = _uuid.v4();
@@ -2401,6 +2442,28 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       );
 
       state = state.copyWith(investmentLots: [...state.investmentLots, newLot]);
+
+      // If peer lender (person_), automatically create a borrow_money transaction
+      if (fundingSource == 'liability_borrowed' &&
+          fundingLiabilityId != null &&
+          fundingLiabilityId.startsWith('person_')) {
+        
+        final borrowTxId = '${buyTxId}_borrow';
+        final alreadyExists = state.transactions.any((t) => t.id == borrowTxId || t.transactionUuid == borrowTxId);
+        if (!alreadyExists) {
+          _createTransactionInternal(
+            id: borrowTxId,
+            type: 'borrow_money',
+            amount: amount,
+            personId: fundingLiabilityId,
+            notes: 'Borrowed to buy investment: $investmentId (Linked: $buyTxId)',
+            date: date,
+            transactionUuid: borrowTxId,
+            operationUuid: buyTxId,
+            sourceRecordId: fundingLiabilityId,
+          );
+        }
+      }
     }
     final investment = state.investments.firstWhere((i) => i.id == investmentId);
     await _logHistory(
@@ -3135,6 +3198,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     if (!isMock) {
       await _ref.read(realTransactionServiceProvider).voidTransaction(transactionId);
       _queueSync('transaction', transactionId, 'upsert');
+      await loadStateFromDatabase();
     } else {
       final orig = state.transactions.firstWhere((t) => t.id == transactionId);
       final voidTxId = _uuid.v4();
@@ -3231,7 +3295,16 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         return t;
       }).toList();
 
+      // Find linked transactions and recursively void them
+      final linkedTxs = state.transactions
+          .where((t) => t.id.startsWith('${transactionId}_') && t.type != 'void' && t.voidedTransactionId == null)
+          .toList();
+
       state = state.copyWith(transactions: [voidTx, ...updatedTxs]);
+
+      for (final linkedTx in linkedTxs) {
+        await voidTransaction(linkedTx.id);
+      }
     }
 
     final orig = state.transactions.firstWhereOrNull((t) => t.id == transactionId);
@@ -3397,9 +3470,16 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     String? fundingSource,
     String? fundingLiabilityId,
     String? fundingDetails,
+    String? id,
+    String? transactionUuid,
+    String? operationUuid,
+    String? sourceRecordId,
+    String? sipId,
+    int? executionMonth,
+    int? executionYear,
   }) {
     final newTx = Transaction(
-      id: _uuid.v4(),
+      id: id ?? _uuid.v4(),
       type: type,
       amount: amount,
       category: category,
@@ -3416,6 +3496,12 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       fundingSource: fundingSource,
       fundingLiabilityId: fundingLiabilityId,
       fundingDetails: fundingDetails,
+      transactionUuid: transactionUuid,
+      operationUuid: operationUuid,
+      sourceRecordId: sourceRecordId,
+      sipId: sipId,
+      executionMonth: executionMonth,
+      executionYear: executionYear,
     );
 
     state = state.copyWith(transactions: [newTx, ...state.transactions]);
@@ -4680,6 +4766,24 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     final now = DateTime.now().toUtc();
     final worthCreation = worthCreationDate ?? now;
 
+    final todayMidnight = DateTime(now.year, now.month, now.day);
+    final startDateMidnight = DateTime(startDate.year, startDate.month, startDate.day);
+    
+    // Creating a SIP must only create a SIP schedule record.
+    // It must NOT create an investment transaction and must NOT deduct money.
+    final DateTime? firstInstallmentDate = null;
+    final DateTime? lastCompletedInstallment = null;
+
+    DateTime? nextDueDate = startDateMidnight;
+    while (nextDueDate != null && nextDueDate.isBefore(todayMidnight)) {
+      final next = SipCalculator.calculateNextDueDate(nextDueDate, frequency, sipDate);
+      if (endDate != null && next.isAfter(endDate)) {
+        nextDueDate = null;
+      } else {
+        nextDueDate = next;
+      }
+    }
+
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
       final repo = _ref.read(realSipRepositoryProvider);
@@ -4699,6 +4803,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         importMode: importMode,
         completedInstallmentsOverride: completedInstallmentsOverride,
         worthCreationDate: worthCreation,
+        firstInstallmentDate: firstInstallmentDate,
+        nextDueDate: nextDueDate,
+        lastCompletedInstallment: lastCompletedInstallment,
       );
       await repo.createSip(domainSip);
       _queueSync('sip', id, 'upsert');
@@ -4719,6 +4826,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         importMode: importMode,
         completedInstallmentsOverride: completedInstallmentsOverride,
         worthCreationDate: worthCreation,
+        firstInstallmentDate: firstInstallmentDate,
+        nextDueDate: nextDueDate,
+        lastCompletedInstallment: lastCompletedInstallment,
       );
       state = state.copyWith(sips: [...state.sips, newSip]);
     }
@@ -4733,65 +4843,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       newValue: 'Frequency: $frequency, Day: $sipDate',
     );
 
-    // Pre-populate historical transactions based on import mode
-    final todayMidnight = DateTime(now.year, now.month, now.day);
-    if (startDate.isBefore(todayMidnight)) {
-      final scheduledDates = SipCalculator.calculateScheduledDates(
-        startDate: startDate,
-        frequency: frequency,
-        sipDate: sipDate,
-        startLimit: startDate,
-        endLimit: todayMidnight,
-        endDate: endDate,
-      );
-
-      List<DateTime> datesToGenerate = [];
-      if (importMode == 'paid') {
-        datesToGenerate = scheduledDates;
-      } else if (importMode == 'manual' && completedInstallmentsOverride > 0) {
-        final N = completedInstallmentsOverride;
-        datesToGenerate = scheduledDates.length > N
-            ? scheduledDates.sublist(scheduledDates.length - N)
-            : scheduledDates;
-      }
-
-      if (datesToGenerate.isNotEmpty) {
-        final fromAcc = state.accounts.firstWhereOrNull((a) => a.id == 'acc_primary_bank_uuid') ?? state.accounts.firstOrNull;
-        final marketPrice = investment?.marketValue ?? 1.0;
-        final price = marketPrice > 0 ? marketPrice : 1.0;
-        final units = amount / price;
-        final invName = investment?.name ?? 'Investment';
-
-        for (final date in datesToGenerate) {
-          await buyInvestment(
-            investmentId,
-            fromAcc?.id,
-            units,
-            price,
-            'SIP Auto-Invest: $invName (SIP ID: $id)',
-            date,
-          );
-        }
-
-        // Auto-update earliest purchase date of the investment if not already set or if earlier than current purchaseDate
-        if (investment != null) {
-          final earliestDate = datesToGenerate.first;
-          if (investment.purchaseDate == null || investment.purchaseDate!.isAfter(earliestDate)) {
-            await updateInvestment(
-              investmentId,
-              investment.name,
-              investment.type,
-              investment.symbol,
-              investment.notes,
-              purchaseDate: earliestDate,
-              purchaseTime: investment.purchaseTime,
-            );
-          }
-        }
-      }
-    }
-
-    // Check if we should process it immediately
+    // Check if we should process it immediately (will process today's date if nextDueDate is today)
     await runAutoSipProcessing();
   }
 
@@ -4813,6 +4865,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         createdAt: sip.createdAt,
         updatedAt: DateTime.now().toUtc(),
         syncStatus: sip.syncStatus,
+        firstInstallmentDate: sip.firstInstallmentDate,
+        nextDueDate: sip.nextDueDate,
+        lastCompletedInstallment: sip.lastCompletedInstallment,
       );
       await repo.updateSip(domainSip);
       _queueSync('sip', sip.id, 'upsert');
@@ -4878,6 +4933,9 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
         createdAt: updatedSip.createdAt,
         updatedAt: updatedSip.updatedAt,
         syncStatus: updatedSip.syncStatus,
+        firstInstallmentDate: updatedSip.firstInstallmentDate,
+        nextDueDate: updatedSip.nextDueDate,
+        lastCompletedInstallment: updatedSip.lastCompletedInstallment,
       );
       await repo.updateSip(domainSip);
       _queueSync('sip', updatedSip.id, 'upsert');
@@ -4897,70 +4955,90 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       
       final activeSips = state.sips.where((s) => s.isActive == 1).toList();
       for (final sip in activeSips) {
-        if (sip.startDate.isAfter(today)) continue;
-        if (sip.endDate != null && sip.endDate!.isBefore(today)) continue;
-
-        bool matches = false;
-        if (sip.frequency == 'weekly') {
-          if (today.weekday == sip.sipDate) {
-            matches = true;
+        var currentSip = sip;
+        
+        if (currentSip.nextDueDate == null) {
+          if (currentSip.endDate != null && 
+              currentSip.lastCompletedInstallment != null && 
+              currentSip.lastCompletedInstallment!.isAfter(currentSip.endDate!)) {
+            continue;
           }
-        } else if (sip.frequency == 'monthly') {
-          final daysInMonth = DateTime(today.year, today.month + 1, 0).day;
-          final targetDay = sip.sipDate > daysInMonth ? daysInMonth : sip.sipDate;
-          if (today.day == targetDay) {
-            matches = true;
-          }
-        } else if (sip.frequency == 'quarterly') {
-          final monthDiff = today.month - sip.startDate.month;
-          if (monthDiff % 3 == 0) {
-            final daysInMonth = DateTime(today.year, today.month + 1, 0).day;
-            final targetDay = sip.sipDate > daysInMonth ? daysInMonth : sip.sipDate;
-            if (today.day == targetDay) {
-              matches = true;
-            }
-          }
+          currentSip = currentSip.copyWith(nextDueDate: Value(currentSip.startDate));
         }
 
-        if (matches) {
+        int catchUpLoops = 0;
+        while (currentSip.nextDueDate != null && 
+               (currentSip.nextDueDate!.isBefore(today) || currentSip.nextDueDate!.isAtSameMomentAs(today)) && 
+               catchUpLoops < 50) {
+          catchUpLoops++;
+          
+          final dueDate = currentSip.nextDueDate!;
+          final investment = state.investments.firstWhereOrNull((i) => i.id == currentSip.investmentId);
+          final invName = investment?.name ?? 'Investment';
+          
+          // Check if transaction is already processed for this date/month/year to prevent duplicate processing
           final alreadyProcessed = state.transactions.any((t) =>
-              t.type == 'investment_buy' &&
-              t.investmentId == sip.investmentId &&
-              t.notes != null &&
-              t.notes!.contains('SIP ID: ${sip.id}') &&
-              t.transactionDate.year == today.year &&
-              t.transactionDate.month == today.month &&
-              t.transactionDate.day == today.day);
+              (t.sipId == currentSip.id &&
+               t.executionMonth == dueDate.month &&
+               t.executionYear == dueDate.year) ||
+              (t.type == 'investment_buy' &&
+               t.investmentId == currentSip.investmentId &&
+               t.notes != null &&
+               t.notes!.contains('SIP ID: ${currentSip.id}') &&
+               t.transactionDate.year == dueDate.year &&
+               t.transactionDate.month == dueDate.month));
 
           if (!alreadyProcessed) {
-            final investment = state.investments.firstWhereOrNull((i) => i.id == sip.investmentId);
-            final invName = investment?.name ?? 'Investment';
-            
-            if (sip.autoCreate == 1) {
+            if (currentSip.autoCreate == 1) {
               final fromAcc = state.accounts.firstWhereOrNull((a) => a.id == 'acc_primary_bank_uuid') ?? state.accounts.firstOrNull;
               if (fromAcc != null) {
                 final marketPrice = investment?.marketValue ?? 1.0;
                 final price = marketPrice > 0 ? marketPrice : 1.0;
-                final units = sip.amount / price;
+                final units = currentSip.amount / price;
                 
-                buyInvestment(
-                  sip.investmentId,
+                await buyInvestment(
+                  currentSip.investmentId,
                   fromAcc.id,
                   units,
                   price,
-                  'SIP Auto-Invest: $invName (SIP ID: ${sip.id})',
-                  today,
+                  'SIP Auto-Invest: $invName (SIP ID: ${currentSip.id})',
+                  dueDate,
+                  sipId: currentSip.id,
+                  executionMonth: dueDate.month,
+                  executionYear: dueDate.year,
                 );
               }
             } else {
               final notificationService = _ref.read(realNotificationServiceProvider);
-              notificationService.showNotification(
+              notificationService.scheduleSystemNotification(
+                id: 2000 + currentSip.id.hashCode.abs() % 999,
                 title: 'SIP Payment Reminder',
-                body: 'Your SIP of ${state.currency}${sip.amount} for "$invName" is due today.',
+                body: 'Your SIP of ${state.currency}${currentSip.amount} for "$invName" is due on ${DateFormat('yyyy-MM-dd').format(dueDate)}.',
+                scheduledDateTime: DateTime.now().add(const Duration(minutes: 30)),
                 type: 'sip',
+                channelId: kChannelReminders,
               );
             }
           }
+          
+          final nextDue = SipCalculator.calculateNextDueDate(dueDate, currentSip.frequency, currentSip.sipDate);
+          final nextFirstInstallment = currentSip.firstInstallmentDate ?? dueDate;
+          
+          if (currentSip.endDate != null && nextDue.isAfter(currentSip.endDate!)) {
+            currentSip = currentSip.copyWith(
+              firstInstallmentDate: Value(nextFirstInstallment),
+              lastCompletedInstallment: Value(dueDate),
+              nextDueDate: const Value(null),
+            );
+          } else {
+            currentSip = currentSip.copyWith(
+              firstInstallmentDate: Value(nextFirstInstallment),
+              lastCompletedInstallment: Value(dueDate),
+              nextDueDate: Value(nextDue),
+            );
+          }
+          
+          await editSip(currentSip);
         }
       }
     } finally {

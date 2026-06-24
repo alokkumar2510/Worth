@@ -21,6 +21,8 @@ class People extends Table {
   TextColumn get bankName => text().nullable()();
   TextColumn get accountHolderName => text().nullable()();
   TextColumn get photoPath => text().nullable()();
+  TextColumn get ownershipType => text().nullable()();
+  TextColumn get liabilityType => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

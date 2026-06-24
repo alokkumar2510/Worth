@@ -22,6 +22,8 @@ class AccountRepositoryImpl implements AccountRepository {
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       syncStatus: entity.syncStatus,
+      ownershipType: entity.ownershipType,
+      liabilityType: entity.liabilityType,
     );
   }
 
@@ -35,6 +37,8 @@ class AccountRepositoryImpl implements AccountRepository {
       createdAt: Value(account.createdAt),
       updatedAt: Value(account.updatedAt),
       syncStatus: Value(account.syncStatus),
+      ownershipType: Value(account.ownershipType),
+      liabilityType: Value(account.liabilityType),
     );
   }
 
@@ -79,6 +83,8 @@ class AccountRepositoryImpl implements AccountRepository {
       createdAt: account.createdAt,
       updatedAt: account.updatedAt,
       syncStatus: account.syncStatus,
+      ownershipType: account.ownershipType,
+      liabilityType: account.liabilityType,
     );
     await _database.update(_database.accounts).replace(dbAccount);
     await _ref.read(syncServiceProvider).queueOperation(

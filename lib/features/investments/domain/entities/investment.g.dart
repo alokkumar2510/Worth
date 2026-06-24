@@ -25,6 +25,9 @@ _$InvestmentImpl _$$InvestmentImplFromJson(Map<String, dynamic> json) =>
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       syncStatus: json['syncStatus'] as String? ?? 'pending',
+      fundSource: json['fundSource'] as String?,
+      sourceAccount: json['sourceAccount'] as String?,
+      ownershipType: json['ownershipType'] as String?,
     );
 
 Map<String, dynamic> _$$InvestmentImplToJson(_$InvestmentImpl instance) =>
@@ -42,4 +45,7 @@ Map<String, dynamic> _$$InvestmentImplToJson(_$InvestmentImpl instance) =>
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),
       'syncStatus': instance.syncStatus,
+      'fundSource': instance.fundSource,
+      'sourceAccount': instance.sourceAccount,
+      'ownershipType': instance.ownershipType,
     };

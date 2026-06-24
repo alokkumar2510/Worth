@@ -354,5 +354,91 @@ void main() {
       expect(state.getInvestmentInvestedCapital(inv.id), equals(5000.0));
       expect(state.getInvestmentMarketValue(inv.id), equals(5000.0));
     });
+
+    group('P0 Bug Fixes Verification Tests', () {
+      test('SIP stateful date cycle scheduling prevents double charging', () async {
+        final notifier = container.read(mockDatabaseProvider.notifier);
+
+        // Create a bank account
+        await notifier.addAccount('Main primary bank', 'bank', 'Primary storage of funds', 50000.0);
+
+        // Create an investment instrument
+        final inv = await notifier.addInvestment('Gold BeEs', 'etf', 'GOLDBEES', 'Gold ETF', 10.0);
+
+        // Create a SIP starting on 10 June 2026, with SIP Day 25, monthly frequency
+        final startDate = DateTime(2026, 6, 10);
+        await notifier.addSip(
+          investmentId: inv.id,
+          amount: 2000.0,
+          frequency: 'monthly',
+          sipDate: 25,
+          startDate: startDate,
+          autoCreate: 1,
+          importMode: 'paid',
+        );
+
+        final state = container.read(mockDatabaseProvider);
+        expect(state.sips.length, equals(1));
+        final sip = state.sips.first;
+
+        // Verify stateful columns
+        expect(sip.firstInstallmentDate, equals(DateTime(2026, 6, 10)));
+        expect(sip.lastCompletedInstallment, equals(DateTime(2026, 6, 10)));
+        expect(sip.nextDueDate, equals(DateTime(2026, 7, 25))); // 25 July 2026, not 25 June 2026!
+
+        // Verify that exactly one transaction was created (on 10 June 2026)
+        final sipTxs = state.transactions.where((t) => t.notes != null && t.notes!.contains('SIP ID: ${sip.id}')).toList();
+        expect(sipTxs.length, equals(1));
+        expect(sipTxs.first.transactionDate, equals(DateTime(2026, 6, 10)));
+      });
+
+      test('Borrowed money peer lending automatically creates single borrow transaction and voids recursively', () async {
+        final notifier = container.read(mockDatabaseProvider.notifier);
+
+        // Create peer lender Sohan
+        final sohan = await notifier.addPerson('Sohan', null, 'Creditor');
+
+        // Create investment NIFTYBEES
+        final inv = await notifier.addInvestment('NIFTYBEES', 'etf', 'NIFTYBEES', 'Nifty ETF', 10.0);
+
+        // Buy investment funded by Sohan
+        await notifier.buyInvestment(
+          inv.id,
+          null,
+          1000.0,
+          10.0,
+          'Buy NIFTYBEES funded by Sohan',
+          DateTime(2026, 6, 10),
+          fundingSource: 'liability_borrowed',
+          fundingLiabilityId: 'person_${sohan.id}',
+        );
+
+        final state = container.read(mockDatabaseProvider);
+
+        // Verify buy transaction was created
+        final buyTx = state.transactions.firstWhere((t) => t.type == 'investment_buy' && t.investmentId == inv.id);
+        expect(buyTx.amount, equals(10000.0));
+
+        // Verify borrow transaction was automatically created with stable ID
+        final borrowTx = state.transactions.firstWhere((t) => t.type == 'borrow_money' && t.personId == 'person_${sohan.id}');
+        expect(borrowTx.amount, equals(10000.0));
+        expect(borrowTx.id, equals('${buyTx.id}_borrow'));
+
+        // Verify there is no duplicate borrow transaction
+        final borrowTxs = state.transactions.where((t) => t.type == 'borrow_money' && t.personId == 'person_${sohan.id}').toList();
+        expect(borrowTxs.length, equals(1));
+
+        // Void the buy transaction
+        await notifier.voidTransaction(buyTx.id);
+
+        final voidedState = container.read(mockDatabaseProvider);
+        final voidedBuyTx = voidedState.transactions.firstWhere((t) => t.id == buyTx.id);
+        final voidedBorrowTx = voidedState.transactions.firstWhere((t) => t.id == borrowTx.id);
+
+        // Both transactions must be voided recursively
+        expect(voidedBuyTx.voidedTransactionId, isNotNull);
+        expect(voidedBorrowTx.voidedTransactionId, isNotNull);
+      });
+    });
   });
 }

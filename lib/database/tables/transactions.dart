@@ -24,7 +24,23 @@ class Transactions extends Table {
   TextColumn get fundingSource => text().nullable()();
   TextColumn get fundingLiabilityId => text().nullable()();
   TextColumn get fundingDetails => text().nullable()();
+  TextColumn get transactionUuid => text().nullable()();
+  TextColumn get operationUuid => text().nullable()();
+  TextColumn get sourceRecordId => text().nullable()();
+  TextColumn get fundSource => text().nullable()();
+  TextColumn get sourceAccount => text().nullable()();
+  TextColumn get ownershipType => text().nullable()();
+  TextColumn get liabilityType => text().nullable()();
+  TextColumn get transactionCategory => text().nullable()();
+  TextColumn get sipId => text().nullable()();
+  IntColumn get executionMonth => integer().nullable()();
+  IntColumn get executionYear => integer().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+        {sipId, executionMonth, executionYear}
+      ];
 }

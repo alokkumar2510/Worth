@@ -14,6 +14,8 @@ class Account with _$Account {
     required DateTime createdAt,
     required DateTime updatedAt,
     @Default('pending') String syncStatus,
+    String? ownershipType,
+    String? liabilityType,
   }) = _Account;
 
   factory Account.fromJson(Map<String, dynamic> json) => _$AccountFromJson(json);

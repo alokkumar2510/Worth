@@ -25,6 +25,9 @@ class SipRepositoryImpl implements SipRepository {
       importMode: entity.importMode,
       completedInstallmentsOverride: entity.completedInstallmentsOverride,
       worthCreationDate: entity.worthCreationDate,
+      firstInstallmentDate: entity.firstInstallmentDate,
+      nextDueDate: entity.nextDueDate,
+      lastCompletedInstallment: entity.lastCompletedInstallment,
     );
   }
 
@@ -45,6 +48,9 @@ class SipRepositoryImpl implements SipRepository {
       importMode: Value(entity.importMode),
       completedInstallmentsOverride: Value(entity.completedInstallmentsOverride),
       worthCreationDate: Value(entity.worthCreationDate),
+      firstInstallmentDate: Value(entity.firstInstallmentDate),
+      nextDueDate: Value(entity.nextDueDate),
+      lastCompletedInstallment: Value(entity.lastCompletedInstallment),
     );
   }
 
@@ -91,6 +97,9 @@ class SipRepositoryImpl implements SipRepository {
       importMode: sip.importMode,
       completedInstallmentsOverride: sip.completedInstallmentsOverride,
       worthCreationDate: sip.worthCreationDate,
+      firstInstallmentDate: sip.firstInstallmentDate,
+      nextDueDate: sip.nextDueDate,
+      lastCompletedInstallment: sip.lastCompletedInstallment,
     );
     await _database.update(_database.sips).replace(dbSip);
   }

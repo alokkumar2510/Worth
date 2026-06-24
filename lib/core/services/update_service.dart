@@ -97,6 +97,9 @@ class UpdateService extends StateNotifier<UpdateState> {
     _startPeriodicChecks();
   }
 
+  /// Test-only constructor: skips starting the periodic timer.
+  UpdateService.test(this._ref) : super(UpdateState());
+
   void _startPeriodicChecks() {
     _checkTimer?.cancel();
     // Periodic check every 12 hours

@@ -28,6 +28,9 @@ class InvestmentRepositoryImpl implements InvestmentRepository {
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
       syncStatus: entity.syncStatus,
+      fundSource: entity.fundSource,
+      sourceAccount: entity.sourceAccount,
+      ownershipType: entity.ownershipType,
     );
   }
 
@@ -46,6 +49,9 @@ class InvestmentRepositoryImpl implements InvestmentRepository {
       createdAt: Value(entity.createdAt),
       updatedAt: Value(entity.updatedAt),
       syncStatus: Value(entity.syncStatus),
+      fundSource: Value(entity.fundSource),
+      sourceAccount: Value(entity.sourceAccount),
+      ownershipType: Value(entity.ownershipType),
     );
   }
 
@@ -127,6 +133,9 @@ class InvestmentRepositoryImpl implements InvestmentRepository {
       createdAt: investment.createdAt,
       updatedAt: investment.updatedAt,
       syncStatus: investment.syncStatus,
+      fundSource: investment.fundSource,
+      sourceAccount: investment.sourceAccount,
+      ownershipType: investment.ownershipType,
     );
     await _database.update(_database.investments).replace(dbInvestment);
     await _ref.read(syncServiceProvider).queueOperation(
