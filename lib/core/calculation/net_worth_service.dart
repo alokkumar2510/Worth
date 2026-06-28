@@ -83,28 +83,20 @@ class NetWorthService {
     );
 
     final double personalBank = state.accounts
-        .where((a) => a.isArchived == 0 && a.type != 'credit' && (a.ownershipType == 'PERSONAL' || a.ownershipType == null))
-        .fold(0.0, (sum, a) => sum + state.getAccountCashBalance(a.id));
+        .where((a) => a.isArchived == 0 && a.type != 'credit')
+        .fold(0.0, (sum, a) => sum + state.getAccountCashBalanceByOwnership(a.id, 'PERSONAL'));
 
     final double borrowedCash = state.accounts
-        .where((a) => a.isArchived == 0 && a.type != 'credit' && a.ownershipType == 'BORROWED')
-        .fold(0.0, (sum, a) => sum + state.getAccountCashBalance(a.id));
+        .where((a) => a.isArchived == 0 && a.type != 'credit')
+        .fold(0.0, (sum, a) => sum + state.getAccountCashBalanceByOwnership(a.id, 'BORROWED'));
 
     final double personalReceivables = state.people
         .where((p) => p.isArchived == 0 && (p.ownershipType == 'PERSONAL' || p.ownershipType == null))
         .fold(0.0, (sum, p) => sum + state.getPersonReceivableBalance(p.id));
 
-    final double personalInv = state.investments
-        .where((i) => i.isArchived == 0 && (i.fundSource == 'PERSONAL' || i.fundSource == null))
-        .fold(0.0, (sum, i) => sum + state.getInvestmentInvestedCapital(i.id));
-
-    final double borrowedInv = state.investments
-        .where((i) => i.isArchived == 0 && i.fundSource == 'BORROWED')
-        .fold(0.0, (sum, i) => sum + state.getInvestmentInvestedCapital(i.id));
-
-    final double mtfInv = state.investments
-        .where((i) => i.isArchived == 0 && i.fundSource == 'MTF')
-        .fold(0.0, (sum, i) => sum + state.getInvestmentInvestedCapital(i.id));
+    final double personalInv = state.personalInvestments;
+    final double borrowedInv = state.borrowedInvestments;
+    final double mtfInv = state.mtfInvestments;
 
     final double totalAssets = personalBank + borrowedCash + personalReceivables + personalInv + borrowedInv + mtfInv;
 

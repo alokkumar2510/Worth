@@ -239,17 +239,170 @@ class MockDatabaseState {
 
   // --- Derived Calculations ---
 
+  double getAccountCashBalanceByOwnership(String accountId, String ownershipType) {
+    double balance = 0.0;
+    bool hasLedgerTx = false;
+
+    // Helper to get ownership type of a transaction relative to an account
+    String getTxOwnership(Transaction tx) {
+      if (tx.type == 'borrow_money') {
+        if (tx.personId != null) {
+          final cleanPersonId = tx.personId!.startsWith('person_') ? tx.personId!.substring(7) : tx.personId!;
+          final person = people.firstWhereOrNull((p) => (p.id.startsWith('person_') ? p.id.substring(7) : p.id) == cleanPersonId);
+          if (person != null && person.type == 'broker') {
+            return 'MTF';
+          }
+        }
+        return 'BORROWED';
+      }
+      if (tx.type == 'repay_money') {
+        if (tx.personId != null) {
+          final cleanPersonId = tx.personId!.startsWith('person_') ? tx.personId!.substring(7) : tx.personId!;
+          final person = people.firstWhereOrNull((p) => (p.id.startsWith('person_') ? p.id.substring(7) : p.id) == cleanPersonId);
+          if (person != null && person.type == 'broker') {
+            return 'MTF';
+          }
+        }
+        return 'BORROWED';
+      }
+      if (tx.ownershipType != null) {
+        return tx.ownershipType!;
+      }
+      if (tx.fundSource != null) {
+        return tx.fundSource!;
+      }
+      if (tx.fundingSource != null) {
+        if (tx.fundingSource == 'liability_borrowed') return 'BORROWED';
+        if (tx.fundingSource == 'mtf') return 'MTF';
+        if (tx.fundingSource == 'existing_cash') return 'PERSONAL';
+      }
+
+      final fromAcc = accounts.firstWhereOrNull((a) => a.id == tx.fromAccountId);
+      final toAcc = accounts.firstWhereOrNull((a) => a.id == tx.toAccountId);
+      if ((fromAcc != null && fromAcc.type == 'credit') || (toAcc != null && toAcc.type == 'credit')) {
+        return 'BORROWED';
+      }
+
+      if (tx.investmentId != null) {
+        final inv = investments.firstWhereOrNull((i) => i.id == tx.investmentId);
+        if (inv != null) {
+          if (inv.fundSource != null) return inv.fundSource!;
+          if (inv.ownershipType != null) return inv.ownershipType!;
+          if (inv.fundingSource != null) {
+            if (inv.fundingSource == 'liability_borrowed') return 'BORROWED';
+            if (inv.fundingSource == 'mtf') return 'MTF';
+          }
+        }
+      }
+
+      return 'PERSONAL';
+    }
+
+    for (final tx in transactions) {
+      if (tx.voidedTransactionId != null || tx.type == 'void') continue;
+
+      if (tx.toAccountId == accountId) {
+        hasLedgerTx = true;
+        final txOwnership = getTxOwnership(tx);
+        
+        if (tx.type == 'investment_sell' && tx.investmentId != null) {
+          final inv = investments.firstWhereOrNull((i) => i.id == tx.investmentId);
+          if (inv != null) {
+            final mtf = mtfPositions.firstWhereOrNull((m) => m.investmentId == inv.id && m.isClosed == 0);
+            if (mtf != null) {
+              final totalMtfVal = mtf.ownCapital + mtf.borrowedCapital;
+              final mtfShare = totalMtfVal > 0 ? (mtf.borrowedCapital / totalMtfVal) : 0.0;
+              final ownShare = 1.0 - mtfShare;
+              
+              final debtPctOfOwn = _getDebtPortion(inv.fundingSource, inv.fundingDetails, 100.0);
+              final borrowedShare = ownShare * (debtPctOfOwn / 100.0);
+              final personalShare = ownShare - borrowedShare;
+              
+              if (ownershipType == 'MTF') balance += tx.amount * mtfShare;
+              if (ownershipType == 'BORROWED') balance += tx.amount * borrowedShare;
+              if (ownershipType == 'PERSONAL') balance += tx.amount * personalShare;
+              continue;
+            } else if (inv.fundingSource == 'mixed_sources') {
+              final debtPortion = _getDebtPortion(inv.fundingSource, inv.fundingDetails, tx.amount);
+              if (ownershipType == 'BORROWED') balance += debtPortion;
+              if (ownershipType == 'PERSONAL') balance += (tx.amount - debtPortion);
+              continue;
+            }
+          }
+        }
+
+        if (txOwnership == ownershipType) {
+          balance += tx.amount;
+        }
+      }
+
+      if (tx.fromAccountId == accountId) {
+        hasLedgerTx = true;
+        final txOwnership = getTxOwnership(tx);
+
+        if (tx.type == 'investment_buy' && tx.investmentId != null) {
+          final inv = investments.firstWhereOrNull((i) => i.id == tx.investmentId);
+          if (inv != null) {
+            final mtf = mtfPositions.firstWhereOrNull((m) => m.investmentId == inv.id && m.isClosed == 0);
+            if (mtf != null) {
+              final totalMtfVal = mtf.ownCapital + mtf.borrowedCapital;
+              final mtfShare = totalMtfVal > 0 ? (mtf.borrowedCapital / totalMtfVal) : 0.0;
+              final ownShare = 1.0 - mtfShare;
+              
+              final debtPctOfOwn = _getDebtPortion(inv.fundingSource, inv.fundingDetails, 100.0);
+              final borrowedShare = ownShare * (debtPctOfOwn / 100.0);
+              final personalShare = ownShare - borrowedShare;
+              
+              if (ownershipType == 'MTF') balance -= tx.amount * mtfShare;
+              if (ownershipType == 'BORROWED') balance -= tx.amount * borrowedShare;
+              if (ownershipType == 'PERSONAL') balance -= tx.amount * personalShare;
+              continue;
+            } else if (inv.fundingSource == 'mixed_sources') {
+              final debtPortion = _getDebtPortion(inv.fundingSource, inv.fundingDetails, tx.amount);
+              if (ownershipType == 'BORROWED') balance -= debtPortion;
+              if (ownershipType == 'PERSONAL') balance -= (tx.amount - debtPortion);
+              continue;
+            }
+          }
+        }
+
+        if (txOwnership == ownershipType) {
+          balance -= tx.amount;
+        }
+      }
+    }
+
+    for (final adj in adjustments) {
+      if (adj.entityId == accountId && adj.entityType == 'account') {
+        final acc = accounts.firstWhereOrNull((a) => a.id == accountId);
+        final accOwnership = acc?.ownershipType ?? 'PERSONAL';
+        if (accOwnership == ownershipType) {
+          balance += adj.adjustedAmount;
+        }
+      }
+    }
+
+    if (!hasLedgerTx) {
+      final acc = accounts.firstWhereOrNull((a) => a.id == accountId);
+      final accOwnership = acc?.ownershipType ?? 'PERSONAL';
+      if (accOwnership == ownershipType) {
+        return getAccountCashBalance(accountId);
+      }
+      return 0.0;
+    }
+
+    return balance;
+  }
+
   double getAccountCashBalance(String accountId) {
     double balance = 0.0;
     for (final tx in transactions) {
       if (tx.voidedTransactionId != null || tx.type == 'void') continue;
 
       if (tx.toAccountId == accountId) {
-        // Income, positive transfer, recover, borrow, etc.
         balance += tx.amount;
       }
       if (tx.fromAccountId == accountId) {
-        // Expense, negative transfer, lend, repay, etc.
         balance -= tx.amount;
       }
     }
@@ -292,20 +445,25 @@ class MockDatabaseState {
   }
 
   double getPersonReceivableBalance(String personId) {
+    final cleanPersonId = personId.startsWith('person_') ? personId.substring(7) : personId;
     double balance = 0.0;
     for (final tx in transactions) {
       if (tx.voidedTransactionId != null || tx.type == 'void') continue;
 
-      if (tx.personId == personId) {
-        if (tx.type == 'lend_money') {
-          balance += tx.amount;
-        } else if (tx.type == 'recover_money') {
-          balance -= tx.amount;
+      if (tx.personId != null) {
+        final cleanTxPersonId = tx.personId!.startsWith('person_') ? tx.personId!.substring(7) : tx.personId!;
+        if (cleanTxPersonId == cleanPersonId) {
+          if (tx.type == 'lend_money') {
+            balance += tx.amount;
+          } else if (tx.type == 'recover_money') {
+            balance -= tx.amount;
+          }
         }
       }
     }
     for (final adj in adjustments) {
-      if (adj.entityId == personId && adj.entityType == 'person_receivable') {
+      final cleanAdjEntityId = adj.entityId.startsWith('person_') ? adj.entityId.substring(7) : adj.entityId;
+      if (cleanAdjEntityId == cleanPersonId && adj.entityType == 'person_receivable') {
         balance += adj.adjustedAmount;
       }
     }
@@ -313,20 +471,25 @@ class MockDatabaseState {
   }
 
   double getPersonLiabilityBalance(String personId) {
+    final cleanPersonId = personId.startsWith('person_') ? personId.substring(7) : personId;
     double balance = 0.0;
     for (final tx in transactions) {
       if (tx.voidedTransactionId != null || tx.type == 'void') continue;
 
-      if (tx.personId == personId) {
-        if (tx.type == 'borrow_money' || tx.type == 'interest_accrued') {
-          balance += tx.amount;
-        } else if (tx.type == 'repay_money') {
-          balance -= tx.amount;
+      if (tx.personId != null) {
+        final cleanTxPersonId = tx.personId!.startsWith('person_') ? tx.personId!.substring(7) : tx.personId!;
+        if (cleanTxPersonId == cleanPersonId) {
+          if (tx.type == 'borrow_money' || tx.type == 'interest_accrued') {
+            balance += tx.amount;
+          } else if (tx.type == 'repay_money') {
+            balance -= tx.amount;
+          }
         }
       }
     }
     for (final adj in adjustments) {
-      if (adj.entityId == personId && adj.entityType == 'person_liability') {
+      final cleanAdjEntityId = adj.entityId.startsWith('person_') ? adj.entityId.substring(7) : adj.entityId;
+      if (cleanAdjEntityId == cleanPersonId && adj.entityType == 'person_liability') {
         balance += adj.adjustedAmount;
       }
     }
@@ -392,8 +555,8 @@ class MockDatabaseState {
   double get personalBankBalance {
     double total = 0.0;
     for (final acc in accounts) {
-      if (acc.isArchived == 0 && acc.type != 'credit' && (acc.ownershipType == 'PERSONAL' || acc.ownershipType == null)) {
-        total += getAccountCashBalance(acc.id);
+      if (acc.isArchived == 0 && acc.type != 'credit') {
+        total += getAccountCashBalanceByOwnership(acc.id, 'PERSONAL');
       }
     }
     return total;
@@ -402,8 +565,8 @@ class MockDatabaseState {
   double get borrowedCashBalance {
     double total = 0.0;
     for (final acc in accounts) {
-      if (acc.isArchived == 0 && acc.type != 'credit' && acc.ownershipType == 'BORROWED') {
-        total += getAccountCashBalance(acc.id);
+      if (acc.isArchived == 0 && acc.type != 'credit') {
+        total += getAccountCashBalanceByOwnership(acc.id, 'BORROWED');
       }
     }
     return total;
@@ -422,8 +585,18 @@ class MockDatabaseState {
   double get personalInvestments {
     double total = 0.0;
     for (final inv in investments) {
-      if (inv.isArchived == 0 && (inv.fundSource == 'PERSONAL' || inv.fundSource == null)) {
-        total += getInvestmentInvestedCapital(inv.id);
+      if (inv.isArchived == 1) continue;
+      final val = getInvestmentInvestedCapital(inv.id);
+      final mtf = mtfPositions.firstWhereOrNull((m) => m.investmentId == inv.id && m.isClosed == 0);
+      if (mtf != null) {
+        final totalMtfVal = mtf.ownCapital + mtf.borrowedCapital;
+        final ownShare = totalMtfVal > 0 ? (mtf.ownCapital / totalMtfVal) : 0.0;
+        final ownVal = val * ownShare;
+        final debtPortion = _getDebtPortion(inv.fundingSource, inv.fundingDetails, ownVal);
+        total += (ownVal - debtPortion);
+      } else {
+        final debtPortion = _getDebtPortion(inv.fundingSource, inv.fundingDetails, val);
+        total += (val - debtPortion);
       }
     }
     return total;
@@ -432,8 +605,18 @@ class MockDatabaseState {
   double get borrowedInvestments {
     double total = 0.0;
     for (final inv in investments) {
-      if (inv.isArchived == 0 && inv.fundSource == 'BORROWED') {
-        total += getInvestmentInvestedCapital(inv.id);
+      if (inv.isArchived == 1) continue;
+      final val = getInvestmentInvestedCapital(inv.id);
+      final mtf = mtfPositions.firstWhereOrNull((m) => m.investmentId == inv.id && m.isClosed == 0);
+      if (mtf != null) {
+        final totalMtfVal = mtf.ownCapital + mtf.borrowedCapital;
+        final ownShare = totalMtfVal > 0 ? (mtf.ownCapital / totalMtfVal) : 0.0;
+        final ownVal = val * ownShare;
+        final debtPortion = _getDebtPortion(inv.fundingSource, inv.fundingDetails, ownVal);
+        total += debtPortion;
+      } else {
+        final debtPortion = _getDebtPortion(inv.fundingSource, inv.fundingDetails, val);
+        total += debtPortion;
       }
     }
     return total;
@@ -442,8 +625,13 @@ class MockDatabaseState {
   double get mtfInvestments {
     double total = 0.0;
     for (final inv in investments) {
-      if (inv.isArchived == 0 && inv.fundSource == 'MTF') {
-        total += getInvestmentInvestedCapital(inv.id);
+      if (inv.isArchived == 1) continue;
+      final val = getInvestmentInvestedCapital(inv.id);
+      final mtf = mtfPositions.firstWhereOrNull((m) => m.investmentId == inv.id && m.isClosed == 0);
+      if (mtf != null) {
+        final totalMtfVal = mtf.ownCapital + mtf.borrowedCapital;
+        final mtfShare = totalMtfVal > 0 ? (mtf.borrowedCapital / totalMtfVal) : 0.0;
+        total += val * mtfShare;
       }
     }
     return total;
@@ -455,7 +643,7 @@ class MockDatabaseState {
 
   double get borrowedCapitalLiability {
     double total = 0.0;
-    final peers = people.where((p) => p.isArchived == 0 && p.type != 'broker' && (p.ownershipType == 'BORROWED' || p.liabilityType == 'BORROWED_CAPITAL' || p.type == 'borrowing'));
+    final peers = people.where((p) => p.isArchived == 0 && p.type != 'broker');
     for (final p in peers) {
       final bal = getPersonLiabilityBalance(p.id);
       if (bal > 0) {
@@ -500,11 +688,20 @@ class MockDatabaseState {
   }
 
   Map<String, double> get fundingSourceBreakdown {
-    return {
-      'PERSONAL': selfFundedAssets,
-      'BORROWED': borrowedCashBalance + borrowedInvestments,
-      'MTF': mtfInvestments,
-    };
+    final Map<String, double> breakdown = {};
+    for (final inv in investments) {
+      if (inv.isArchived == 0 && inv.fundingSource != null && inv.fundingSource != 'none') {
+        final val = getInvestmentInvestedCapital(inv.id);
+        breakdown[inv.fundingSource!] = (breakdown[inv.fundingSource!] ?? 0.0) + val;
+      }
+    }
+    for (final acc in accounts) {
+      if (acc.isArchived == 0 && acc.type != 'credit' && acc.fundingSource != null && acc.fundingSource != 'none') {
+        final val = getAccountCashBalance(acc.id);
+        breakdown[acc.fundingSource!] = (breakdown[acc.fundingSource!] ?? 0.0) + val;
+      }
+    }
+    return breakdown;
   }
 
   double _getDebtPortion(String? fundingSource, String? fundingDetails, double assetValue) {
@@ -2443,10 +2640,19 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
 
       state = state.copyWith(investmentLots: [...state.investmentLots, newLot]);
 
-      // If peer lender (person_), automatically create a borrow_money transaction
-      if (fundingSource == 'liability_borrowed' &&
+      // If peer lender (person_), automatically create a borrow_money transaction (unless it's an MTF position or a borrow transaction already exists)
+      final cleanPersonId = fundingLiabilityId != null
+          ? (fundingLiabilityId!.startsWith('person_') ? fundingLiabilityId!.substring(7) : fundingLiabilityId)
+          : null;
+      final isMtf = state.mtfPositions.any((m) => m.investmentId == investmentId);
+      final hasExistingBorrow = cleanPersonId != null && state.transactions.any((t) =>
+          t.type == 'borrow_money' &&
+          (t.personId == cleanPersonId || (t.personId != null && t.personId!.startsWith('person_') && t.personId!.substring(7) == cleanPersonId)));
+      if (!isMtf &&
+          !hasExistingBorrow &&
+          fundingSource == 'liability_borrowed' &&
           fundingLiabilityId != null &&
-          fundingLiabilityId.startsWith('person_')) {
+          fundingLiabilityId!.startsWith('person_')) {
         
         final borrowTxId = '${buyTxId}_borrow';
         final alreadyExists = state.transactions.any((t) => t.id == borrowTxId || t.transactionUuid == borrowTxId);
@@ -4775,12 +4981,14 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
     final DateTime? lastCompletedInstallment = null;
 
     DateTime? nextDueDate = startDateMidnight;
-    while (nextDueDate != null && nextDueDate.isBefore(todayMidnight)) {
-      final next = SipCalculator.calculateNextDueDate(nextDueDate, frequency, sipDate);
-      if (endDate != null && next.isAfter(endDate)) {
-        nextDueDate = null;
-      } else {
-        nextDueDate = next;
+    if (autoCreate == 0) {
+      while (nextDueDate != null && nextDueDate.isBefore(todayMidnight)) {
+        final next = SipCalculator.calculateNextDueDate(nextDueDate, frequency, sipDate);
+        if (endDate != null && next.isAfter(endDate)) {
+          nextDueDate = null;
+        } else {
+          nextDueDate = next;
+        }
       }
     }
 
@@ -4809,6 +5017,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       );
       await repo.createSip(domainSip);
       _queueSync('sip', id, 'upsert');
+      await loadStateFromDatabase();
     } else {
       final newSip = Sip(
         id: id,
@@ -4848,6 +5057,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
   }
 
   Future<void> editSip(Sip sip) async {
+    print('[editSip] id: ${sip.id}, firstInstallmentDate: ${sip.firstInstallmentDate}, lastCompletedInstallment: ${sip.lastCompletedInstallment}, nextDueDate: ${sip.nextDueDate}');
     final updatedSip = sip.copyWith(updatedAt: DateTime.now().toUtc());
     final isMock = _ref.read(mockModeProvider);
     if (!isMock) {
@@ -4871,6 +5081,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       );
       await repo.updateSip(domainSip);
       _queueSync('sip', sip.id, 'upsert');
+      await loadStateFromDatabase();
     } else {
       state = state.copyWith(
         sips: state.sips.map((s) => s.id == sip.id ? updatedSip : s).toList(),
@@ -4894,6 +5105,7 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final repo = _ref.read(realSipRepositoryProvider);
       await repo.deleteSip(id);
       _queueSync('sip', id, 'delete');
+      await loadStateFromDatabase();
     } else {
       state = state.copyWith(
         sips: state.sips.where((s) => s.id != id).toList(),
@@ -4954,6 +5166,10 @@ class MockDatabaseNotifier extends StateNotifier<MockDatabaseState> {
       final today = DateTime(now.year, now.month, now.day);
       
       final activeSips = state.sips.where((s) => s.isActive == 1).toList();
+      print('[runAutoSipProcessing] active sips count: ${activeSips.length}');
+      for (final s in activeSips) {
+        print('[runAutoSipProcessing] sip id: ${s.id}, nextDueDate: ${s.nextDueDate}, today: $today, startDate: ${s.startDate}');
+      }
       for (final sip in activeSips) {
         var currentSip = sip;
         

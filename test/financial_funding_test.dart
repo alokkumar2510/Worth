@@ -218,7 +218,11 @@ void main() {
       // Total liabilities = 6,000 (broker) + 4,000 (Bob) = 10,000
       expect(state.totalLiabilities, equals(10000.0));
 
-      // Total assets = 50,000 (bank) + 10,000 (ETF) = 60,000
+      print('personalBankBalance: ${state.personalBankBalance}');
+      print('borrowedCashBalance: ${state.borrowedCashBalance}');
+      print('personalInvestments: ${state.personalInvestments}');
+      print('borrowedInvestments: ${state.borrowedInvestments}');
+      print('mtfInvestments: ${state.mtfInvestments}');
       expect(state.totalAssets, equals(60000.0));
 
       // Net Worth = 60,000 - 10,000 = 50,000 (equal to original bank balance)
@@ -377,6 +381,8 @@ void main() {
           importMode: 'paid',
         );
 
+        await Future.delayed(const Duration(milliseconds: 100));
+        await notifier.loadStateFromDatabase();
         final state = container.read(mockDatabaseProvider);
         expect(state.sips.length, equals(1));
         final sip = state.sips.first;
